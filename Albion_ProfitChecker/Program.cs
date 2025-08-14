@@ -1,89 +1,77 @@
-using System.Text.Json;
+using AlbionProfitChecker.Models;
+using AlbionProfitChecker.Services;
 
-class Item
+// ===============================
+// Konfiguration
+// ===============================
+const string CITY_BUY = "Lymhurst";          // wo wir einkaufen
+const string CITY_SELL = "Black Market";     // Vergleichsmarkt
+const int DAYS = 14;                         // Zeitraum für Ø
+const double MIN_PROFIT_PERCENT = 10.0;      // Mindestmarge
+
+// ===============================
+// Hilfsfunktionen
+// ===============================
+static IEnumerable<ItemVariant> GenerateItemVariantsForBase(string baseCode, int minTier = 4, int maxTier = 8, int maxEnchant = 3)
 {
-    public string Name { get; set; }
-    public string Tier { get; set; } // z. B. "5.0"
-    public int Price { get; set; }   // z. B. 23000
-    public int Amount { get; set; }  // z. B. 20
+    for (int tier = minTier; tier <= maxTier; tier++)
+    {
+        for (int enchant = 0; enchant <= maxEnchant; enchant++)
+        {
+            var id = enchant == 0 ? $"T{tier}_{baseCode}" : $"T{tier}_{baseCode}@{enchant}";
+            yield return new ItemVariant
+            {
+                ItemId = id,
+                Tier = tier,
+                Enchantment = enchant
+            };
+        }
+    }
 }
 
-class Program
+// ===============================
+// Hauptlogik
+// ===============================
+var api = new AlbionApiService();
+var candidates = new List<ItemVariant>();
+
+// TODO: später kannst du hier weitere Basiscodes ergänzen (Waffen, Rüstungen, etc.)
+var baseItemCodes = new[] { "BAG", "MAIN_SWORD", "2H_BOW" };
+
+foreach (var baseCode in baseItemCodes)
 {
-    static string FilePath = "items.json";
-
-    static void Main()
+    var variants = GenerateItemVariantsForBase(baseCode);
+    foreach (var v in variants)
     {
-        List<Item> items = LoadItems();
+        // 1) aktueller Kaufpreis in Lymhurst
+        v.LymhurstSellMin = await api.GetSellPriceMinAsync(v.ItemId, CITY_BUY);
 
-        while (true)
-        {
-            Console.Clear();
-            Console.WriteLine("=== Albion Profit Checker ===");
-            Console.WriteLine("1. Zeige Liste");
-            Console.WriteLine("2. Item hinzufügen");
-            Console.WriteLine("3. Beenden");
-            Console.Write("Auswahl: ");
-            var choice = Console.ReadLine();
+        // 2) Historie Black Market holen, Ø bilden (Preis + verkaufte Stück/Tag)
+        var bmHistory = await api.GetHistoryAsync(v.ItemId, CITY_SELL, DAYS);
+        ProfitService.FillAggregates(v, bmHistory);
 
-            switch (choice)
-            {
-                case "1":
-                    ShowItems(items);
-                    break;
-                case "2":
-                    AddItem(items);
-                    break;
-                case "3":
-                    SaveItems(items);
-                    return;
-                default:
-                    Console.WriteLine("Ungültige Eingabe");
-                    break;
-            }
-
-            Console.WriteLine("Drücke eine Taste...");
-            Console.ReadKey();
-        }
+        // Kandidaten aufnehmen
+        candidates.Add(v);
     }
+}
 
-    static List<Item> LoadItems()
+// Filter: mindestens 30% Profit, und es wird überhaupt verkauft
+var profitable = candidates
+    .Where(v => v.LymhurstSellMin > 0 && v.BlackMarketAvgPrice14d > 0 && v.ProfitPercent >= MIN_PROFIT_PERCENT && v.BlackMarketAvgSoldPerDay14d > 0.1)
+    .OrderByDescending(v => v.ProfitPercent)
+    .ThenByDescending(v => v.BlackMarketAvgSoldPerDay14d)
+    .ToList();
+
+// Ausgabe
+Console.WriteLine($"Gefundene profitable Varianten (≥ {MIN_PROFIT_PERCENT}% Profit, Zeitraum {DAYS} Tage):");
+if (profitable.Count == 0)
+{
+    Console.WriteLine("— keine Treffer —");
+}
+else
+{
+    foreach (var p in profitable)
     {
-        if (!File.Exists(FilePath)) return new List<Item>();
-        string json = File.ReadAllText(FilePath);
-        return JsonSerializer.Deserialize<List<Item>>(json) ?? new List<Item>();
-    }
-
-    static void SaveItems(List<Item> items)
-    {
-        string json = JsonSerializer.Serialize(items, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(FilePath, json);
-    }
-
-    static void ShowItems(List<Item> items)
-    {
-        Console.WriteLine("\nDeine gespeicherten Items:");
-        foreach (var item in items)
-        {
-            Console.WriteLine($"{item.Name} {item.Tier} {item.Price} = {item.Amount}");
-        }
-    }
-
-    static void AddItem(List<Item> items)
-    {
-        Console.Write("Name (z. B. Schwere Armbrust): ");
-        string name = Console.ReadLine();
-
-        Console.Write("Tier (z. B. 5.0): ");
-        string tier = Console.ReadLine();
-
-        Console.Write("Preis in Silber (z. B. 23000): ");
-        int price = int.Parse(Console.ReadLine());
-
-        Console.Write("Menge (z. B. 20): ");
-        int amount = int.Parse(Console.ReadLine());
-
-        items.Add(new Item { Name = name, Tier = tier, Price = price, Amount = amount });
-        Console.WriteLine("Item hinzugefügt.");
+        Console.WriteLine($"{p.ItemId,-12} | Buy(Lym): {p.LymhurstSellMin,8} | BM Ø14d: {p.BlackMarketAvgPrice14d,10:F0} | Sold/Tag Ø14d: {p.BlackMarketAvgSoldPerDay14d,6:F1} | Profit: {p.ProfitPercent,6:F1}%");
     }
 }
