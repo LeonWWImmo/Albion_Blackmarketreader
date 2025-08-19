@@ -13,8 +13,7 @@ namespace AlbionProfitChecker.Services
     {
         private readonly HttpClient _http;
         private const string API_BASE = "https://west.albion-online-data.com/api/v2/stats";
-        private const int MAX_PRICE_AGE_DAYS = 90; // frische Preise bevorzugen, sonst Fallback
-
+        private const int MAX_PRICE_AGE_DAYS = 90; 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
@@ -137,53 +136,54 @@ namespace AlbionProfitChecker.Services
         }
         
         /// <summary>
-/// Holt Min-Sell-Preise für viele Items auf einmal.
-/// Nutzt v2/prices und berücksichtigt Datum.
-/// </summary>
-public async Task<Dictionary<string, (int Price, DateTime? DateUtc)>> GetSellPriceMinBulkAsync(
-    IEnumerable<string> itemIds, string location)
-{
-    var result = new Dictionary<string, (int, DateTime?)>(StringComparer.OrdinalIgnoreCase);
-
-    var ids = itemIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-    if (ids.Count == 0) return result;
-
-    var url = $"{API_BASE}/prices/{string.Join(",", ids)}.json?locations={Uri.EscapeDataString(location)}";
-    using var resp = await _http.GetAsync(url);
-    if (!resp.IsSuccessStatusCode) return result;
-
-    var json = await resp.Content.ReadAsStringAsync();
-    using var doc = JsonDocument.Parse(json);
-
-    foreach (var el in doc.RootElement.EnumerateArray())
-    {
-        var id = el.TryGetProperty("item_id", out var idEl) ? idEl.GetString() : null;
-        var city = el.TryGetProperty("city", out var cityEl) ? cityEl.GetString() : null;
-
-        if (string.IsNullOrWhiteSpace(id) || !string.Equals(city, location, StringComparison.OrdinalIgnoreCase))
-            continue;
-
-        int price = 0;
-        if (el.TryGetProperty("sell_price_min", out var p))
+        /// Holt Min-Sell-Preise für viele Items auf einmal.
+        /// Nutzt v2/prices und berücksichtigt Datum.
+        /// </summary>
+        public async Task<Dictionary<string, (int Price, DateTime? DateUtc)>> GetSellPriceMinBulkAsync(
+            IEnumerable<string> itemIds, string location)
         {
-            if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var n)) price = n;
-            else if (p.ValueKind == JsonValueKind.String && int.TryParse(p.GetString(), out n)) price = n;
+            var result = new Dictionary<string, (int, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+
+            var ids = itemIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (ids.Count == 0) return result;
+
+            var url = $"{API_BASE}/prices/{string.Join(",", ids)}.json?locations={Uri.EscapeDataString(location)}";
+            using var resp = await _http.GetAsync(url);
+            if (!resp.IsSuccessStatusCode) return result;
+
+            var json = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                var id = el.TryGetProperty("item_id", out var idEl) ? idEl.GetString() : null;
+                var city = el.TryGetProperty("city", out var cityEl) ? cityEl.GetString() : null;
+
+                if (string.IsNullOrWhiteSpace(id) || !string.Equals(city, location, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                int price = 0;
+                if (el.TryGetProperty("sell_price_min", out var p))
+                {
+                    if (p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var n)) price = n;
+                    else if (p.ValueKind == JsonValueKind.String && int.TryParse(p.GetString(), out n)) price = n;
+                }
+
+                DateTime? priceDate = null;
+                if (el.TryGetProperty("sell_price_min_date", out var dEl))
+                {
+                    var ds = dEl.GetString();
+                    if (DateTime.TryParse(ds, out var dt)) priceDate = dt.ToUniversalTime();
+                }
+
+                // Wenn gültig, speichern
+                if (price > 0)
+                    result[id] = (price, priceDate);
+            }
+
+            return result;
         }
 
-        DateTime? priceDate = null;
-        if (el.TryGetProperty("sell_price_min_date", out var dEl))
-        {
-            var ds = dEl.GetString();
-            if (DateTime.TryParse(ds, out var dt)) priceDate = dt.ToUniversalTime();
-        }
-
-        // Wenn gültig, speichern
-        if (price > 0)
-            result[id] = (price, priceDate);
-    }
-
-    return result;
-}
 
     }
 }

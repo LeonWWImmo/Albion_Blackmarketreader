@@ -6,8 +6,7 @@ public class ItemVariant
     public int Tier { get; init; }
     public int Enchantment { get; init; }
 
-    // Daten aus API
-    public int LymhurstSellMin { get; set; }        // aktueller Kaufpreis in Lymhurst
+    public int LymhurstSellMin { get; set; }        // Kaufpreis in Lymhurst
     public double BlackMarketAvgPrice14d { get; set; } // Preis 14 Tage
     public double BlackMarketAvgSoldPerDay14d { get; set; } // verkaufte Stück pro Tag 
 

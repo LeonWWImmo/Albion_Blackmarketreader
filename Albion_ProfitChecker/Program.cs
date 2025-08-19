@@ -6,7 +6,6 @@ namespace AlbionProfitChecker;
 
 internal static class Program
 {
-    // ---------- Konfiguration ----------
     private const string CITY_BUY = "Lymhurst";
     private const string BM_LOCATION = "Black Market";
 
@@ -14,11 +13,11 @@ internal static class Program
     private static readonly int[] ENCHANTS = { 0, 1, 2, 3 };
 
     private static readonly int[] BM_FALLBACK_DAYS = { 14, 30, 60 };
-    private const double MIN_PROFIT_PERCENT = 20.0;
+    private const double MIN_PROFIT_PERCENT = 40.0;
 
     private const int MIN_BM_POINTS = 1;
 
-    private const int INTER_HISTORY_DELAY_MS = 3000;
+    private const int INTER_HISTORY_DELAY_MS = 5000;
 
     private const string ITEM_LIST_PATH = "Data/ItemList.json";
 
