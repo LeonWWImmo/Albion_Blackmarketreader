@@ -1,107 +1,194 @@
-using AlbionProfitChecker.Models;
+using System.Globalization;
+using System.Text.Json;
 using AlbionProfitChecker.Services;
 
-// ===============================
-// Konfiguration
-// ===============================
-const string CITY_BUY = "Lymhurst";          // wo wir einkaufen
-const string CITY_SELL = "Black Market";     // Vergleichsmarkt
-const int DAYS = 14;                         // Zeitraum für Ø
-const double MIN_PROFIT_PERCENT = 10.0;      // Mindestmarge
-bool DEBUG_SKIPS = true;
+namespace AlbionProfitChecker;
 
-// ===============================
-// Hilfsfunktionen
-// ===============================
-static IEnumerable<ItemVariant> GenerateItemVariantsForBase(string baseCode, int minTier = 4, int maxTier = 8, int maxEnchant = 3)
+internal static class Program
 {
-    for (int tier = minTier; tier <= maxTier; tier++)
+    // ---------- Konfiguration ----------
+    private const string CITY_BUY = "Lymhurst";
+    private const string BM_LOCATION = "Black Market";
+
+    private static readonly int[] TIERS = { 4, 5, 6, 7, 8 };
+    private static readonly int[] ENCHANTS = { 0, 1, 2, 3 };
+
+    // BM-History: adaptiver Fallback
+    private static readonly int[] BM_FALLBACK_DAYS = { 14, 30, 60 };
+    private const double MIN_PROFIT_PERCENT = 10.0;
+
+    // WICHTIG: Nur noch Mindest-Anzahl an History-Punkten – hier 1 (= zeige auch Items mit sehr wenig Historie)
+    private const int MIN_BM_POINTS = 1;
+
+    // kleine Pause zwischen History-Requests (Throttle freundlich)
+    private const int INTER_HISTORY_DELAY_MS = 2000;
+
+    // Pfad zur externen Itemliste
+    private const string ITEM_LIST_PATH = "Data/ItemList.json";
+
+    private sealed record Variant(string ItemId, int Tier, int Enchant, string BaseCode);
+
+    private sealed record ResultRow(
+        string ItemId,
+        int Tier,
+        int Enchant,
+        long LymhurstBuyPrice,
+        DateTime? LymhurstDateUtc,
+        double BmAvgPrice,
+        double BmSoldPerDay,
+        double ProfitPercent
+    );
+
+    public static async Task Main()
     {
-        for (int enchant = 0; enchant <= maxEnchant; enchant++)
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
+        var api = new AlbionApiService();
+
+        // 0) ItemList laden
+        var baseCodes = LoadItemList();
+        if (baseCodes.Length == 0)
         {
-            var id = enchant == 0 ? $"T{tier}_{baseCode}" : $"T{tier}_{baseCode}@{enchant}";
-            yield return new ItemVariant
+            Console.WriteLine("Keine Items in Data/ItemList.json gefunden!");
+            return;
+        }
+
+        // 1) Varianten bauen
+        var variants = GenerateAllVariants(baseCodes).ToList();
+
+        // 2) Bulk City-Preise holen
+        var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var cityPrices = await api.GetSellPriceMinBulkAsync(allIds, CITY_BUY);
+
+        var results = new List<ResultRow>(variants.Count);
+
+        // 3) BM-History ziehen & Profit berechnen
+        foreach (var v in variants)
+        {
+            (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
+            if (buyPrice <= 0)
             {
-                ItemId = id,
-                Tier = tier,
-                Enchantment = enchant
-            };
+                Console.WriteLine($"skip {v.ItemId}: kein {CITY_BUY}-Preis (0 oder kein Datensatz)");
+                continue;
+            }
+
+            var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(api, v.ItemId);
+            if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < MIN_BM_POINTS)
+            {
+                Console.WriteLine($"skip {v.ItemId}: keine BM-History/Ø-Preis (Punkte={pointsUsed})");
+                continue;
+            }
+
+            double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
+
+            Console.WriteLine(
+                $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
+                $"BM Ø={Math.Round(avgPrice)} | Sold/Tag={Math.Round(avgSoldPerDay, 1)} | Span={daysUsed}d/{pointsUsed}p");
+
+            if (profitPercent < MIN_PROFIT_PERCENT)
+            {
+                Console.WriteLine($"skip {v.ItemId}: Profit {profitPercent:+0.0;-0.0}% < {MIN_PROFIT_PERCENT:0}%");
+            }
+            else
+            {
+                results.Add(new ResultRow(
+                    v.ItemId, v.Tier, v.Enchant,
+                    buyPrice, buyDateUtc,
+                    avgPrice, avgSoldPerDay, profitPercent
+                ));
+            }
         }
-    }
-}
 
-// ===============================
-// Hauptlogik
-// ===============================
-var api = new AlbionApiService();
-var candidates = new List<ItemVariant>();
+        // 4) Ausgabe
+        var winners = results
+            .OrderByDescending(r => r.ProfitPercent)
+            .ThenByDescending(r => r.BmSoldPerDay)
+            .ToList();
 
-// weitere Basiscodes einfach ergänzen
-var baseItemCodes = new[] { "BAG", "MAIN_SWORD", "2H_BOW" };
+        Console.WriteLine();
+        Console.WriteLine($"Gefundene profitable Varianten (≥ {MIN_PROFIT_PERCENT:0}% Profit, Zeitraum {string.Join("/", BM_FALLBACK_DAYS)} Tage):");
 
-foreach (var baseCode in baseItemCodes)
-{
-    var variants = GenerateItemVariantsForBase(baseCode);
-    foreach (var v in variants)
-    {
-        // 1) Lymhurst-Preis (+ Datum)
-        var (price, priceDate) = await api.GetSellPriceMinAsync(v.ItemId, CITY_BUY);
-        v.LymhurstSellMin = price;
-
-        // 2) Black-Market-History (Ø Preis/14d + Verkäufe/Tag)
-        var bmHistory = await api.GetHistoryAsync(v.ItemId, CITY_SELL, DAYS);
-        ProfitService.FillAggregates(v, bmHistory);
-
-        // optionales Info-Log
-        if (DEBUG_SKIPS && price > 0)
+        if (winners.Count == 0)
         {
-            var d = priceDate?.ToString("yyyy-MM-dd") ?? "kein Datum";
-            Console.WriteLine($"info {v.ItemId}: Lym={price} (Datum: {d}), BM Ø14={v.BlackMarketAvgPrice14d:F0}, Sold/Tag={v.BlackMarketAvgSoldPerDay14d:F1}");
+            Console.WriteLine("(keine)");
+            return;
         }
 
-        candidates.Add(v);
+        foreach (var r in winners)
+        {
+            Console.WriteLine(
+                $"{r.ItemId.PadRight(14)} | " +
+                $"Buy(Lym): {r.LymhurstBuyPrice,9} | " +
+                $"BM Ø: {Math.Round(r.BmAvgPrice),10} | " +
+                $"Sold/Tag Ø: {Math.Round(r.BmSoldPerDay, 1),6} | " +
+                $"Profit: {r.ProfitPercent,7:0.0}%"
+            );
+        }
     }
-}
 
-// Filter inkl. Gründe
-var profitable = new List<ItemVariant>();
-foreach (var v in candidates)
-{
-    if (v.LymhurstSellMin <= 0)
-    {
-        if (DEBUG_SKIPS) Console.WriteLine($"skip {v.ItemId}: kein Lymhurst-Preis (0 oder kein Datensatz)");
-        continue;
-    }
-    if (v.BlackMarketAvgPrice14d <= 0)
-    {
-        if (DEBUG_SKIPS) Console.WriteLine($"skip {v.ItemId}: keine BM-History/Ø-Preis");
-        continue;
-    }
-    if (v.BlackMarketAvgSoldPerDay14d <= 0.1)
-    {
-        if (DEBUG_SKIPS) Console.WriteLine($"skip {v.ItemId}: zu geringe Verkäufe/Tag (Ø {v.BlackMarketAvgSoldPerDay14d:F2})");
-        continue;
-    }
-    if (v.ProfitPercent < MIN_PROFIT_PERCENT)
-    {
-        if (DEBUG_SKIPS) Console.WriteLine($"skip {v.ItemId}: Profit {v.ProfitPercent:F1}% < {MIN_PROFIT_PERCENT}%");
-        continue;
-    }
-    profitable.Add(v);
-}
+    // ---------- Helpers ----------
 
-// Ausgabe
-Console.WriteLine($"\nGefundene profitable Varianten (≥ {MIN_PROFIT_PERCENT}% Profit, Zeitraum {DAYS} Tage):");
-if (profitable.Count == 0)
-{
-    Console.WriteLine("— keine Treffer —");
-}
-else
-{
-    foreach (var p in profitable
-        .OrderByDescending(v => v.ProfitPercent)
-        .ThenByDescending(v => v.BlackMarketAvgSoldPerDay14d))
+    private static string[] LoadItemList()
     {
-        Console.WriteLine($"{p.ItemId,-12} | Buy(Lym): {p.LymhurstSellMin,8} | BM Ø14d: {p.BlackMarketAvgPrice14d,10:F0} | Sold/Tag Ø14d: {p.BlackMarketAvgSoldPerDay14d,6:F1} | Profit: {p.ProfitPercent,6:F1}%");
+        if (!File.Exists(ITEM_LIST_PATH))
+        {
+            Console.WriteLine($"WARN: {ITEM_LIST_PATH} fehlt, benutze nur BAG als Default.");
+            return new[] { "BAG" };
+        }
+
+        try
+        {
+            var json = File.ReadAllText(ITEM_LIST_PATH);
+            var arr = JsonSerializer.Deserialize<string[]>(json);
+            return arr ?? Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fehler beim Laden von {ITEM_LIST_PATH}: {ex.Message}");
+            return Array.Empty<string>();
+        }
+    }
+
+    private static IEnumerable<Variant> GenerateAllVariants(IEnumerable<string> baseCodes)
+    {
+        foreach (var baseCode in baseCodes)
+        {
+            foreach (var tier in TIERS)
+            {
+                foreach (var enchant in ENCHANTS)
+                {
+                    var itemId = enchant == 0
+                        ? $"T{tier}_{baseCode}"
+                        : $"T{tier}_{baseCode}@{enchant}";
+                    yield return new Variant(itemId, tier, enchant, baseCode);
+                }
+            }
+        }
+    }
+
+    private static string FormatDate(DateTime? utc)
+        => utc.HasValue ? utc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "—";
+
+    private static async Task<(double avgPrice, double avgSoldPerDay, int daysUsed, int pointsUsed)>
+        GetBmAveragesAsync(AlbionApiService api, string itemId)
+    {
+        foreach (var span in BM_FALLBACK_DAYS)
+        {
+            var pts = await api.GetHistoryAsync(itemId, BM_LOCATION, span);
+            if (pts != null && pts.Count > 0)
+            {
+                var cutoff = DateTime.UtcNow.AddDays(-span);
+                var use = pts.Where(p => p.Timestamp.ToUniversalTime() >= cutoff).ToList();
+                if (use.Count >= MIN_BM_POINTS)
+                {
+                    var avgP   = use.Average(p => (double)p.AvgPrice);
+                    var avgCnt = use.Average(p => (double)p.ItemCount);
+                    if (avgP > 0 && avgCnt > 0)
+                        return (avgP, avgCnt, span, use.Count);
+                }
+            }
+            await Task.Delay(INTER_HISTORY_DELAY_MS); // throttle-freundlich zwischen Fallbacks
+        }
+        return (0, 0, 0, 0);
     }
 }
