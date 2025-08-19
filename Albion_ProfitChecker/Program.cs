@@ -13,17 +13,13 @@ internal static class Program
     private static readonly int[] TIERS = { 4, 5, 6, 7, 8 };
     private static readonly int[] ENCHANTS = { 0, 1, 2, 3 };
 
-    // BM-History: adaptiver Fallback
     private static readonly int[] BM_FALLBACK_DAYS = { 14, 30, 60 };
-    private const double MIN_PROFIT_PERCENT = 10.0;
+    private const double MIN_PROFIT_PERCENT = 20.0;
 
-    // WICHTIG: Nur noch Mindest-Anzahl an History-Punkten – hier 1 (= zeige auch Items mit sehr wenig Historie)
     private const int MIN_BM_POINTS = 1;
 
-    // kleine Pause zwischen History-Requests (Throttle freundlich)
-    private const int INTER_HISTORY_DELAY_MS = 2000;
+    private const int INTER_HISTORY_DELAY_MS = 3000;
 
-    // Pfad zur externen Itemliste
     private const string ITEM_LIST_PATH = "Data/ItemList.json";
 
     private sealed record Variant(string ItemId, int Tier, int Enchant, string BaseCode);
@@ -174,20 +170,32 @@ internal static class Program
     {
         foreach (var span in BM_FALLBACK_DAYS)
         {
-            var pts = await api.GetHistoryAsync(itemId, BM_LOCATION, span);
-            if (pts != null && pts.Count > 0)
+            for (int attempt = 1; attempt <= 3; attempt++) // bis zu 3 Versuche
             {
-                var cutoff = DateTime.UtcNow.AddDays(-span);
-                var use = pts.Where(p => p.Timestamp.ToUniversalTime() >= cutoff).ToList();
-                if (use.Count >= MIN_BM_POINTS)
+                var pts = await api.GetHistoryAsync(itemId, BM_LOCATION, span);
+                if (pts != null && pts.Count > 0)
                 {
-                    var avgP   = use.Average(p => (double)p.AvgPrice);
-                    var avgCnt = use.Average(p => (double)p.ItemCount);
-                    if (avgP > 0 && avgCnt > 0)
-                        return (avgP, avgCnt, span, use.Count);
+                    var cutoff = DateTime.UtcNow.AddDays(-span);
+                    var use = pts.Where(p => p.Timestamp.ToUniversalTime() >= cutoff).ToList();
+                    if (use.Count >= MIN_BM_POINTS)
+                    {
+                        var avgP = use.Average(p => (double)p.AvgPrice);
+                        var avgCnt = use.Average(p => (double)p.ItemCount);
+                        if (avgP > 0 && avgCnt > 0)
+                            return (avgP, avgCnt, span, use.Count);
+                    }
+                }
+
+                // Falls leer -> Retry mit Delay
+                if (attempt < 3)
+                {
+                    Console.WriteLine($"WARN: {itemId} ({span}d) Versuch {attempt} fehlgeschlagen, retry...");
+                    await Task.Delay(2000);
                 }
             }
-            await Task.Delay(INTER_HISTORY_DELAY_MS); // throttle-freundlich zwischen Fallbacks
+
+            // extra Pause zwischen Spans
+            await Task.Delay(INTER_HISTORY_DELAY_MS);
         }
         return (0, 0, 0, 0);
     }
