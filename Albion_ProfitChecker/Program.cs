@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using AlbionProfitChecker.Services;
 
@@ -9,17 +11,23 @@ internal static class Program
     private const string CITY_BUY = "Lymhurst";
     private const string BM_LOCATION = "Black Market";
 
-    private static readonly int[] TIERS = { 4, 5, 6, 7, 8 };
-    private static readonly int[] ENCHANTS = { 0, 1, 2, 3 };
+    private static readonly int[] DEFAULT_TIERS = { 4, 5, 6, 7, 8 };
+    private static readonly int[] DEFAULT_ENCHANTS = { 0, 1, 2, 3 };
 
-    private static readonly int[] BM_FALLBACK_DAYS = { 14, 30, 60 };
-    private const double MIN_PROFIT_PERCENT = 40.0;
+    private static readonly int[] DEFAULT_BM_DAYS = { 14, 30, 60 };
+    private const double DEFAULT_MIN_PROFIT_PERCENT = 30.0;
+    private const double DEFAULT_MIN_SOLD_PER_DAY = 0.0;
 
-    private const int MIN_BM_POINTS = 1;
+    private const int DEFAULT_MIN_BM_POINTS = 1;
+    private const int DEFAULT_MAX_PRICE_AGE_DAYS = 30;
+    private const int DEFAULT_BULK_BATCH_SIZE = 100;
+    private const int DEFAULT_BULK_DELAY_MS = 500;
+    private const int DEFAULT_HISTORY_RETRIES = 1;
+    private const int DEFAULT_HISTORY_RETRY_DELAY_MS = 1200;
+    private const int DEFAULT_HISTORY_SPAN_DELAY_MS = 1000;
+    private const int DEFAULT_MAX_HISTORY_CONCURRENCY = 3;
 
-    private const int INTER_HISTORY_DELAY_MS = 5000;
-
-    private const string ITEM_LIST_PATH = "Data/ItemList.json";
+    private const string DEFAULT_ITEM_LIST_PATH = "Data/ItemList.json";
 
     private sealed record Variant(string ItemId, int Tier, int Enchant, string BaseCode);
 
@@ -31,68 +39,103 @@ internal static class Program
         DateTime? LymhurstDateUtc,
         double BmAvgPrice,
         double BmSoldPerDay,
-        double ProfitPercent
+        double ProfitPercent,
+        int DaysUsed
     );
 
-    public static async Task Main()
+    private sealed record Options(
+        string ItemListPath,
+        double MinProfitPercent,
+        double MinSoldPerDay,
+        int[] BmFallbackDays,
+        int[] Tiers,
+        int[] Enchants,
+        int MinBmPoints,
+        int MaxPriceAgeDays,
+        int BulkBatchSize,
+        int BulkDelayMs,
+        int HistoryRetries,
+        int HistoryRetryDelayMs,
+        int HistorySpanDelayMs,
+        int MaxHistoryConcurrency
+    );
+
+    public static async Task Main(string[] args)
     {
+        Console.OutputEncoding = Encoding.UTF8;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
+        var options = ParseOptions(args);
 
         var api = new AlbionApiService();
 
         // 0) ItemList laden
-        var baseCodes = LoadItemList();
+        var baseCodes = LoadItemList(options.ItemListPath);
         if (baseCodes.Length == 0)
         {
-            Console.WriteLine("Keine Items in Data/ItemList.json gefunden!");
+            Console.WriteLine($"Keine Items in {options.ItemListPath} gefunden!");
             return;
         }
 
         // 1) Varianten bauen
-        var variants = GenerateAllVariants(baseCodes).ToList();
+        var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
 
         // 2) Bulk City-Preise holen
         var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var cityPrices = await api.GetSellPriceMinBulkAsync(allIds, CITY_BUY);
+        var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, CITY_BUY, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
 
-        var results = new List<ResultRow>(variants.Count);
+        var results = new ConcurrentBag<ResultRow>();
 
-        // 3) BM-History ziehen & Profit berechnen
-        foreach (var v in variants)
+        // 3) BM-History ziehen & Profit berechnen (parallel begrenzt)
+        using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
+        var tasks = variants.Select(async v =>
         {
-            (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
-            if (buyPrice <= 0)
+            await semaphore.WaitAsync();
+            try
             {
-                Console.WriteLine($"skip {v.ItemId}: kein {CITY_BUY}-Preis (0 oder kein Datensatz)");
-                continue;
-            }
+                (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
+                if (buyPrice <= 0)
+                {
+                    Console.WriteLine($"{v.ItemId} (keine preise)");
+                    return;
+                }
 
-            var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(api, v.ItemId);
-            if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < MIN_BM_POINTS)
+                var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(
+                    api, v.ItemId, options.BmFallbackDays, options.MinBmPoints,
+                    options.HistoryRetries, options.HistoryRetryDelayMs, options.HistorySpanDelayMs);
+
+                if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
+                {
+                    Console.WriteLine($"{v.ItemId} (keine preise)");
+                    return;
+                }
+
+                double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
+
+                Console.WriteLine(
+                    $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
+                    $"BM ~={Math.Round(avgPrice)} | Profit={profitPercent:+0.0;-0.0}% | Span={daysUsed}d/{pointsUsed}p");
+
+                if (profitPercent < options.MinProfitPercent || avgSoldPerDay < options.MinSoldPerDay)
+                {
+                    Console.WriteLine($"{v.ItemId}: Lym={buyPrice}, BM={Math.Round(avgPrice)}, Profit={profitPercent:+0.0;-0.0}%");
+                }
+                else
+                {
+                    results.Add(new ResultRow(
+                        v.ItemId, v.Tier, v.Enchant,
+                        buyPrice, buyDateUtc,
+                        avgPrice, avgSoldPerDay, profitPercent, daysUsed
+                    ));
+                }
+            }
+            finally
             {
-                Console.WriteLine($"skip {v.ItemId}: keine BM-History/Ø-Preis (Punkte={pointsUsed})");
-                continue;
+                semaphore.Release();
             }
+        }).ToList();
 
-            double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
-
-            Console.WriteLine(
-                $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
-                $"BM Ø={Math.Round(avgPrice)} | Sold/Tag={Math.Round(avgSoldPerDay, 1)} | Span={daysUsed}d/{pointsUsed}p");
-
-            if (profitPercent < MIN_PROFIT_PERCENT)
-            {
-                Console.WriteLine($"skip {v.ItemId}: Profit {profitPercent:+0.0;-0.0}% < {MIN_PROFIT_PERCENT:0}%");
-            }
-            else
-            {
-                results.Add(new ResultRow(
-                    v.ItemId, v.Tier, v.Enchant,
-                    buyPrice, buyDateUtc,
-                    avgPrice, avgSoldPerDay, profitPercent
-                ));
-            }
-        }
+        await Task.WhenAll(tasks);
 
         // 4) Ausgabe
         var winners = results
@@ -101,7 +144,7 @@ internal static class Program
             .ToList();
 
         Console.WriteLine();
-        Console.WriteLine($"Gefundene profitable Varianten (≥ {MIN_PROFIT_PERCENT:0}% Profit, Zeitraum {string.Join("/", BM_FALLBACK_DAYS)} Tage):");
+        Console.WriteLine($"Gefundene profitable Varianten (>= {options.MinProfitPercent:0}% Profit, Zeitraum {string.Join("/", options.BmFallbackDays)} Tage):");
 
         if (winners.Count == 0)
         {
@@ -113,44 +156,154 @@ internal static class Program
         {
             Console.WriteLine(
                 $"{r.ItemId.PadRight(14)} | " +
-                $"Buy(Lym): {r.LymhurstBuyPrice,9} | " +
-                $"BM Ø: {Math.Round(r.BmAvgPrice),10} | " +
-                $"Sold/Tag Ø: {Math.Round(r.BmSoldPerDay, 1),6} | " +
-                $"Profit: {r.ProfitPercent,7:0.0}%"
+                $"Lym: {r.LymhurstBuyPrice,9} | " +
+                $"BM: {Math.Round(r.BmAvgPrice),10} | " +
+                $"Profit: {r.ProfitPercent,7:0.0}% | " +
+                $"Span: {r.DaysUsed,2}d"
             );
         }
     }
 
     // ---------- Helpers ----------
 
-    private static string[] LoadItemList()
+    private static Options ParseOptions(string[] args)
     {
-        if (!File.Exists(ITEM_LIST_PATH))
+        // simple flag parser: --profit-min 30 --sold-min 0.5 --bm-days 14,30 --item-list path
+        var opt = new Options(
+            ItemListPath: DEFAULT_ITEM_LIST_PATH,
+            MinProfitPercent: DEFAULT_MIN_PROFIT_PERCENT,
+            MinSoldPerDay: DEFAULT_MIN_SOLD_PER_DAY,
+            BmFallbackDays: DEFAULT_BM_DAYS,
+            Tiers: DEFAULT_TIERS,
+            Enchants: DEFAULT_ENCHANTS,
+            MinBmPoints: DEFAULT_MIN_BM_POINTS,
+            MaxPriceAgeDays: DEFAULT_MAX_PRICE_AGE_DAYS,
+            BulkBatchSize: DEFAULT_BULK_BATCH_SIZE,
+            BulkDelayMs: DEFAULT_BULK_DELAY_MS,
+            HistoryRetries: DEFAULT_HISTORY_RETRIES,
+            HistoryRetryDelayMs: DEFAULT_HISTORY_RETRY_DELAY_MS,
+            HistorySpanDelayMs: DEFAULT_HISTORY_SPAN_DELAY_MS,
+            MaxHistoryConcurrency: DEFAULT_MAX_HISTORY_CONCURRENCY
+        );
+
+        for (int i = 0; i < args.Length; i++)
         {
-            Console.WriteLine($"WARN: {ITEM_LIST_PATH} fehlt, benutze nur BAG als Default.");
+            var arg = args[i];
+            if (string.Equals(arg, "--profit-min", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && double.TryParse(args[i + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out var p))
+            {
+                opt = opt with { MinProfitPercent = p };
+                i++;
+            }
+            else if (string.Equals(arg, "--sold-min", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && double.TryParse(args[i + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out var s))
+            {
+                opt = opt with { MinSoldPerDay = s };
+                i++;
+            }
+            else if (string.Equals(arg, "--bm-days", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                opt = opt with { BmFallbackDays = ParseIntList(args[i + 1], DEFAULT_BM_DAYS) };
+                i++;
+            }
+            else if (string.Equals(arg, "--item-list", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                opt = opt with { ItemListPath = args[i + 1] };
+                i++;
+            }
+            else if (string.Equals(arg, "--tiers", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                opt = opt with { Tiers = ParseIntList(args[i + 1], DEFAULT_TIERS) };
+                i++;
+            }
+            else if (string.Equals(arg, "--enchants", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                opt = opt with { Enchants = ParseIntList(args[i + 1], DEFAULT_ENCHANTS) };
+                i++;
+            }
+            else if (string.Equals(arg, "--bm-min-points", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var mp))
+            {
+                opt = opt with { MinBmPoints = Math.Max(1, mp) };
+                i++;
+            }
+            else if (string.Equals(arg, "--max-price-age-days", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var age))
+            {
+                opt = opt with { MaxPriceAgeDays = Math.Max(1, age) };
+                i++;
+            }
+            else if (string.Equals(arg, "--bulk-batch-size", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var bs))
+            {
+                opt = opt with { BulkBatchSize = Math.Max(1, bs) };
+                i++;
+            }
+            else if (string.Equals(arg, "--bulk-delay-ms", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var bd))
+            {
+                opt = opt with { BulkDelayMs = Math.Max(0, bd) };
+                i++;
+            }
+            else if (string.Equals(arg, "--history-retries", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var hr))
+            {
+                opt = opt with { HistoryRetries = Math.Max(0, hr) };
+                i++;
+            }
+            else if (string.Equals(arg, "--history-retry-delay-ms", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var hrd))
+            {
+                opt = opt with { HistoryRetryDelayMs = Math.Max(0, hrd) };
+                i++;
+            }
+            else if (string.Equals(arg, "--history-span-delay-ms", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var hsd))
+            {
+                opt = opt with { HistorySpanDelayMs = Math.Max(0, hsd) };
+                i++;
+            }
+            else if (string.Equals(arg, "--history-parallel", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var hp))
+            {
+                opt = opt with { MaxHistoryConcurrency = Math.Max(1, hp) };
+                i++;
+            }
+        }
+
+        return opt;
+    }
+
+    private static int[] ParseIntList(string csv, int[] fallback)
+    {
+        var parts = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var list = new List<int>();
+        foreach (var p in parts)
+        {
+            if (int.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n))
+                list.Add(n);
+        }
+        return list.Count > 0 ? list.ToArray() : fallback;
+    }
+
+    private static string[] LoadItemList(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"WARN: {path} fehlt, benutze nur BAG als Default.");
             return new[] { "BAG" };
         }
 
         try
         {
-            var json = File.ReadAllText(ITEM_LIST_PATH);
+            var json = File.ReadAllText(path);
             var arr = JsonSerializer.Deserialize<string[]>(json);
             return arr ?? Array.Empty<string>();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Fehler beim Laden von {ITEM_LIST_PATH}: {ex.Message}");
+            Console.WriteLine($"Fehler beim Laden von {path}: {ex.Message}");
             return Array.Empty<string>();
         }
     }
 
-    private static IEnumerable<Variant> GenerateAllVariants(IEnumerable<string> baseCodes)
+    private static IEnumerable<Variant> GenerateAllVariants(IEnumerable<string> baseCodes, IEnumerable<int> tiers, IEnumerable<int> enchants)
     {
         foreach (var baseCode in baseCodes)
         {
-            foreach (var tier in TIERS)
+            foreach (var tier in tiers)
             {
-                foreach (var enchant in ENCHANTS)
+                foreach (var enchant in enchants)
                 {
                     var itemId = enchant == 0
                         ? $"T{tier}_{baseCode}"
@@ -162,21 +315,28 @@ internal static class Program
     }
 
     private static string FormatDate(DateTime? utc)
-        => utc.HasValue ? utc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "—";
+        => utc.HasValue ? utc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "n/a";
 
     private static async Task<(double avgPrice, double avgSoldPerDay, int daysUsed, int pointsUsed)>
-        GetBmAveragesAsync(AlbionApiService api, string itemId)
+        GetBmAveragesAsync(
+            AlbionApiService api,
+            string itemId,
+            int[] spans,
+            int minBmPoints,
+            int historyRetries,
+            int historyRetryDelayMs,
+            int historySpanDelayMs)
     {
-        foreach (var span in BM_FALLBACK_DAYS)
+        foreach (var span in spans)
         {
-            for (int attempt = 1; attempt <= 3; attempt++) // bis zu 3 Versuche
+            for (int attempt = 1; attempt <= 1 + historyRetries; attempt++)
             {
                 var pts = await api.GetHistoryAsync(itemId, BM_LOCATION, span);
                 if (pts != null && pts.Count > 0)
                 {
                     var cutoff = DateTime.UtcNow.AddDays(-span);
                     var use = pts.Where(p => p.Timestamp.ToUniversalTime() >= cutoff).ToList();
-                    if (use.Count >= MIN_BM_POINTS)
+                    if (use.Count >= minBmPoints)
                     {
                         var avgP = use.Average(p => (double)p.AvgPrice);
                         var avgCnt = use.Average(p => (double)p.ItemCount);
@@ -186,16 +346,41 @@ internal static class Program
                 }
 
                 // Falls leer -> Retry mit Delay
-                if (attempt < 3)
+                if (attempt <= historyRetries)
                 {
-                    Console.WriteLine($"WARN: {itemId} ({span}d) Versuch {attempt} fehlgeschlagen, retry...");
-                    await Task.Delay(2000);
+                    Console.WriteLine("...");
+                    if (historyRetryDelayMs > 0)
+                        await Task.Delay(historyRetryDelayMs);
                 }
             }
 
             // extra Pause zwischen Spans
-            await Task.Delay(INTER_HISTORY_DELAY_MS);
+            if (historySpanDelayMs > 0)
+                await Task.Delay(historySpanDelayMs);
         }
         return (0, 0, 0, 0);
+    }
+
+    private static async Task<Dictionary<string, (int Price, DateTime? DateUtc)>> FetchCityPricesBatchedAsync(
+        AlbionApiService api,
+        List<string> allIds,
+        string location,
+        int maxPriceAgeDays,
+        int batchSize,
+        int batchDelayMs)
+    {
+        var result = new Dictionary<string, (int, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < allIds.Count; i += batchSize)
+        {
+            var slice = allIds.Skip(i).Take(batchSize).ToList();
+            var part = await api.GetSellPriceMinBulkAsync(slice, location, maxPriceAgeDays);
+            foreach (var kv in part)
+                result[kv.Key] = kv.Value;
+
+            var more = i + batchSize < allIds.Count;
+            if (more && batchDelayMs > 0)
+                await Task.Delay(batchDelayMs);
+        }
+        return result;
     }
 }

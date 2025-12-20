@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -22,7 +23,18 @@ namespace AlbionProfitChecker.Services
 
         public AlbionApiService(HttpClient? http = null)
         {
-            _http = http ?? new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            if (http != null)
+            {
+                _http = http;
+            }
+            else
+            {
+                var handler = new HttpClientHandler
+                {
+                    AutomaticDecompression = DecompressionMethods.All
+                };
+                _http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+            }
         }
 
         /// <summary>
@@ -33,7 +45,11 @@ namespace AlbionProfitChecker.Services
         {
             var url = $"{API_BASE}/prices/{Uri.EscapeDataString(itemId)}.json?locations={Uri.EscapeDataString(location)}";
             using var resp = await _http.GetAsync(url);
-            if (!resp.IsSuccessStatusCode) return (0, null);
+            if (!resp.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"WARN: Price {url} -> {(int)resp.StatusCode}");
+                return (0, null);
+            }
 
             var json = await resp.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
@@ -84,40 +100,58 @@ namespace AlbionProfitChecker.Services
         public async Task<List<HistoryPoint>> GetHistoryAsync(string itemId, string location, int days = 14)
         {
             var url = $"{API_BASE}/history/{Uri.EscapeDataString(itemId)}.json?locations={Uri.EscapeDataString(location)}&time-scale=24";
-            using var resp = await _http.GetAsync(url);
-            if (!resp.IsSuccessStatusCode) return new();
-
-            var json = await resp.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-
-            var points = new List<HistoryPoint>();
-
-            foreach (var series in doc.RootElement.EnumerateArray())
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
-                if (!series.TryGetProperty("location", out var locEl)) continue;
-                if (!string.Equals(locEl.GetString(), location, StringComparison.OrdinalIgnoreCase)) continue;
-                if (!series.TryGetProperty("data", out var dataEl) || dataEl.ValueKind != JsonValueKind.Array) continue;
-
-                // quality beachten -> wir nehmen ALLE zusammen
-                foreach (var row in dataEl.EnumerateArray())
+                using var resp = await _http.GetAsync(url);
+                if (resp.IsSuccessStatusCode)
                 {
-                    var tsStr = row.TryGetProperty("timestamp", out var tsEl) ? tsEl.GetString() : null;
-                    var count = row.TryGetProperty("item_count", out var cEl) && cEl.TryGetInt32(out var cVal) ? cVal : 0;
-                    var avgP = row.TryGetProperty("avg_price", out var apEl) && apEl.TryGetInt32(out var apVal) ? apVal : 0;
+                    var json = await resp.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
 
-                    if (!DateTime.TryParse(tsStr, out var ts)) continue;
-                    if (ts.ToUniversalTime() < DateTime.UtcNow.AddDays(-days)) continue;
+                    var points = new List<HistoryPoint>();
 
-                    points.Add(new HistoryPoint
+                    foreach (var series in doc.RootElement.EnumerateArray())
                     {
-                        Timestamp = ts,
-                        ItemCount = count,
-                        AvgPrice = avgP
-                    });
+                        if (!series.TryGetProperty("location", out var locEl)) continue;
+                        if (!string.Equals(locEl.GetString(), location, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!series.TryGetProperty("data", out var dataEl) || dataEl.ValueKind != JsonValueKind.Array) continue;
+
+                        // quality beachten -> wir nehmen ALLE zusammen
+                        foreach (var row in dataEl.EnumerateArray())
+                        {
+                            var tsStr = row.TryGetProperty("timestamp", out var tsEl) ? tsEl.GetString() : null;
+                            var count = row.TryGetProperty("item_count", out var cEl) && cEl.TryGetInt32(out var cVal) ? cVal : 0;
+                            var avgP = row.TryGetProperty("avg_price", out var apEl) && apEl.TryGetInt32(out var apVal) ? apVal : 0;
+
+                            if (!DateTime.TryParse(tsStr, out var ts)) continue;
+                            if (ts.ToUniversalTime() < DateTime.UtcNow.AddDays(-days)) continue;
+
+                            points.Add(new HistoryPoint
+                            {
+                                Timestamp = ts,
+                                ItemCount = count,
+                                AvgPrice = avgP
+                            });
+                        }
+                    }
+
+                    return points;
+                }
+
+                if ((int)resp.StatusCode == 429)
+                {
+                    if (attempt < 3)
+                        await Task.Delay(800);
+                    continue; // leise weiterprobieren
+                }
+                else
+                {
+                    Console.WriteLine($"WARN: History {url} -> {(int)resp.StatusCode}");
+                    return new();
                 }
             }
 
-            return points;
+            return new();
         }
 
         /// <summary>
@@ -137,22 +171,29 @@ namespace AlbionProfitChecker.Services
         
         /// <summary>
         /// Holt Min-Sell-Preise für viele Items auf einmal.
-        /// Nutzt v2/prices und berücksichtigt Datum.
+        /// Nutzt v2/prices und berücksichtigt Datum (frische Preise zuerst).
         /// </summary>
         public async Task<Dictionary<string, (int Price, DateTime? DateUtc)>> GetSellPriceMinBulkAsync(
-            IEnumerable<string> itemIds, string location)
+            IEnumerable<string> itemIds, string location, int? maxPriceAgeDays = null)
         {
             var result = new Dictionary<string, (int, DateTime?)>(StringComparer.OrdinalIgnoreCase);
+            var fresh = new Dictionary<string, (int Price, DateTime DateUtc)>(StringComparer.OrdinalIgnoreCase);
+            var fallback = new Dictionary<string, (int Price, DateTime? DateUtc)>(StringComparer.OrdinalIgnoreCase);
 
             var ids = itemIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             if (ids.Count == 0) return result;
 
             var url = $"{API_BASE}/prices/{string.Join(",", ids)}.json?locations={Uri.EscapeDataString(location)}";
             using var resp = await _http.GetAsync(url);
-            if (!resp.IsSuccessStatusCode) return result;
+            if (!resp.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"WARN: Prices {url} -> {(int)resp.StatusCode}");
+                return result;
+            }
 
             var json = await resp.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
+            DateTime? ageLimit = maxPriceAgeDays.HasValue ? DateTime.UtcNow.AddDays(-maxPriceAgeDays.Value) : null;
 
             foreach (var el in doc.RootElement.EnumerateArray())
             {
@@ -176,10 +217,28 @@ namespace AlbionProfitChecker.Services
                     if (DateTime.TryParse(ds, out var dt)) priceDate = dt.ToUniversalTime();
                 }
 
-                // Wenn gültig, speichern
-                if (price > 0)
-                    result[id] = (price, priceDate);
+                if (price <= 0) continue;
+
+                bool isFresh = priceDate.HasValue && ageLimit.HasValue && priceDate.Value >= ageLimit.Value;
+
+                if (isFresh)
+                {
+                    if (!fresh.TryGetValue(id, out var existing) || priceDate.Value > existing.DateUtc)
+                        fresh[id] = (price, priceDate.Value);
+                }
+                else
+                {
+                    if (!fallback.TryGetValue(id, out var existing) || (priceDate ?? DateTime.MinValue) > existing.DateUtc.GetValueOrDefault(DateTime.MinValue))
+                        fallback[id] = (price, priceDate);
+                }
             }
+
+            foreach (var kvp in fresh)
+                result[kvp.Key] = (kvp.Value.Price, kvp.Value.DateUtc);
+
+            foreach (var kvp in fallback)
+                if (!result.ContainsKey(kvp.Key))
+                    result[kvp.Key] = (kvp.Value.Price, kvp.Value.DateUtc);
 
             return result;
         }
