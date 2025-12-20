@@ -26,6 +26,7 @@ internal static class Program
     private const int DEFAULT_HISTORY_RETRY_DELAY_MS = 1200;
     private const int DEFAULT_HISTORY_SPAN_DELAY_MS = 1000;
     private const int DEFAULT_MAX_HISTORY_CONCURRENCY = 3;
+    private const string PROGRESS_PATH = "ui/progress.json";
 
     private const string DEFAULT_ITEM_LIST_PATH = "Data/ItemList.json";
 
@@ -79,14 +80,18 @@ internal static class Program
 
         // 1) Varianten bauen
         var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
+        int totalVariants = variants.Count;
+        UpdateProgress(totalVariants, 0);
 
         // 2) Bulk City-Preise holen
         var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, CITY_BUY, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
 
         var results = new ConcurrentBag<ResultRow>();
+        int processed = 0;
 
         // 3) BM-History ziehen & Profit berechnen (parallel begrenzt)
+        var noPriceLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
         var tasks = variants.Select(async v =>
         {
@@ -96,7 +101,9 @@ internal static class Program
                 (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
                 if (buyPrice <= 0)
                 {
-                    Console.WriteLine($"{v.ItemId} (keine preise)");
+                    var key = v.BaseCode;
+                    if (noPriceLogged.Add(key))
+                        Console.WriteLine($"{v.ItemId} (keine preise)");
                     return;
                 }
 
@@ -106,7 +113,9 @@ internal static class Program
 
                 if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
                 {
-                    Console.WriteLine($"{v.ItemId} (keine preise)");
+                    var key = v.BaseCode;
+                    if (noPriceLogged.Add(key))
+                        Console.WriteLine($"{v.ItemId} (keine preise)");
                     return;
                 }
 
@@ -131,17 +140,23 @@ internal static class Program
             }
             finally
             {
+                var done = Interlocked.Increment(ref processed);
+                if (done == totalVariants || done % 5 == 0)
+                    UpdateProgress(totalVariants, done);
                 semaphore.Release();
             }
         }).ToList();
 
         await Task.WhenAll(tasks);
+        UpdateProgress(totalVariants, totalVariants);
 
         // 4) Ausgabe
         var winners = results
             .OrderByDescending(r => r.ProfitPercent)
             .ThenByDescending(r => r.BmSoldPerDay)
             .ToList();
+
+        ExportResultsToJs(winners, "ui/results.js");
 
         Console.WriteLine();
         Console.WriteLine($"Gefundene profitable Varianten (>= {options.MinProfitPercent:0}% Profit, Zeitraum {string.Join("/", options.BmFallbackDays)} Tage):");
@@ -382,5 +397,53 @@ internal static class Program
                 await Task.Delay(batchDelayMs);
         }
         return result;
+    }
+
+    private static void ExportResultsToJs(IEnumerable<ResultRow> winners, string path)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var payload = winners.Select(w => new
+            {
+                id = w.ItemId,
+                lym = w.LymhurstBuyPrice,
+                bm = Math.Round(w.BmAvgPrice),
+                sold = Math.Round(w.BmSoldPerDay, 1),
+                profit = Math.Round(w.ProfitPercent, 1),
+                span = $"{w.DaysUsed}d"
+            }).ToList();
+
+            var json = JsonSerializer.Serialize(payload);
+            File.WriteAllText(path, $"window.results = {json};");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"WARN: results.js konnte nicht geschrieben werden: {ex.Message}");
+        }
+    }
+
+    private static readonly object _progressLock = new();
+    private static void UpdateProgress(int total, int done)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(PROGRESS_PATH);
+            if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var payload = JsonSerializer.Serialize(new { total, done, ts = DateTime.UtcNow });
+            lock (_progressLock)
+            {
+                File.WriteAllText(PROGRESS_PATH, payload);
+            }
+        }
+        catch
+        {
+            // leise ignorieren
+        }
     }
 }
