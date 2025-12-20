@@ -412,7 +412,6 @@ internal static class Program
                 id = w.ItemId,
                 lym = w.LymhurstBuyPrice,
                 bm = Math.Round(w.BmAvgPrice),
-                sold = Math.Round(w.BmSoldPerDay, 1),
                 profit = Math.Round(w.ProfitPercent, 1),
                 span = $"{w.DaysUsed}d"
             }).ToList();

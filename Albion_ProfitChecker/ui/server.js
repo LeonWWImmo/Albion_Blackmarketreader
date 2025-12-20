@@ -20,6 +20,8 @@ function sendFile(res, filePath, contentType = 'text/html') {
 }
 
 const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
   if (req.method === 'POST' && req.url === '/refresh') {
     const cmd = 'dotnet run -- --profit-min 0 --sold-min 0 --bm-days 14';
     const start = Date.now();
@@ -49,17 +51,32 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // static files
-  let file = 'index.html';
+  // static files / routing
+  let filePath = path.join(uiDir, 'index.html');
   let contentType = 'text/html';
-  if (req.url.startsWith('/results.js')) {
-    file = 'results.js';
+
+  if (url.pathname === '/dashboard' || url.pathname === '/dashboard.html') {
+    filePath = path.join(uiDir, 'dashboard.html');
+  } else if (url.pathname === '/index.html' || url.pathname === '/') {
+    filePath = path.join(uiDir, 'index.html');
+  } else if (url.pathname === '/styles.css') {
+    filePath = path.join(uiDir, 'styles.css');
+    contentType = 'text/css';
+  } else if (url.pathname.startsWith('/results.js')) {
+    filePath = path.join(uiDir, 'results.js');
     contentType = 'application/javascript';
-  } else if (req.url.startsWith('/index.html')) {
-    file = 'index.html';
+  } else if (url.pathname === '/progress.json') {
+    filePath = path.join(uiDir, 'progress.json');
+    contentType = 'application/json';
+  } else if (url.pathname.startsWith('/picture/')) {
+    const imgPath = path.join(projectDir, url.pathname);
+    filePath = imgPath;
+    const ext = path.extname(imgPath).toLowerCase();
+    const map = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml' };
+    contentType = map[ext] || 'application/octet-stream';
   }
 
-  sendFile(res, path.join(uiDir, file), contentType);
+  sendFile(res, filePath, contentType);
 });
 
 server.listen(port, () => {
