@@ -5,7 +5,7 @@ Demo - weitere Updates werden kommen!
 Lokales Tool, das profitable Items zwischen Lymhurst (City Buy) und dem Black Market identifiziert. Läuft als self‑contained .NET 8 App, liefert das Web-UI selbst aus und öffnet den Browser automatisch.
 
 ## Download/Entpacken
-- Entweder das Repository/ZIP von deinem bereitgestellten [Link herunterladen](Albion_ProfitChecker.zip) und entpacken 
+- Entweder das Repository/ZIP von deinem bereitgestellten [Link herunterladen](./Albion_ProfitChecker.zip) und entpacken 
 - Oder per Git holen:
   ```powershell
   git clone https://github.com/LeonWWImmo/Albion_Blackmarketreader
