@@ -121,10 +121,12 @@
         const card = document.createElement('div');
         card.className = 'card card-box';
         const profitClass = r.profit < 0 ? 'profit negative' : 'profit';
-        const baseId = r.id.split('@')[0];
-        const displayName = nameMap[baseId] || baseId;
-        const enchantMatch = r.id.split('@')[1];
-        const enchant = enchantMatch ? parseInt(enchantMatch, 10) : 0;
+        const match = /^T?(\d+)?_(.+?)(?:@(\d+))?$/i.exec(r.id) || [];
+        const tier = match[1];
+        const baseCode = (match[2] || r.id).trim().toUpperCase();
+        const enchant = match[3] ? parseInt(match[3], 10) : 0;
+        const baseLabel = nameMap[baseCode] || baseCode;
+        const displayName = tier ? `T${tier} ${baseLabel}` : baseLabel;
         const tagClass = enchant ? `tag enchant-${enchant}` : '';
         const tagHtml = tagClass ? `<span class="${tagClass}"></span>` : '';
         card.innerHTML = `

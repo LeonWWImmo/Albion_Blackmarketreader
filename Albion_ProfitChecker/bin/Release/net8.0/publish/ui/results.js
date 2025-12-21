@@ -1,0 +1,1 @@
+window.results = [{"id":"T5_MAIN_SWORD","lym":11733,"bm":23838,"sold":277.7,"profit":103.2,"span":"14d"},{"id":"T4_MAIN_SWORD","lym":6308,"bm":11559,"sold":126.9,"profit":83.2,"span":"14d"},{"id":"T5_MAIN_SWORD@2","lym":83188,"bm":151772,"sold":6.9,"profit":82.4,"span":"14d"}];
