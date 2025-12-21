@@ -27,7 +27,7 @@ Lokales Tool, das profitable Items zwischen Lymhurst (City Buy) und dem Black Ma
 
 - Das Sync kann bis zu **15min dauern**, da wir von über 6000 Items reden und die Api von Albion Online Api sonst überlastet währe.
 
-![Dashboard](Albion_ProfitChecker\picture\Dashboard.png)
+![Dashboard](Albion_ProfitChecker/picture/Dashboard.png)
 
 
 
