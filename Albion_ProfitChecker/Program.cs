@@ -2,6 +2,10 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
 using AlbionProfitChecker.Services;
 
 namespace AlbionProfitChecker;
@@ -26,7 +30,10 @@ internal static class Program
     private const int DEFAULT_HISTORY_RETRY_DELAY_MS = 1200;
     private const int DEFAULT_HISTORY_SPAN_DELAY_MS = 1000;
     private const int DEFAULT_MAX_HISTORY_CONCURRENCY = 3;
-    private const string PROGRESS_PATH = "ui/progress.json";
+    private static readonly string BaseDir = AppContext.BaseDirectory;
+    private static readonly string UiDir = Path.Combine(BaseDir, "ui");
+    private static readonly string PictureDir = Path.Combine(BaseDir, "picture");
+    private static readonly string ProgressPath = Path.Combine(UiDir, "progress.json");
 
     private const string DEFAULT_ITEM_LIST_PATH = "Data/ItemList.json";
 
@@ -66,120 +73,64 @@ internal static class Program
         Console.OutputEncoding = Encoding.UTF8;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
+        bool runOnce = args.Any(a => string.Equals(a, "--run-once", StringComparison.OrdinalIgnoreCase));
+        bool serve = !runOnce;
+
         var options = ParseOptions(args);
 
-        var api = new AlbionApiService();
-
-        // 0) ItemList laden
-        var baseCodes = LoadItemList(options.ItemListPath);
-        if (baseCodes.Length == 0)
+        if (serve)
         {
-            Console.WriteLine($"Keine Items in {options.ItemListPath} gefunden!");
+            await RunServerAsync(options);
             return;
         }
 
-        // 1) Varianten bauen
-        var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
-        int totalVariants = variants.Count;
-        UpdateProgress(totalVariants, 0);
-
-        // 2) Bulk City-Preise holen
-        var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, CITY_BUY, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
-
-        var results = new ConcurrentBag<ResultRow>();
-        int processed = 0;
-
-        // 3) BM-History ziehen & Profit berechnen (parallel begrenzt)
-        var noPriceLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
-        var tasks = variants.Select(async v =>
-        {
-            await semaphore.WaitAsync();
-            try
-            {
-                (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
-                if (buyPrice <= 0)
-                {
-                    var key = v.BaseCode;
-                    if (noPriceLogged.Add(key))
-                        Console.WriteLine($"{v.ItemId} (keine preise)");
-                    return;
-                }
-
-                var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(
-                    api, v.ItemId, options.BmFallbackDays, options.MinBmPoints,
-                    options.HistoryRetries, options.HistoryRetryDelayMs, options.HistorySpanDelayMs);
-
-                if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
-                {
-                    var key = v.BaseCode;
-                    if (noPriceLogged.Add(key))
-                        Console.WriteLine($"{v.ItemId} (keine preise)");
-                    return;
-                }
-
-                double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
-
-                Console.WriteLine(
-                    $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
-                    $"BM ~={Math.Round(avgPrice)} | Profit={profitPercent:+0.0;-0.0}% | Span={daysUsed}d/{pointsUsed}p");
-
-                if (profitPercent < options.MinProfitPercent || avgSoldPerDay < options.MinSoldPerDay)
-                {
-                    Console.WriteLine($"{v.ItemId}: Lym={buyPrice}, BM={Math.Round(avgPrice)}, Profit={profitPercent:+0.0;-0.0}%");
-                }
-                else
-                {
-                    results.Add(new ResultRow(
-                        v.ItemId, v.Tier, v.Enchant,
-                        buyPrice, buyDateUtc,
-                        avgPrice, avgSoldPerDay, profitPercent, daysUsed
-                    ));
-                }
-            }
-            finally
-            {
-                var done = Interlocked.Increment(ref processed);
-                if (done == totalVariants || done % 5 == 0)
-                    UpdateProgress(totalVariants, done);
-                semaphore.Release();
-            }
-        }).ToList();
-
-        await Task.WhenAll(tasks);
-        UpdateProgress(totalVariants, totalVariants);
-
-        // 4) Ausgabe
-        var winners = results
-            .OrderByDescending(r => r.ProfitPercent)
-            .ThenByDescending(r => r.BmSoldPerDay)
-            .ToList();
-
-        ExportResultsToJs(winners, "ui/results.js");
-
-        Console.WriteLine();
-        Console.WriteLine($"Gefundene profitable Varianten (>= {options.MinProfitPercent:0}% Profit, Zeitraum {string.Join("/", options.BmFallbackDays)} Tage):");
-
-        if (winners.Count == 0)
-        {
-            Console.WriteLine("(keine)");
-            return;
-        }
-
-        foreach (var r in winners)
-        {
-            Console.WriteLine(
-                $"{r.ItemId.PadRight(14)} | " +
-                $"Lym: {r.LymhurstBuyPrice,9} | " +
-                $"BM: {Math.Round(r.BmAvgPrice),10} | " +
-                $"Profit: {r.ProfitPercent,7:0.0}% | " +
-                $"Span: {r.DaysUsed,2}d"
-            );
-        }
+        await RunPipelineAsync(options);
     }
 
-    // ---------- Helpers ----------
+    private static async Task RunServerAsync(Options options)
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ContentRootPath = BaseDir,
+            WebRootPath = UiDir
+        });
+
+        builder.WebHost.UseUrls("http://localhost:5173");
+
+        var app = builder.Build();
+
+        app.UseDefaultFiles();
+        app.UseStaticFiles(); // ui/*
+        if (Directory.Exists(PictureDir))
+        {
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(PictureDir),
+                RequestPath = "/picture"
+            });
+        }
+
+        app.MapGet("/progress", () =>
+        {
+            if (!File.Exists(ProgressPath))
+                return Results.Json(new { total = 0, done = 0, ts = DateTime.UtcNow });
+            var json = File.ReadAllText(ProgressPath);
+            return Results.Content(json, "application/json");
+        });
+
+        app.MapPost("/refresh", async (HttpContext ctx) =>
+        {
+            await RunPipelineAsync(options);
+            return Results.Json(new { updatedAt = DateTime.UtcNow });
+        });
+
+        Console.WriteLine("Lokaler Server gestartet: http://localhost:5173");
+        Console.WriteLine("Passwort für Dashboard: testo");
+        TryOpenBrowser("http://localhost:5173");
+        await app.RunAsync();
+    }
+
+    // ---------- Pipeline ----------
 
     private static Options ParseOptions(string[] args)
     {
@@ -279,6 +230,120 @@ internal static class Program
         return opt;
     }
 
+    private static async Task RunPipelineAsync(Options options)
+    {
+        var api = new AlbionApiService();
+
+        // 0) ItemList laden
+        var itemListPath = ToAbsolute(options.ItemListPath);
+        var baseCodes = LoadItemList(itemListPath);
+        if (baseCodes.Length == 0)
+        {
+            Console.WriteLine($"Keine Items in {itemListPath} gefunden!");
+            return;
+        }
+
+        // 1) Varianten bauen
+        var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
+        int totalVariants = variants.Count;
+        UpdateProgress(totalVariants, 0);
+
+        // 2) Bulk City-Preise holen
+        var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, CITY_BUY, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
+
+        var results = new ConcurrentBag<ResultRow>();
+        int processed = 0;
+
+        // 3) BM-History ziehen & Profit berechnen (parallel begrenzt)
+        var noPriceLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
+        var tasks = variants.Select(async v =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
+                if (buyPrice <= 0)
+                {
+                    var key = v.BaseCode;
+                    if (noPriceLogged.Add(key))
+                        Console.WriteLine($"{v.ItemId} (keine preise)");
+                    return;
+                }
+
+                var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(
+                    api, v.ItemId, options.BmFallbackDays, options.MinBmPoints,
+                    options.HistoryRetries, options.HistoryRetryDelayMs, options.HistorySpanDelayMs);
+
+                if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
+                {
+                    var key = v.BaseCode;
+                    if (noPriceLogged.Add(key))
+                        Console.WriteLine($"{v.ItemId} (keine preise)");
+                    return;
+                }
+
+                double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
+
+                Console.WriteLine(
+                    $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
+                    $"BM ~={Math.Round(avgPrice)} | Profit={profitPercent:+0.0;-0.0}% | Span={daysUsed}d/{pointsUsed}p");
+
+                if (profitPercent < options.MinProfitPercent || avgSoldPerDay < options.MinSoldPerDay)
+                {
+                    Console.WriteLine($"{v.ItemId}: Lym={buyPrice}, BM={Math.Round(avgPrice)}, Profit={profitPercent:+0.0;-0.0}%");
+                }
+                else
+                {
+                    results.Add(new ResultRow(
+                        v.ItemId, v.Tier, v.Enchant,
+                        buyPrice, buyDateUtc,
+                        avgPrice, avgSoldPerDay, profitPercent, daysUsed
+                    ));
+                }
+            }
+            finally
+            {
+                var done = Interlocked.Increment(ref processed);
+                if (done == totalVariants || done % 5 == 0)
+                    UpdateProgress(totalVariants, done);
+                semaphore.Release();
+            }
+        }).ToList();
+
+        await Task.WhenAll(tasks);
+        UpdateProgress(totalVariants, totalVariants);
+
+        // 4) Ausgabe
+        var winners = results
+            .OrderByDescending(r => r.ProfitPercent)
+            .ThenByDescending(r => r.BmSoldPerDay)
+            .ToList();
+
+        ExportResultsToJs(winners, Path.Combine(UiDir, "results.js"));
+
+        Console.WriteLine();
+        Console.WriteLine($"Gefundene profitable Varianten (>= {options.MinProfitPercent:0}% Profit, Zeitraum {string.Join("/", options.BmFallbackDays)} Tage):");
+
+        if (winners.Count == 0)
+        {
+            Console.WriteLine("(keine)");
+            return;
+        }
+
+        foreach (var r in winners)
+        {
+            Console.WriteLine(
+                $"{r.ItemId.PadRight(14)} | " +
+                $"Lym: {r.LymhurstBuyPrice,9} | " +
+                $"BM: {Math.Round(r.BmAvgPrice),10} | " +
+                $"Profit: {r.ProfitPercent,7:0.0}% | " +
+                $"Span: {r.DaysUsed,2}d"
+            );
+        }
+    }
+
     private static int[] ParseIntList(string csv, int[] fallback)
     {
         var parts = csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -329,8 +394,32 @@ internal static class Program
         }
     }
 
+    private static string ToAbsolute(string relativePath)
+    {
+        if (Path.IsPathRooted(relativePath))
+            return relativePath;
+        return Path.Combine(BaseDir, relativePath);
+    }
+
     private static string FormatDate(DateTime? utc)
         => utc.HasValue ? utc.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "n/a";
+
+    private static void TryOpenBrowser(string url)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch
+        {
+            // ignore
+        }
+    }
 
     private static async Task<(double avgPrice, double avgSoldPerDay, int daysUsed, int pointsUsed)>
         GetBmAveragesAsync(
@@ -430,14 +519,14 @@ internal static class Program
     {
         try
         {
-            var dir = Path.GetDirectoryName(PROGRESS_PATH);
+            var dir = Path.GetDirectoryName(ProgressPath);
             if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
             var payload = JsonSerializer.Serialize(new { total, done, ts = DateTime.UtcNow });
             lock (_progressLock)
             {
-                File.WriteAllText(PROGRESS_PATH, payload);
+                File.WriteAllText(ProgressPath, payload);
             }
         }
         catch

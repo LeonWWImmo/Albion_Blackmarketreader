@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Albion Profit Radar - Landing</title>
+  <base href="/">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
+  <div class="page">
+    <div class="top-bar">
+      <a class="cta" href="dashboard.html">Zum Dashboard</a>
+    </div>
+
+    <div class="hero hero-landing">
+      <div class="hero-text">
+        <h1>RomulusKings Market Reader</h1>
+        <p>Scanne den Schwarzmarkt nach Profit-Perlen. Live-Preise, Nachfrage, Enchant-Farben – alles in einem Dashboard.</p>
+        <div class="pill-row">
+          <span class="pill">Live City Prices</span>
+          <span class="pill">BM History &amp; Spans</span>
+          <span class="pill">Profit-Filter</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="article">
+      <div class="article-block">
+        <div class="article-text">
+          <h2>Preiskarten lesen</h2>
+          <p>Die Karten zeigen Lymhurst-Buy, Black-Market-History und Sold/Tag. Enchant-Tags sind farbig: @1 grün, @2 blau, @3 lila, @4 gold. Negative Profite bleiben sichtbar.</p>
+          <ul>
+            <li><strong>ID</strong> zeigt Tier/Enchant-Kombination.</li>
+            <li><strong>Sold/Tag</strong> = Nachfrage, je höher desto liquider.</li>
+            <li><strong>Profit</strong> farbig hinterlegt, Span zeigt verwendeten Zeitraum.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/Anzeige-preis.png" alt="Preiskarte" />
+        </div>
+      </div>
+
+      <div class="article-block">
+        <div class="article-text">
+          <h2>Profit filtern</h2>
+          <p>Setze den Mindest-Profit in % und klicke „Filter anwenden“. Das Dashboard zeigt nur Varianten mit Profit ≥ deinem Wert und sortiert danach.</p>
+          <ul>
+            <li>Filter greift sofort auf die geladenen Ergebnisse.</li>
+            <li>Negative Profite bleiben, wenn der Schwellenwert ≤ 0 ist.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/Filter-anwenden.png" alt="Filter anwenden" />
+        </div>
+      </div>
+
+      <div class="article-block">
+        <div class="article-text">
+          <h2>Neue Daten sync</h2>
+          <p>Der Sync holt City-Bulk-Preise, dann BM-History mit Retries/Spans. Währenddessen siehst du den Fortschritt in % und kannst danach sofort filtern.</p>
+          <ul>
+            <li>Bulk City Prices (Lymhurst) mit Frische-Check.</li>
+            <li>History mit 14/30/60 Tagen, Retries bei leeren Antworten.</li>
+            <li>Ergebnisse ersetzen sich automatisch.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/Datensync.png" alt="Datensync" />
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Albion Profit Radar - Dashboard</title>
+  <base href="/">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
+  <div class="page">
+    <div id="app" style="display:none;">
+      <div class="hero">
+        <div>
+          <h1>RomulusKings Market Reader</h1>
+          <p>&ge; 30% Profit · Zeiträume 14/30/60 Tage · Live-Daten Black Market</p>
+        </div>
+        <div class="badge" id="refreshBtn" title="Daten neu laden">
+          <span id="refreshIcon" class="refresh-icon"></span>
+          <span>Neue Daten sync</span>
+          <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label for="minProfit">Profit ≥</label>
+        <input id="minProfit" type="number" step="1" value="0" />
+        <span>%</span>
+        <button id="applyFilter">Filter anwenden</button>
+      </div>
+
+      <div id="cards" class="grid"></div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth" class="auth" style="display:flex;">
+      <div class="auth-box">
+        <h2>Passwort</h2>
+        <p id="authMsg">Bitte Passwort eingeben.</p>
+        <input type="password" id="authInput" placeholder="Passwort" />
+        <button id="authBtn">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loadResults = () => new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = `results.js?v=${Date.now()}`;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('results.js konnte nicht geladen werden'));
+      document.head.appendChild(s);
+    });
+
+    const app = document.getElementById('app');
+    const cards = document.getElementById('cards');
+    const minProfitInput = document.getElementById('minProfit');
+    const applyFilterBtn = document.getElementById('applyFilter');
+    const auth = document.getElementById('auth');
+    const authInput = document.getElementById('authInput');
+    const authBtn = document.getElementById('authBtn');
+    const authMsg = document.getElementById('authMsg');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshIcon = document.getElementById('refreshIcon');
+    const lastUpdated = document.getElementById('lastUpdated');
+
+    const nameMap = {
+      "MAIN_SWORD": "Broadsword","2H_CLAYMORE": "Claymore","DUAL_SWORD": "Dual Swords","2H_CLEAVER": "Carving Sword",
+      "MAIN_AXE": "Battleaxe","2H_HALBERD": "Halberd","DUAL_AXE": "Bear Paws","2H_SCYTHE": "Infernal Scythe",
+      "MAIN_SPEAR": "Spear","2H_GLAIVE": "Glaive","2H_TRIDENT": "Trinity Spear","2H_HARPOON": "Heron Spear",
+      "2H_BOW": "Bow","2H_WARBOW": "Warbow","2H_LONGBOW": "Longbow","2H_SIEGE_BOW": "Wailing Bow",
+      "2H_CROSSBOW": "Crossbow","2H_HEAVYCROSSBOW": "Heavy Crossbow","2H_REPEATINGCROSSBOW": "Light Crossbow","2H_WEAPONIZEDCROSSBOW": "Energy Shaper",
+      "MAIN_FIRESTAFF": "Fire Staff","2H_FIRESTAFF": "Great Fire Staff","2H_INFERNOSTAFF": "Infernal Staff","2H_WILDFIRESTAFF": "Wildfire Staff",
+      "MAIN_FROSTSTAFF": "Frost Staff","2H_FROSTSTAFF": "Great Frost Staff","2H_GLACIALSTAFF": "Glacial Staff","2H_HOARFROSTSTAFF": "Hoarfrost Staff","2H_ICEGAUNTLETS": "Icicle Staff",
+      "MAIN_HOLYSTAFF": "Holy Staff","2H_HOLYSTAFF": "Great Holy Staff","2H_DIVINESTAFF": "Divine Staff","2H_LIFETOUCHSTAFF": "Lifetouch Staff","2H_REDEMPTIONSTAFF": "Redemption Staff",
+      "MAIN_NATURESTAFF": "Nature Staff","2H_NATURESTAFF": "Great Nature Staff","2H_WILDSTAFF": "Wild Staff","2H_DRUIDSTAFF": "Druidic Staff","2H_IRONROOTSTAFF": "Ironroot Staff",
+      "MAIN_CURSEDSTAFF": "Cursed Staff","2H_CURSEDSTAFF": "Great Cursed Staff","2H_DEMONICSTAFF": "Demonic Staff","2H_SHADOWSTAFF": "Shadowcaller",
+      "MAIN_ARCANESTAFF": "Arcane Staff","2H_ARCANESTAFF": "Great Arcane Staff","2H_ENIGMATICSTAFF": "Enigmatic Staff","2H_OCCULTSTAFF": "Occult Staff","2H_EYESTAFF": "Evensong",
+      "MAIN_DAGGER": "Dagger","2H_DAGGER": "Dagger Pair","DUAL_DAGGER": "Bloodletter","2H_CLAWPAIR": "Claws","2H_DEATHGIVERS": "Deathgivers",
+      "MAIN_HAMMER": "Hammer","2H_HAMMER": "Great Hammer","2H_POLEHAMMER": "Polehammer","2H_RAMHAMMER": "Grovekeeper",
+      "2H_QUARTERSTAFF": "Quarterstaff","2H_IRONCLADEDSTAFF": "Ironclad Staff","2H_DOUBLEBLADEDSTAFF": "Double Bladed Staff","2H_COMBATSTAFF": "Black Monk Staff","2H_SOULSTAFF": "Soulscythe",
+      "OFF_SHIELD": "Shield","OFF_TORCH": "Torch","OFF_BOOK": "Tome","OFF_HORN": "Mistcaller","OFF_TALISMAN": "Sacred Scepter","OFF_CENSER": "Censer",
+      "HEAD_PLATE_SET1": "Soldier Helmet","HEAD_PLATE_SET2": "Knight Helmet","HEAD_PLATE_SET3": "Guardian Helmet",
+      "ARMOR_PLATE_SET1": "Soldier Armor","ARMOR_PLATE_SET2": "Knight Armor","ARMOR_PLATE_SET3": "Guardian Armor",
+      "SHOES_PLATE_SET1": "Soldier Boots","SHOES_PLATE_SET2": "Knight Boots","SHOES_PLATE_SET3": "Guardian Boots",
+      "HEAD_LEATHER_SET1": "Mercenary Hood","HEAD_LEATHER_SET2": "Hunter Hood","HEAD_LEATHER_SET3": "Assassin Hood",
+      "ARMOR_LEATHER_SET1": "Mercenary Jacket","ARMOR_LEATHER_SET2": "Hunter Jacket","ARMOR_LEATHER_SET3": "Assassin Jacket",
+      "SHOES_LEATHER_SET1": "Mercenary Shoes","SHOES_LEATHER_SET2": "Hunter Shoes","SHOES_LEATHER_SET3": "Assassin Shoes",
+      "HEAD_CLOTH_SET1": "Scholar Cowl","HEAD_CLOTH_SET2": "Cleric Cowl","HEAD_CLOTH_SET3": "Mage Cowl",
+      "ARMOR_CLOTH_SET1": "Scholar Robe","ARMOR_CLOTH_SET2": "Cleric Robe","ARMOR_CLOTH_SET3": "Mage Robe",
+      "SHOES_CLOTH_SET1": "Scholar Sandals","SHOES_CLOTH_SET2": "Cleric Sandals","SHOES_CLOTH_SET3": "Mage Sandals",
+      "CAPE": "Cape","BAG": "Bag"
+    };
+
+    let allData = [];
+    let minProfitFilter = 0;
+    let authed = false;
+    let spinning = false;
+    let progressTimer = null;
+    const progressEl = document.createElement('span');
+    progressEl.style.fontSize = '12px';
+    progressEl.style.color = 'var(--muted)';
+    progressEl.style.marginLeft = '6px';
+    refreshBtn.appendChild(progressEl);
+
+    function render() {
+      cards.innerHTML = "";
+      const source = allData.length > 0 ? allData : (window.results || []);
+      const data = source.filter(r => (Number(r.profit ?? 0)) >= minProfitFilter);
+      if (!Array.isArray(data) || data.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.color = 'var(--muted)';
+        empty.style.padding = '12px 4px';
+        empty.textContent = 'Keine Ergebnisse geladen.';
+        cards.appendChild(empty);
+        return;
+      }
+      data.forEach(r => {
+        const card = document.createElement('div');
+        card.className = 'card card-box';
+        const profitClass = r.profit < 0 ? 'profit negative' : 'profit';
+        const baseId = r.id.split('@')[0];
+        const displayName = nameMap[baseId] || baseId;
+        const enchantMatch = r.id.split('@')[1];
+        const enchant = enchantMatch ? parseInt(enchantMatch, 10) : 0;
+        const tagClass = enchant ? `tag enchant-${enchant}` : '';
+        const tagHtml = tagClass ? `<span class="${tagClass}"></span>` : '';
+        card.innerHTML = `
+          ${tagHtml}
+          <div class="title">${displayName}</div>
+          <div class="row"><span>ID</span><span class="val">${r.id}</span></div>
+          <div class="row"><span>Lymhurst</span><span class="val">${r.lym.toLocaleString()}</span></div>
+          <div class="row"><span>Black Market</span><span class="val">${r.bm.toLocaleString()}</span></div>
+          <div class="row"><span>Sold/Tag</span><span class="val">${(r.sold ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</span></div>
+          <div class="${profitClass}">
+            Profit: ${r.profit > 0 ? '+' : ''}${r.profit.toFixed(1)}%
+            <span class="span-tag">${r.span}</span>
+          </div>
+        `;
+        cards.appendChild(card);
+      });
+    }
+
+    function startApp() {
+      loadResults()
+        .then(() => {
+          allData = window.results || [];
+          render();
+        })
+        .catch(() => {
+          const empty = document.createElement('div');
+          empty.style.color = 'var(--muted)';
+          empty.style.padding = '12px 4px';
+          empty.textContent = 'results.js konnte nicht geladen werden.';
+          cards.appendChild(empty);
+        });
+    }
+
+    function setSpinning(on) {
+      spinning = on;
+      refreshIcon.classList.toggle('spin', on);
+      refreshBtn.style.opacity = on ? '0.75' : '1';
+      refreshBtn.style.cursor = on ? 'progress' : 'pointer';
+      if (!on) {
+        progressEl.textContent = '';
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+      }
+    }
+
+    async function pollProgress() {
+      try {
+        const resp = await fetch('/progress');
+        if (!resp.ok) return;
+        const { total = 0, done = 0 } = await resp.json();
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((done / total) * 100));
+          progressEl.textContent = `${pct}%`;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    refreshBtn.addEventListener('click', async () => {
+      if (!authed) {
+        auth.style.display = 'flex';
+        authInput.focus();
+        return;
+      }
+      if (spinning) return;
+      setSpinning(true);
+      progressEl.textContent = '0%';
+      progressTimer = setInterval(pollProgress, 1000);
+      try {
+        const resp = await fetch('/refresh', { method: 'POST' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const body = await resp.json();
+        await loadResults();
+        allData = window.results || [];
+        render();
+        const updated = body?.updatedAt || new Date().toISOString();
+        lastUpdated.textContent = new Date(updated).toLocaleTimeString();
+      } catch (err) {
+        alert('Refresh fehlgeschlagen. Läuft der lokale Server?');
+      } finally {
+        setSpinning(false);
+      }
+    });
+
+    applyFilterBtn.addEventListener('click', () => {
+      const val = parseFloat(minProfitInput.value);
+      minProfitFilter = isNaN(val) ? 0 : val;
+      render();
+    });
+
+    function tryAuth() {
+      const val = authInput.value.trim();
+      if (val === 'testo') {
+        authed = true;
+        auth.style.display = 'none';
+        app.style.display = 'block';
+        startApp();
+      } else {
+        authMsg.textContent = 'Falsches Passwort.';
+        authMsg.style.color = 'var(--danger)';
+      }
+    }
+
+    authBtn.addEventListener('click', tryAuth);
+    authInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') tryAuth();
+    });
+
+    // Autofokus beim Laden
+    authInput.focus();
+  </script>
+</body>
+</html>
