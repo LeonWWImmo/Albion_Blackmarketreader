@@ -28,6 +28,11 @@ body {
   align-items: flex-end;
   margin-bottom: 24px;
 }
+.hero-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
 .hero h1 {
   font-family: "Space Grotesk", sans-serif;
   font-size: clamp(26px, 4vw, 38px);
@@ -207,6 +212,10 @@ body {
 .tag.enchant-2 { background: #60a5fa; }
 .tag.enchant-3 { background: #c084fc; }
 .tag.enchant-4 { background: #fcd34d; }
+.card.border-enchant-1 { border-color: rgba(74, 222, 128, 0.5); box-shadow: 0 0 0 1px rgba(74,222,128,0.35); }
+.card.border-enchant-2 { border-color: rgba(96, 165, 250, 0.5); box-shadow: 0 0 0 1px rgba(96,165,250,0.35); }
+.card.border-enchant-3 { border-color: rgba(192, 132, 252, 0.5); box-shadow: 0 0 0 1px rgba(192,132,252,0.35); }
+.card.border-enchant-4 { border-color: rgba(252, 211, 77, 0.5); box-shadow: 0 0 0 1px rgba(252,211,77,0.35); }
 .card.card-box { position: relative; }
 @media (max-width: 600px) { .hero { flex-direction: column; align-items: flex-start; } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

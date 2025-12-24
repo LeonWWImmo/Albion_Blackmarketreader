@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Albion_ProfitChecker")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0d4925e4d7580df843e484c53141d26ef9b0b591")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b426704526b813bb15bce99a20859bbf8209c9a0")]
 [assembly: System.Reflection.AssemblyProductAttribute("Albion_ProfitChecker")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Albion_ProfitChecker")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

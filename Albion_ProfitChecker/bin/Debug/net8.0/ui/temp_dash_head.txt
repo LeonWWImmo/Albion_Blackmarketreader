@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Albion Profit Radar - Dashboard</title>
+  <base href="/">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
+  <div class="page">
+    <div id="app" style="display:none;">
+      <div class="hero">
+        <div>
+          <h1>RomulusKings Market Reader</h1>
+          <p>&ge; 30% Profit · Zeiträume 14/30/60 Tage · Live-Daten Black Market</p>
+        </div>
+        <div class="badge" id="refreshBtn" title="Daten neu laden">
+          <span id="refreshIcon" class="refresh-icon"></span>
+          <span>Neue Daten sync</span>
+          <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+        </div>
+        <div style="font-size:12px; color: var(--muted); margin-top:6px;">Deals: <span id="dealCount">0</span></div>
+      </div>
+
+      <div class="filters">
+        <label for="minProfit">Profit ≥</label>
+        <input id="minProfit" type="number" step="1" value="0" />
+        <span>%</span>
+        <button id="applyFilter">Filter anwenden</button>
+        <button id="filterSilver" style="margin-left:6px;">Nach Silber filtern</button>
+        <button id="clearSilver" style="display:none;">×</button>
+      </div>
+
+      <div id="cards" class="grid"></div>
+    </div>
+
+    <!-- Auth Modal -->

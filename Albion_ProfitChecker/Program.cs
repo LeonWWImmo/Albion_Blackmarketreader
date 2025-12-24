@@ -18,7 +18,7 @@ internal static class Program
     private static readonly int[] DEFAULT_TIERS = { 4, 5, 6, 7, 8 };
     private static readonly int[] DEFAULT_ENCHANTS = { 0, 1, 2, 3 };
 
-    private static readonly int[] DEFAULT_BM_DAYS = { 14, 30, 60 };
+    private static readonly int[] DEFAULT_BM_DAYS = { 14 };
     private const double DEFAULT_MIN_PROFIT_PERCENT = 30.0;
     private const double DEFAULT_MIN_SOLD_PER_DAY = 0.0;
 

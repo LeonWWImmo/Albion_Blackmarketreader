@@ -15,20 +15,25 @@
       <div class="hero">
         <div>
           <h1>RomulusKings Market Reader</h1>
-          <p>&ge; 30% Profit · Zeiträume 14/30/60 Tage · Live-Daten Black Market</p>
+          <p>&ge; 30% Profit ¶ú ZeitrÇÏume 14/30/60 Tage ¶ú Live-Daten Black Market</p>
         </div>
-        <div class="badge" id="refreshBtn" title="Daten neu laden">
-          <span id="refreshIcon" class="refresh-icon"></span>
-          <span>Neue Daten sync</span>
-          <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+        <div class="hero-cta">
+          <div class="badge" id="refreshBtn" title="Daten neu laden">
+            <span id="refreshIcon" class="refresh-icon"></span>
+            <span>Neue Daten sync</span>
+            <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+          </div>
+          <div style="font-size:12px; color: var(--muted); margin-top:4px;">Deals: <span id="dealCount">0</span></div>
         </div>
       </div>
 
       <div class="filters">
-        <label for="minProfit">Profit ≥</label>
+        <label for="minProfit">Profit ƒ%¾</label>
         <input id="minProfit" type="number" step="1" value="0" />
         <span>%</span>
         <button id="applyFilter">Filter anwenden</button>
+        <button id="filterSilver" style="margin-left:6px;">Nach Silber filtern</button>
+        <button id="clearSilver" style="display:none;">×</button>
       </div>
 
       <div id="cards" class="grid"></div>
@@ -58,6 +63,8 @@
     const cards = document.getElementById('cards');
     const minProfitInput = document.getElementById('minProfit');
     const applyFilterBtn = document.getElementById('applyFilter');
+    const filterSilverBtn = document.getElementById('filterSilver');
+    const clearSilverBtn = document.getElementById('clearSilver');
     const auth = document.getElementById('auth');
     const authInput = document.getElementById('authInput');
     const authBtn = document.getElementById('authBtn');
@@ -65,26 +72,49 @@
     const refreshBtn = document.getElementById('refreshBtn');
     const refreshIcon = document.getElementById('refreshIcon');
     const lastUpdated = document.getElementById('lastUpdated');
+    const dealCountEl = document.getElementById('dealCount');
+    const LAST_UPDATED_KEY = 'albion_profit_last_updated';
 
     const nameMap = {
       "MAIN_SWORD": "Broadsword","2H_CLAYMORE": "Claymore","DUAL_SWORD": "Dual Swords","2H_CLEAVER": "Carving Sword",
+      "2H_CLEAVER_HELL": "Carving Sword",
+      "2H_AXE": "Greataxe","2H_AXE_AVALON": "Realmbreaker",
+      "2H_ARCANESTAFF_CRYSTAL": "Astral Staff","2H_ARCANESTAFF_HELL": "Occult Staff","2H_ARCANE_RINGPAIR_AVALON": "Evensong",
       "MAIN_AXE": "Battleaxe","2H_HALBERD": "Halberd","DUAL_AXE": "Bear Paws","2H_SCYTHE": "Infernal Scythe",
+      "2H_DUALAXE_KEEPER": "Bear Paws",
       "MAIN_SPEAR": "Spear","2H_GLAIVE": "Glaive","2H_TRIDENT": "Trinity Spear","2H_HARPOON": "Heron Spear",
+      "2H_SPEAR": "Pike","2H_SPEAR_HELL": "Trinity Spear","2H_TRIDENT_UNDEAD": "Trinity Spear",
       "2H_BOW": "Bow","2H_WARBOW": "Warbow","2H_LONGBOW": "Longbow","2H_SIEGE_BOW": "Wailing Bow",
+      "2H_BOW_AVALON": "Mistpiercer","2H_BOW_CRYSTAL": "Skystrider Bow","2H_BOW_HELL": "Wailing Bow","2H_BOW_KEEPER": "Bow of Badon","2H_LONGBOW_UNDEAD": "Whispering Bow",
       "2H_CROSSBOW": "Crossbow","2H_HEAVYCROSSBOW": "Heavy Crossbow","2H_REPEATINGCROSSBOW": "Light Crossbow","2H_WEAPONIZEDCROSSBOW": "Energy Shaper",
+      "2H_CROSSBOWLARGE": "Heavy Crossbow","2H_CROSSBOWLARGE_MORGANA": "Siegebow","2H_CROSSBOW_CANNON_AVALON": "Energy Shaper","2H_REPEATINGCROSSBOW_UNDEAD": "Repeating Crossbow",
       "MAIN_FIRESTAFF": "Fire Staff","2H_FIRESTAFF": "Great Fire Staff","2H_INFERNOSTAFF": "Infernal Staff","2H_WILDFIRESTAFF": "Wildfire Staff",
+      "2H_FIRESTAFF_HELL": "Infernal Staff","2H_FIRESTAFF_KEEPER": "Wildfire Staff",
       "MAIN_FROSTSTAFF": "Frost Staff","2H_FROSTSTAFF": "Great Frost Staff","2H_GLACIALSTAFF": "Glacial Staff","2H_HOARFROSTSTAFF": "Hoarfrost Staff","2H_ICEGAUNTLETS": "Icicle Staff",
+      "2H_FROSTSTAFF_CRYSTAL": "Arctic Staff","2H_FROSTSTAFF_GLACIAL": "Glacial Staff",
       "MAIN_HOLYSTAFF": "Holy Staff","2H_HOLYSTAFF": "Great Holy Staff","2H_DIVINESTAFF": "Divine Staff","2H_LIFETOUCHSTAFF": "Lifetouch Staff","2H_REDEMPTIONSTAFF": "Redemption Staff",
+      "2H_HOLYSTAFF_HELL": "Lifetouch Staff","2H_HOLYSTAFF_KEEPER": "Redemption Staff",
       "MAIN_NATURESTAFF": "Nature Staff","2H_NATURESTAFF": "Great Nature Staff","2H_WILDSTAFF": "Wild Staff","2H_DRUIDSTAFF": "Druidic Staff","2H_IRONROOTSTAFF": "Ironroot Staff",
+      "2H_NATURESTAFF_HELL": "Blight Staff","2H_NATURESTAFF_KEEPER": "Druidic Staff",
       "MAIN_CURSEDSTAFF": "Cursed Staff","2H_CURSEDSTAFF": "Great Cursed Staff","2H_DEMONICSTAFF": "Demonic Staff","2H_SHADOWSTAFF": "Shadowcaller",
+      "2H_CURSEDSTAFF_MORGANA": "Damnation Staff",
       "MAIN_ARCANESTAFF": "Arcane Staff","2H_ARCANESTAFF": "Great Arcane Staff","2H_ENIGMATICSTAFF": "Enigmatic Staff","2H_OCCULTSTAFF": "Occult Staff","2H_EYESTAFF": "Evensong",
+      "2H_OCCULTSTAFF_HELL": "Occult Staff",
       "MAIN_DAGGER": "Dagger","2H_DAGGER": "Dagger Pair","DUAL_DAGGER": "Bloodletter","2H_CLAWPAIR": "Claws","2H_DEATHGIVERS": "Deathgivers",
+      "2H_DAGGERPAIR": "Dagger Pair","2H_DAGGERPAIR_CRYSTAL": "Bridled Fury","2H_DAGGER_KATAR_AVALON": "Bloodletter","2H_CLAWPAIR": "Claws","2H_HELLFIRE_HAND": "Hellfire Hands",
       "MAIN_HAMMER": "Hammer","2H_HAMMER": "Great Hammer","2H_POLEHAMMER": "Polehammer","2H_RAMHAMMER": "Grovekeeper",
+      "2H_DUALHAMMER_AVALON": "Hand of Justice",
       "2H_QUARTERSTAFF": "Quarterstaff","2H_IRONCLADEDSTAFF": "Ironclad Staff","2H_DOUBLEBLADEDSTAFF": "Double Bladed Staff","2H_COMBATSTAFF": "Black Monk Staff","2H_SOULSTAFF": "Soulscythe",
+      "2H_COMBATSTAFF_MORGANA": "Black Monk Stave","2H_SOULSTAFF": "Soulscythe","2H_SCYTHE_CRYSTAL": "Crystal Reaper","2H_SCYTHE_HELL": "Soulscythe","2H_TWINSCYTHE_HELL": "Twin Scythes",
+      "2H_FLAIL": "Morning Star","2H_FLAIL_MORGANA": "Soulscythe",
       "OFF_SHIELD": "Shield","OFF_TORCH": "Torch","OFF_BOOK": "Tome","OFF_HORN": "Mistcaller","OFF_TALISMAN": "Sacred Scepter","OFF_CENSER": "Censer",
+      "OFF_CENSER_AVALON": "Celestial Censer","OFF_HORN_KEEPER": "Mistcaller","OFF_TALISMAN_AVALON": "Sacred Scepter",
       "HEAD_PLATE_SET1": "Soldier Helmet","HEAD_PLATE_SET2": "Knight Helmet","HEAD_PLATE_SET3": "Guardian Helmet",
+      "HEAD_PLATE_AVALON": "Helmet of Valor","HEAD_PLATE_HELL": "Demon Helmet","HEAD_PLATE_FEY": "Duskweaver Helmet","HEAD_PLATE_KEEPER": "Judicator Helmet","HEAD_PLATE_UNDEAD": "Graveguard Helmet",
       "ARMOR_PLATE_SET1": "Soldier Armor","ARMOR_PLATE_SET2": "Knight Armor","ARMOR_PLATE_SET3": "Guardian Armor",
+      "ARMOR_PLATE_AVALON": "Armor of Valor","ARMOR_PLATE_HELL": "Demon Armor","ARMOR_PLATE_FEY": "Duskweaver Armor","ARMOR_PLATE_KEEPER": "Judicator Armor","ARMOR_PLATE_UNDEAD": "Graveguard Armor",
       "SHOES_PLATE_SET1": "Soldier Boots","SHOES_PLATE_SET2": "Knight Boots","SHOES_PLATE_SET3": "Guardian Boots",
+      "SHOES_PLATE_AVALON": "Boots of Valor","SHOES_PLATE_HELL": "Demon Boots","SHOES_PLATE_FEY": "Duskweaver Boots","SHOES_PLATE_KEEPER": "Judicator Boots","SHOES_PLATE_UNDEAD": "Graveguard Boots",
       "HEAD_LEATHER_SET1": "Mercenary Hood","HEAD_LEATHER_SET2": "Hunter Hood","HEAD_LEATHER_SET3": "Assassin Hood",
       "ARMOR_LEATHER_SET1": "Mercenary Jacket","ARMOR_LEATHER_SET2": "Hunter Jacket","ARMOR_LEATHER_SET3": "Assassin Jacket",
       "SHOES_LEATHER_SET1": "Mercenary Shoes","SHOES_LEATHER_SET2": "Hunter Shoes","SHOES_LEATHER_SET3": "Assassin Shoes",
@@ -96,6 +126,7 @@
 
     let allData = [];
     let minProfitFilter = 0;
+    let sortBySilver = false;
     let authed = false;
     let spinning = false;
     let progressTimer = null;
@@ -109,6 +140,15 @@
       cards.innerHTML = "";
       const source = allData.length > 0 ? allData : (window.results || []);
       const data = source.filter(r => (Number(r.profit ?? 0)) >= minProfitFilter);
+      const sorted = [...data].sort((a, b) => {
+        if (sortBySilver) {
+          const sa = (a.bm ?? 0) - (a.lym ?? 0);
+          const sb = (b.bm ?? 0) - (b.lym ?? 0);
+          return sb - sa;
+        }
+        return (b.profit ?? 0) - (a.profit ?? 0);
+      });
+      dealCountEl.textContent = sorted.length;
       if (!Array.isArray(data) || data.length === 0) {
         const empty = document.createElement('div');
         empty.style.color = 'var(--muted)';
@@ -117,9 +157,8 @@
         cards.appendChild(empty);
         return;
       }
-      data.forEach(r => {
+      sorted.forEach(r => {
         const card = document.createElement('div');
-        card.className = 'card card-box';
         const profitClass = r.profit < 0 ? 'profit negative' : 'profit';
         const match = /^T?(\d+)?_(.+?)(?:@(\d+))?$/i.exec(r.id) || [];
         const tier = match[1];
@@ -129,6 +168,8 @@
         const displayName = tier ? `T${tier} ${baseLabel}` : baseLabel;
         const tagClass = enchant ? `tag enchant-${enchant}` : '';
         const tagHtml = tagClass ? `<span class="${tagClass}"></span>` : '';
+        const borderClass = enchant ? `border-enchant-${enchant}` : '';
+        card.className = `card card-box ${borderClass}`.trim();
         card.innerHTML = `
           ${tagHtml}
           <div class="title">${displayName}</div>
@@ -150,6 +191,7 @@
         .then(() => {
           allData = window.results || [];
           render();
+          loadStoredLastUpdated();
         })
         .catch(() => {
           const empty = document.createElement('div');
@@ -206,7 +248,7 @@
         allData = window.results || [];
         render();
         const updated = body?.updatedAt || new Date().toISOString();
-        lastUpdated.textContent = new Date(updated).toLocaleTimeString();
+        persistLastUpdated(updated);
       } catch (err) {
         alert('Refresh fehlgeschlagen. Läuft der lokale Server?');
       } finally {
@@ -219,6 +261,30 @@
       minProfitFilter = isNaN(val) ? 0 : val;
       render();
     });
+
+    filterSilverBtn.addEventListener('click', () => {
+      sortBySilver = true;
+      clearSilverBtn.style.display = 'inline-flex';
+      render();
+    });
+
+    clearSilverBtn.addEventListener('click', () => {
+      sortBySilver = false;
+      clearSilverBtn.style.display = 'none';
+      render();
+    });
+
+    function persistLastUpdated(iso) {
+      try { localStorage.setItem(LAST_UPDATED_KEY, iso); } catch { /* ignore */ }
+      lastUpdated.textContent = new Date(iso).toLocaleTimeString();
+    }
+
+    function loadStoredLastUpdated() {
+      try {
+        const stored = localStorage.getItem(LAST_UPDATED_KEY);
+        if (stored) lastUpdated.textContent = new Date(stored).toLocaleTimeString();
+      } catch { /* ignore */ }
+    }
 
     function tryAuth() {
       const val = authInput.value.trim();
@@ -234,12 +300,7 @@
     }
 
     authBtn.addEventListener('click', tryAuth);
-    authInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') tryAuth();
-    });
-
-    // Autofokus beim Laden
-    authInput.focus();
+    authInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAuth(); });
   </script>
 </body>
 </html>
