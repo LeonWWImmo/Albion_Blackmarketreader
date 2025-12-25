@@ -3,6 +3,9 @@ name: Manual Test (2 Items)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test-two-items:
     runs-on: ubuntu-latest
