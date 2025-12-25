@@ -1,12 +1,10 @@
-name: Daily Data Sync
+name: Manual Test (2 Items)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 5 * * *" # täglich um 05:00 UTC
 
 jobs:
-  sync:
+  test-two-items:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,9 +18,18 @@ jobs:
       - name: Restore
         run: dotnet restore Albion_ProfitChecker/Albion_ProfitChecker.csproj
 
-      - name: Run backend to refresh results.js
+      - name: Create temp item list (2 items)
         working-directory: Albion_ProfitChecker
-        run: dotnet run -- --run-once --bm-days 14
+        run: |
+          echo '["2H_BOW","2H_CLAYMORE"]' > Data/ItemList.tmp.json
+
+      - name: Run backend (2 items)
+        working-directory: Albion_ProfitChecker
+        run: dotnet run -- --item-list Data/ItemList.tmp.json --bm-days 14
+
+      - name: Cleanup temp item list
+        working-directory: Albion_ProfitChecker
+        run: rm -f Data/ItemList.tmp.json
 
       - name: Commit updated results (falls vorhanden)
         working-directory: .
@@ -31,7 +38,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain Albion_ProfitChecker/ui/results.js)" ]; then
             git add Albion_ProfitChecker/ui/results.js Albion_ProfitChecker/ui/progress.json || true
-            git commit -m "chore: daily data refresh"
+            git commit -m "chore: test data refresh (2 items)"
           else
             echo "Keine Änderungen in results.js"
           fi
