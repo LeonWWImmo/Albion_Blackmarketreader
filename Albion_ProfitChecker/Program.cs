@@ -12,9 +12,9 @@ namespace AlbionProfitChecker;
 
 internal static class Program
 {
-    private const string CITY_BUY = "Lymhurst";
     private const string BM_LOCATION = "Black Market";
 
+    private static readonly string[] DEFAULT_CITIES = { "Lymhurst", "Martlock", "Fort Sterling", "Thetford", "Bridgewatch", "Caerleon" };
     private static readonly int[] DEFAULT_TIERS = { 4, 5, 6, 7, 8 };
     private static readonly int[] DEFAULT_ENCHANTS = { 0, 1, 2, 3 };
 
@@ -40,11 +40,12 @@ internal static class Program
     private sealed record Variant(string ItemId, int Tier, int Enchant, string BaseCode);
 
     private sealed record ResultRow(
+        string City,
         string ItemId,
         int Tier,
         int Enchant,
-        long LymhurstBuyPrice,
-        DateTime? LymhurstDateUtc,
+        long CityBuyPrice,
+        DateTime? CityDateUtc,
         double BmAvgPrice,
         double BmSoldPerDay,
         double ProfitPercent,
@@ -56,6 +57,7 @@ internal static class Program
         double MinProfitPercent,
         double MinSoldPerDay,
         int[] BmFallbackDays,
+        string[] Cities,
         int[] Tiers,
         int[] Enchants,
         int MinBmPoints,
@@ -140,6 +142,7 @@ internal static class Program
             MinProfitPercent: DEFAULT_MIN_PROFIT_PERCENT,
             MinSoldPerDay: DEFAULT_MIN_SOLD_PER_DAY,
             BmFallbackDays: DEFAULT_BM_DAYS,
+            Cities: DEFAULT_CITIES,
             Tiers: DEFAULT_TIERS,
             Enchants: DEFAULT_ENCHANTS,
             MinBmPoints: DEFAULT_MIN_BM_POINTS,
@@ -183,6 +186,13 @@ internal static class Program
             else if (string.Equals(arg, "--enchants", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
             {
                 opt = opt with { Enchants = ParseIntList(args[i + 1], DEFAULT_ENCHANTS) };
+                i++;
+            }
+            else if (string.Equals(arg, "--cities", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                var list = args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (list.Length > 0)
+                    opt = opt with { Cities = list.ToArray() };
                 i++;
             }
             else if (string.Equals(arg, "--bm-min-points", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[i + 1], out var mp))
@@ -243,77 +253,81 @@ internal static class Program
             return;
         }
 
-        // 1) Varianten bauen
-        var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
-        int totalVariants = variants.Count;
-        UpdateProgress(totalVariants, 0);
-
-        // 2) Bulk City-Preise holen
-        var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, CITY_BUY, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
-
         var results = new ConcurrentBag<ResultRow>();
-        int processed = 0;
 
-        // 3) BM-History ziehen & Profit berechnen (parallel begrenzt)
-        var noPriceLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
-        var tasks = variants.Select(async v =>
+        foreach (var city in options.Cities)
         {
-            await semaphore.WaitAsync();
-            try
+            Console.WriteLine($"--- Starte City: {city} ---");
+
+            var variants = GenerateAllVariants(baseCodes, options.Tiers, options.Enchants).ToList();
+            int totalVariants = variants.Count;
+            UpdateProgress(totalVariants, 0);
+
+            // 2) Bulk City-Preise holen
+            var allIds = variants.Select(v => v.ItemId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var cityPrices = await FetchCityPricesBatchedAsync(api, allIds, city, options.MaxPriceAgeDays, options.BulkBatchSize, options.BulkDelayMs);
+
+            int processed = 0;
+            var noPriceLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using var semaphore = new SemaphoreSlim(options.MaxHistoryConcurrency);
+            var tasks = variants.Select(async v =>
             {
-                (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
-                if (buyPrice <= 0)
+                await semaphore.WaitAsync();
+                try
                 {
-                    var key = v.BaseCode;
-                    if (noPriceLogged.Add(key))
-                        Console.WriteLine($"{v.ItemId} (keine preise)");
-                    return;
+                    (int buyPrice, DateTime? buyDateUtc) = cityPrices.TryGetValue(v.ItemId, out var tuple) ? tuple : (0, null);
+                    if (buyPrice <= 0)
+                    {
+                        var key = $"{city}:{v.BaseCode}";
+                        if (noPriceLogged.Add(key))
+                            Console.WriteLine($"{city} {v.ItemId} (keine preise)");
+                        return;
+                    }
+
+                    var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(
+                        api, v.ItemId, options.BmFallbackDays, options.MinBmPoints,
+                        options.HistoryRetries, options.HistoryRetryDelayMs, options.HistorySpanDelayMs);
+
+                    if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
+                    {
+                        var key = $"{city}:{v.BaseCode}";
+                        if (noPriceLogged.Add(key))
+                            Console.WriteLine($"{city} {v.ItemId} (keine preise)");
+                        return;
+                    }
+
+                    double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
+
+                    Console.WriteLine(
+                        $"info {city} {v.ItemId}: Buy={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
+                        $"BM ~={Math.Round(avgPrice)} | Profit={profitPercent:+0.0;-0.0}% | Span={daysUsed}d/{pointsUsed}p");
+
+                    if (profitPercent < options.MinProfitPercent || avgSoldPerDay < options.MinSoldPerDay)
+                    {
+                        Console.WriteLine($"{city} {v.ItemId}: Buy={buyPrice}, BM={Math.Round(avgPrice)}, Profit={profitPercent:+0.0;-0.0}%");
+                    }
+                    else
+                    {
+                        results.Add(new ResultRow(
+                            city,
+                            v.ItemId, v.Tier, v.Enchant,
+                            buyPrice, buyDateUtc,
+                            avgPrice, avgSoldPerDay, profitPercent, daysUsed
+                        ));
+                    }
                 }
-
-                var (avgPrice, avgSoldPerDay, daysUsed, pointsUsed) = await GetBmAveragesAsync(
-                    api, v.ItemId, options.BmFallbackDays, options.MinBmPoints,
-                    options.HistoryRetries, options.HistoryRetryDelayMs, options.HistorySpanDelayMs);
-
-                if (avgPrice <= 0 || avgSoldPerDay <= 0 || pointsUsed < options.MinBmPoints)
+                finally
                 {
-                    var key = v.BaseCode;
-                    if (noPriceLogged.Add(key))
-                        Console.WriteLine($"{v.ItemId} (keine preise)");
-                    return;
+                    var done = Interlocked.Increment(ref processed);
+                    if (done == totalVariants || done % 5 == 0)
+                        UpdateProgress(totalVariants, done);
+                    semaphore.Release();
                 }
+            }).ToList();
 
-                double profitPercent = ((avgPrice - buyPrice) / buyPrice) * 100.0;
-
-                Console.WriteLine(
-                    $"info {v.ItemId}: Lym={buyPrice} (Datum: {FormatDate(buyDateUtc)}), " +
-                    $"BM ~={Math.Round(avgPrice)} | Profit={profitPercent:+0.0;-0.0}% | Span={daysUsed}d/{pointsUsed}p");
-
-                if (profitPercent < options.MinProfitPercent || avgSoldPerDay < options.MinSoldPerDay)
-                {
-                    Console.WriteLine($"{v.ItemId}: Lym={buyPrice}, BM={Math.Round(avgPrice)}, Profit={profitPercent:+0.0;-0.0}%");
-                }
-                else
-                {
-                    results.Add(new ResultRow(
-                        v.ItemId, v.Tier, v.Enchant,
-                        buyPrice, buyDateUtc,
-                        avgPrice, avgSoldPerDay, profitPercent, daysUsed
-                    ));
-                }
-            }
-            finally
-            {
-                var done = Interlocked.Increment(ref processed);
-                if (done == totalVariants || done % 5 == 0)
-                    UpdateProgress(totalVariants, done);
-                semaphore.Release();
-            }
-        }).ToList();
-
-        await Task.WhenAll(tasks);
-        UpdateProgress(totalVariants, totalVariants);
+            await Task.WhenAll(tasks);
+            UpdateProgress(totalVariants, totalVariants);
+        }
 
         // 4) Ausgabe
         var winners = results
@@ -335,8 +349,8 @@ internal static class Program
         foreach (var r in winners)
         {
             Console.WriteLine(
-                $"{r.ItemId.PadRight(14)} | " +
-                $"Lym: {r.LymhurstBuyPrice,9} | " +
+                $"{r.City}:{r.ItemId.PadRight(14)} | " +
+                $"Buy: {r.CityBuyPrice,9} | " +
                 $"BM: {Math.Round(r.BmAvgPrice),10} | " +
                 $"Profit: {r.ProfitPercent,7:0.0}% | " +
                 $"Span: {r.DaysUsed,2}d"
@@ -498,8 +512,9 @@ internal static class Program
 
             var payload = winners.Select(w => new
             {
+                city = w.City,
                 id = w.ItemId,
-                lym = w.LymhurstBuyPrice,
+                lym = w.CityBuyPrice,
                 bm = Math.Round(w.BmAvgPrice),
                 sold = Math.Round(w.BmSoldPerDay, 1),
                 profit = Math.Round(w.ProfitPercent, 1),

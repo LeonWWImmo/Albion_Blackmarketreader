@@ -12,31 +12,59 @@
   <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
   <div class="page">
     <div id="app" style="display:none;">
-      <div class="hero">
-        <div>
-          <h1>RomulusKings Market Reader</h1>
-          <p>&ge; 30% Profit ¶ú ZeitrÇÏume 14/30/60 Tage ¶ú Live-Daten Black Market</p>
-        </div>
-        <div class="hero-cta">
-          <div class="badge" id="refreshBtn" title="Daten neu laden">
-            <span id="refreshIcon" class="refresh-icon"></span>
-            <span>Neue Daten sync</span>
-            <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+      <div class="layout">
+        <div class="main-col">
+          <div class="top-row">
+            <div class="hero">
+              <div>
+                <h1>RomulusKings Market Reader</h1>
+                <p>&ge; 30% Profit &bull; Zeiträume 14/30/60 Tage &bull; Live-Daten Black Market</p>
+              </div>
+            </div>
           </div>
-          <div style="font-size:12px; color: var(--muted); margin-top:4px;">Deals: <span id="dealCount">0</span></div>
+
+          <div class="top-row" style="justify-content: flex-end; margin-top: -12px;">
+            <div class="hero-cta">
+              <div class="badge" id="refreshBtn" title="Daten neu laden">
+                <span id="refreshIcon" class="refresh-icon"></span>
+                <span>Neue Daten sync</span>
+                <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+              </div>
+              <div style="font-size:12px; color: var(--muted); margin-top:4px; text-align:right;">Deals: <span id="dealCount">0</span></div>
+            </div>
+          </div>
+
+          <div class="filters">
+            <label for="minProfit">Profit ≥</label>
+            <input id="minProfit" type="number" step="1" value="0" />
+            <span>%</span>
+            <button id="applyFilter">Filter anwenden</button>
+            <button id="filterSilver" style="margin-left:6px;">Nach Silber filtern</button>
+            <button id="clearSilver" style="display:none;">×</button>
+          </div>
+
+          <div id="cards" class="grid"></div>
         </div>
-      </div>
 
-      <div class="filters">
-        <label for="minProfit">Profit ƒ%¾</label>
-        <input id="minProfit" type="number" step="1" value="0" />
-        <span>%</span>
-        <button id="applyFilter">Filter anwenden</button>
-        <button id="filterSilver" style="margin-left:6px;">Nach Silber filtern</button>
-        <button id="clearSilver" style="display:none;">×</button>
+        <aside class="aside">
+          <div class="city-panel">
+            <img id="cityCrestImg" src="../picture/Carleon.png" alt="City Crest" class="city-crest-img" />
+            <div class="city-panel-body">
+              <div class="city-panel-title">City</div>
+              <div class="city-panel-name" id="cityName">Alle Städte</div>
+              <select id="citySelect" class="city-select">
+                <option value="ALL">Alle Städte</option>
+                <option value="Lymhurst">Lymhurst</option>
+                <option value="Martlock">Martlock</option>
+                <option value="Fort Sterling">Fort Sterling</option>
+                <option value="Thetford">Thetford</option>
+                <option value="Bridgewatch">Bridgewatch</option>
+                <option value="Caerleon">Caerleon</option>
+              </select>
+            </div>
+          </div>
+        </aside>
       </div>
-
-      <div id="cards" class="grid"></div>
     </div>
 
     <!-- Auth Modal -->
@@ -74,6 +102,27 @@
     const lastUpdated = document.getElementById('lastUpdated');
     const dealCountEl = document.getElementById('dealCount');
     const LAST_UPDATED_KEY = 'albion_profit_last_updated';
+    const citySelect = document.getElementById('citySelect');
+    const cityNameEl = document.getElementById('cityName');
+    const cityCrestImg = document.getElementById('cityCrestImg');
+    const crestMap = {
+      "ALL": "../picture/Carleon.png",
+      "Lymhurst": "../picture/Lymhurstwappen.png",
+      "Martlock": "../picture/Martlockwappen.png",
+      "Fort Sterling": "../picture/Fortsterlingwappen.png",
+      "Thetford": "../picture/Thefortwappen.png",
+      "Bridgewatch": "../picture/Bridgewatch.png",
+      "Caerleon": "../picture/Carleon.png"
+    };
+    const bgMap = {
+      "ALL": 'radial-gradient(circle at 20% 20%, rgba(124, 255, 208, 0.08), transparent 30%), radial-gradient(circle at 80% 0%, rgba(117, 193, 255, 0.1), transparent 25%), var(--bg)',
+      "Lymhurst": 'radial-gradient(circle at 20% 20%, rgba(124, 255, 208, 0.08), transparent 30%), radial-gradient(circle at 80% 0%, rgba(117, 193, 255, 0.1), transparent 25%), var(--bg)',
+      "Fort Sterling": 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 32%), radial-gradient(circle at 80% 0%, rgba(200,200,200,0.08), transparent 25%), var(--bg)',
+      "Caerleon": 'radial-gradient(circle at 20% 20%, rgba(15,15,20,0.55), transparent 32%), radial-gradient(circle at 80% 0%, rgba(0,0,0,0.45), transparent 28%), var(--bg)',
+      "Bridgewatch": 'radial-gradient(circle at 20% 20%, rgba(255, 150, 60, 0.16), transparent 32%), radial-gradient(circle at 80% 0%, rgba(255, 110, 20, 0.12), transparent 28%), var(--bg)',
+      "Martlock": 'radial-gradient(circle at 20% 20%, rgba(90, 170, 255, 0.18), transparent 32%), radial-gradient(circle at 80% 0%, rgba(60, 130, 230, 0.14), transparent 28%), var(--bg)',
+      "Thetford": 'radial-gradient(circle at 20% 20%, rgba(180, 120, 255, 0.16), transparent 32%), radial-gradient(circle at 80% 0%, rgba(140, 80, 220, 0.14), transparent 28%), var(--bg)'
+    };
 
     const nameMap = {
       "MAIN_SWORD": "Broadsword","2H_CLAYMORE": "Claymore","DUAL_SWORD": "Dual Swords","2H_CLEAVER": "Carving Sword",
@@ -127,6 +176,7 @@
     let allData = [];
     let minProfitFilter = 0;
     let sortBySilver = false;
+    let cityFilter = 'ALL';
     let authed = false;
     let spinning = false;
     let progressTimer = null;
@@ -139,7 +189,9 @@
     function render() {
       cards.innerHTML = "";
       const source = allData.length > 0 ? allData : (window.results || []);
-      const data = source.filter(r => (Number(r.profit ?? 0)) >= minProfitFilter);
+      const data = source
+        .filter(r => (Number(r.profit ?? 0)) >= minProfitFilter)
+        .filter(r => cityFilter === 'ALL' ? true : (r.city || '').toLowerCase() === cityFilter.toLowerCase());
       const sorted = [...data].sort((a, b) => {
         if (sortBySilver) {
           const sa = (a.bm ?? 0) - (a.lym ?? 0);
@@ -165,7 +217,11 @@
         const baseCode = (match[2] || r.id).trim().toUpperCase();
         const enchant = match[3] ? parseInt(match[3], 10) : 0;
         const baseLabel = nameMap[baseCode] || baseCode;
-        const displayName = tier ? `T${tier} ${baseLabel}` : baseLabel;
+        let displayName = baseLabel;
+        if (tier) {
+          const tierLabel = enchant ? `${tier}.${enchant}` : `${tier}`;
+          displayName = `${tierLabel}\u00A0\u00A0${baseLabel}`;
+        }
         const tagClass = enchant ? `tag enchant-${enchant}` : '';
         const tagHtml = tagClass ? `<span class="${tagClass}"></span>` : '';
         const borderClass = enchant ? `border-enchant-${enchant}` : '';
@@ -174,7 +230,7 @@
           ${tagHtml}
           <div class="title">${displayName}</div>
           <div class="row"><span>ID</span><span class="val">${r.id}</span></div>
-          <div class="row"><span>Lymhurst</span><span class="val">${r.lym.toLocaleString()}</span></div>
+          <div class="row"><span>${r.city || 'City'}</span><span class="val">${r.lym.toLocaleString()}</span></div>
           <div class="row"><span>Black Market</span><span class="val">${r.bm.toLocaleString()}</span></div>
           <div class="row"><span>Sold/Tag</span><span class="val">${(r.sold ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</span></div>
           <div class="${profitClass}">
@@ -274,6 +330,22 @@
       render();
     });
 
+    function setCity(city) {
+      cityFilter = city;
+      cityNameEl.textContent = cityFilter === 'ALL' ? 'Alle Städte' : cityFilter;
+      const crestSrc = crestMap[cityFilter] || crestMap.ALL;
+      cityCrestImg.src = crestSrc;
+      cityCrestImg.onerror = () => { cityCrestImg.onerror = null; cityCrestImg.src = crestMap.ALL; };
+      cityCrestImg.alt = `${cityNameEl.textContent} Crest`;
+      const bg = bgMap[cityFilter] || bgMap.ALL;
+      document.body.style.background = bg;
+    }
+
+    citySelect.addEventListener('change', () => {
+      setCity(citySelect.value);
+      render();
+    });
+
     function persistLastUpdated(iso) {
       try { localStorage.setItem(LAST_UPDATED_KEY, iso); } catch { /* ignore */ }
       lastUpdated.textContent = new Date(iso).toLocaleTimeString();
@@ -301,6 +373,9 @@
 
     authBtn.addEventListener('click', tryAuth);
     authInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAuth(); });
+
+    // Initial crest
+    setCity('ALL');
   </script>
 </body>
 </html>
