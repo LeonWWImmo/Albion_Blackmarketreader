@@ -25,7 +25,7 @@ jobs:
 
       - name: Run backend (2 items)
         working-directory: Albion_ProfitChecker
-        run: dotnet run -- --item-list Data/ItemList.tmp.json --bm-days 14
+        run: dotnet run -- --run-once --item-list Data/ItemList.tmp.json --bm-days 14
 
       - name: Cleanup temp item list
         working-directory: Albion_ProfitChecker
