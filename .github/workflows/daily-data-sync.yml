@@ -1,0 +1,53 @@
+name: Daily Data Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *" # täglich um 05:00 UTC
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Albion_ProfitChecker/Albion_ProfitChecker.csproj
+
+      - name: Run backend to refresh results.js
+        working-directory: Albion_ProfitChecker
+        run: dotnet run -- --run-once --bm-days 14
+
+      - name: Commit updated results (falls vorhanden)
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain ui/results.js)" ]; then
+            git add ui/results.js ui/progress.json || true
+            git commit -m "chore: daily data refresh"
+          else
+            echo "Keine Änderungen in results.js"
+          fi
+
+      - name: Push changes
+        if: success()
+        run: |
+          if [ -n "$(git log origin/$(git rev-parse --abbrev-ref HEAD)..HEAD)" ]; then
+            git push
+          else
+            echo "Nichts zu pushen"
+          fi
+
+      - name: Trigger Vercel Deploy Hook
+        if: env.VERCEL_DEPLOY_HOOK_URL != ''
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          curl -X POST "$VERCEL_DEPLOY_HOOK_URL"

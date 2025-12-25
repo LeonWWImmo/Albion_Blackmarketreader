@@ -18,7 +18,7 @@
             <div class="hero">
               <div>
                 <h1>RomulusKings Market Reader</h1>
-                <p>&ge; 30% Profit &bull; Zeiträume 14/30/60 Tage &bull; Live-Daten Black Market</p>
+                <p>&ge; 30% Profit &bull; Zeiträume 14 Tage &bull; Live-Daten Black Market</p>
               </div>
             </div>
           </div>
@@ -211,7 +211,9 @@
       }
       sorted.forEach(r => {
         const card = document.createElement('div');
-        const profitClass = r.profit < 0 ? 'profit negative' : 'profit';
+        const silverDiff = (r.bm ?? 0) - (r.lym ?? 0);
+        const profitValue = sortBySilver ? silverDiff : (r.profit ?? 0);
+        const profitClass = profitValue < 0 ? 'profit negative' : 'profit';
         const match = /^T?(\d+)?_(.+?)(?:@(\d+))?$/i.exec(r.id) || [];
         const tier = match[1];
         const baseCode = (match[2] || r.id).trim().toUpperCase();
@@ -234,7 +236,9 @@
           <div class="row"><span>Black Market</span><span class="val">${r.bm.toLocaleString()}</span></div>
           <div class="row"><span>Sold/Tag</span><span class="val">${(r.sold ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</span></div>
           <div class="${profitClass}">
-            Profit: ${r.profit > 0 ? '+' : ''}${r.profit.toFixed(1)}%
+            ${sortBySilver
+              ? `Profit: ${profitValue.toLocaleString()}`
+              : `Profit: ${profitValue > 0 ? '+' : ''}${profitValue.toFixed(1)}%`}
             <span class="span-tag">${r.span}</span>
           </div>
         `;
