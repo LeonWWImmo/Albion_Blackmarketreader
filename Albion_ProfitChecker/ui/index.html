@@ -15,23 +15,83 @@
       <a class="cta" href="dashboard.html">Zum Dashboard</a>
     </div>
 
-    <div class="hero hero-landing">
-      <div class="hero-text">
-        <h1>RomulusKings Market Reader</h1>
-        <p>Scanne den Schwarzmarkt nach Profit-Perlen. Live-Preise, Nachfrage, Enchant-Farben – alles in einem Dashboard.</p>
-        <div class="pill-row">
-          <span class="pill">Live City Prices</span>
-          <span class="pill">BM History &amp; Spans</span>
-          <span class="pill">Profit-Filter</span>
+    <section class="hero hero-landing">
+      <div class="hero-left">
+        <span class="badge-glow">🚀 Albion Black Market Tool</span>
+        <h1>
+          Maximiere deinen<br>
+          <span class="gradient-text">Albion Profit</span>
+        </h1>
+        <p>
+          Live Black-Market Scans · Profit-Analyse · City-Vergleich ·
+          In Sekunden sehen, was sich wirklich lohnt.
+        </p>
+
+        <div class="hero-actions">
+          <a href="dashboard.html" class="cta primary">Zum Dashboard</a>
+          <a href="#features" class="cta ghost">Features ansehen</a>
+        </div>
+
+        <div class="hero-stats">
+          <div><strong>14 / 30 / 60</strong><span>Tage Analyse</span></div>
+          <div><strong>Live</strong><span>BM Preise</span></div>
+          <div><strong>Smart</strong><span>Profit Filter</span></div>
         </div>
       </div>
-    </div>
+
+      <div class="hero-right">
+        <img src="../picture/Anzeige-preis.png" class="hero-preview" alt="Preiskarte Vorschau">
+      </div>
+    </section>
+
+    <section id="features" class="feature-grid">
+      <div class="feature-card">
+        <h3>📈 Live Profit Scan</h3>
+        <p>Vergleicht City-Preise mit Black Market in Echtzeit.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>💰 Silber-Filter</h3>
+        <p>Zeigt dir direkt die profitabelsten Items.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>⚡ Auto Sync</h3>
+        <p>Aktualisiert Preise automatisch mit Retry-System.</p>
+      </div>
+
+      <div class="feature-card">
+        <h3>🏙 City Switching</h3>
+        <p>Alle Städte sofort vergleichen.</p>
+      </div>
+    </section>
+
+    <section class="how-it-works">
+      <h2>So funktioniert’s</h2>
+      <div class="how-steps">
+        <div class="step-card">
+          <div class="step-icon">1️⃣</div>
+          <h3>Stadt wählen</h3>
+          <p>City im Dropdown auswählen – Wappen & Hintergrund wechseln mit.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">2️⃣</div>
+          <h3>Profit/Silber filtern</h3>
+          <p>Prozent oder absoluter Silber-Gewinn, sofort sortiert.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-icon">3️⃣</div>
+          <h3>Kaufen & verkaufen</h3>
+          <p>Items checken, Markt handeln, Profit mitnehmen.</p>
+        </div>
+      </div>
+    </section>
 
     <div class="article">
       <div class="article-block">
         <div class="article-text">
           <h2>Preiskarten lesen</h2>
-          <p>Die Karten zeigen Lymhurst-Buy, Black-Market-History und Sold/Tag. Enchant-Tags sind farbig: @1 grün, @2 blau, @3 lila, @4 gold. Negative Profite bleiben sichtbar.</p>
+          <p>Die Karten zeigen City-Buy, Black-Market-History und Sold/Tag. Enchant-Tags sind farbig: @1 grün, @2 blau, @3 lila, @4 gold. Negative Profite bleiben sichtbar.</p>
           <ul>
             <li><strong>ID</strong> zeigt Tier/Enchant-Kombination.</li>
             <li><strong>Sold/Tag</strong> = Nachfrage, je höher desto liquider.</li>
@@ -59,8 +119,23 @@
 
       <div class="article-block">
         <div class="article-text">
+          <h2>Silber-Filter</h2>
+          <p>Mit „Nach Silber filtern“ wechselst du von Prozent-Profit auf absoluten Silber-Gewinn. Die Karten zeigen dann direkt den Gewinn in Silber (BM − City) und werden danach sortiert.</p>
+          <ul>
+            <li>Anzeige: z. B. „Profit: 230.000“ statt „+120.0%“.</li>
+            <li>Sortierung: höchste Silber-Gewinne zuerst.</li>
+            <li>Nochmals klicken oder X nutzen, um zurück zu Prozent zu gehen.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/Silber-Filter.png" alt="Silber-Filter" />
+        </div>
+      </div>
+
+      <div class="article-block">
+        <div class="article-text">
           <h2>Neue Daten sync</h2>
-          <p>Der Sync holt City-Bulk-Preise, dann BM-History mit Retries/Spans. Wärenddessen siehst du den Fortschritt in % und kannst danach sofort filtern.</p>
+          <p>Der Sync holt City-Bulk-Preise, dann BM-History mit Retries/Spans. Währenddessen siehst du den Fortschritt in % und kannst danach sofort filtern.</p>
           <ul>
             <li>Bulk City Prices (Lymhurst) mit Frische-Check.</li>
             <li>History mit 14/30/60 Tagen, Retries bei leeren Antworten.</li>
@@ -82,14 +157,44 @@
             <li>Nach Abschluss sind die neuen Daten sofort im Dashboard.</li>
           </ul>
         </div>
-        <div class="article-media"> 
+        <div class="article-media">
           <img src="../picture/Sync-amlaufen.png" alt="Sync läuft" />
         </div>
       </div>
 
       <div class="article-block">
         <div class="article-text">
-          <h2>Testosteron-Logo</h2> 
+          <h2>Deals-Zähler</h2>
+          <p>„Deals“ zeigt, wie viele Karten aktuell angezeigt werden. Er reagiert auf Filter und Stadtauswahl und hilft, die Trefferanzahl im Blick zu behalten.</p>
+          <ul>
+            <li>Passt sich an Profit-/Silber-Filter und City-Wechsel an.</li>
+            <li>Steigt oder sinkt sofort, wenn du Filter setzt oder entfernst.</li>
+            <li>Zeigt die Treffer, die du wirklich siehst.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/Deals.bild.png" alt="Deals Zähler" />
+        </div>
+      </div>
+
+      <div class="article-block">
+        <div class="article-text">
+          <h2>City wechseln</h2>
+          <p>Über die City-Kachel stellst du die Stadt um. Karten, Deals-Zähler und Hintergrund-Schimmer passen sich an die gewählte Stadt an.</p>
+          <ul>
+            <li>Dropdown: Lymhurst, Martlock, Fort Sterling, Thetford, Bridgewatch, Caerleon.</li>
+            <li>Wappen und Hintergrundfarbe wechseln zur Stadt.</li>
+            <li>Karten zeigen nur Preise/Profite für die gewählte Stadt.</li>
+          </ul>
+        </div>
+        <div class="article-media">
+          <img src="../picture/City-anpasssen.png" alt="City auswählen" />
+        </div>
+      </div>
+
+      <div class="article-block">
+        <div class="article-text">
+          <h2>Logo</h2>
           <p>Das Molekül-Logo oben links bringt dich zur Landing-Seite zurück. Es ist als kleines Easter Egg (Testosteron-Symbol) und Home-Button gedacht.</p>
           <ul>
             <li>Klick = Zur Startseite springen.</li>
@@ -101,6 +206,29 @@
         </div>
       </div>
     </div>
+
+    <section class="why-tool">
+      <h2>Warum dieses Tool?</h2>
+      <div class="why-grid">
+        <div class="why-card">
+          <h3>❌ Stundenlang Preise vergleichen</h3>
+          <p>Manuell switchen zwischen Cities kostet Zeit.</p>
+        </div>
+        <div class="why-card">
+          <h3>❌ Falsche Items kaufen</h3>
+          <p>Ohne Daten verpasst du Margen oder kaufst zu teuer.</p>
+        </div>
+        <div class="why-card">
+          <h3>✅ Sofort sehen, was sich lohnt</h3>
+          <p>Profit Radar zeigt klar: welche Items, welche Stadt, wie viel Gewinn.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>Albion Profit Radar · Für Trader gebaut, nicht von Sandbox Interactive</div>
+      <div>© 2025 · Transparent, API-konform, reine Client-Seite</div>
+    </footer>
   </div>
 </body>
 </html>

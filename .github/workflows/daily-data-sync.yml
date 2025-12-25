@@ -25,7 +25,7 @@ jobs:
 
       - name: Run backend to refresh results.js
         working-directory: Albion_ProfitChecker
-        run: dotnet run -- --run-once --bm-days 14
+        run: dotnet run -- --run-once --bm-days 14 --bulk-batch-size 50 --bulk-delay-ms 1500 --history-parallel 1 --history-retries 1 --history-retry-delay-ms 2500 --history-span-delay-ms 1500
 
       - name: Commit updated results (falls vorhanden)
         working-directory: .

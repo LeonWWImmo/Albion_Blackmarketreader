@@ -25,10 +25,10 @@
 
           <div class="top-row" style="justify-content: flex-end; margin-top: -12px;">
             <div class="hero-cta">
-              <div class="badge" id="refreshBtn" title="Daten neu laden">
-                <span id="refreshIcon" class="refresh-icon"></span>
-                <span>Neue Daten sync</span>
-                <span id="lastUpdated" style="font-weight:400; color: var(--muted); font-size:12px; margin-left:6px;"></span>
+              <div class="badge" id="refreshBtn" title="Letzte Aktualisierung">
+                <span style="font-weight:600;">Letzte Aktualisierung:</span>
+                <span id="lastUpdatedTime" style="font-weight:600; margin-left:6px;"></span>
+                <span id="lastUpdatedDate" style="font-weight:400; color: var(--muted); margin-left:8px;"></span>
               </div>
               <div style="font-size:12px; color: var(--muted); margin-top:4px; text-align:right;">Deals: <span id="dealCount">0</span></div>
             </div>
@@ -98,8 +98,8 @@
     const authBtn = document.getElementById('authBtn');
     const authMsg = document.getElementById('authMsg');
     const refreshBtn = document.getElementById('refreshBtn');
-    const refreshIcon = document.getElementById('refreshIcon');
-    const lastUpdated = document.getElementById('lastUpdated');
+    const lastUpdatedTime = document.getElementById('lastUpdatedTime');
+    const lastUpdatedDate = document.getElementById('lastUpdatedDate');
     const dealCountEl = document.getElementById('dealCount');
     const LAST_UPDATED_KEY = 'albion_profit_last_updated';
     const citySelect = document.getElementById('citySelect');
@@ -181,9 +181,7 @@
     let spinning = false;
     let progressTimer = null;
     const progressEl = document.createElement('span');
-    progressEl.style.fontSize = '12px';
-    progressEl.style.color = 'var(--muted)';
-    progressEl.style.marginLeft = '6px';
+    progressEl.style.display = 'none';
     refreshBtn.appendChild(progressEl);
 
     function render() {
@@ -264,9 +262,8 @@
 
     function setSpinning(on) {
       spinning = on;
-      refreshIcon.classList.toggle('spin', on);
       refreshBtn.style.opacity = on ? '0.75' : '1';
-      refreshBtn.style.cursor = on ? 'progress' : 'pointer';
+      refreshBtn.style.cursor = 'default';
       if (!on) {
         progressEl.textContent = '';
         if (progressTimer) {
@@ -290,30 +287,9 @@
       }
     }
 
-    refreshBtn.addEventListener('click', async () => {
-      if (!authed) {
-        auth.style.display = 'flex';
-        authInput.focus();
-        return;
-      }
-      if (spinning) return;
-      setSpinning(true);
-      progressEl.textContent = '0%';
-      progressTimer = setInterval(pollProgress, 1000);
-      try {
-        const resp = await fetch('/refresh', { method: 'POST' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const body = await resp.json();
-        await loadResults();
-        allData = window.results || [];
-        render();
-        const updated = body?.updatedAt || new Date().toISOString();
-        persistLastUpdated(updated);
-      } catch (err) {
-        alert('Refresh fehlgeschlagen. Läuft der lokale Server?');
-      } finally {
-        setSpinning(false);
-      }
+    refreshBtn.addEventListener('click', () => {
+      // bewusst keine Aktion mehr (Frontend getrennt vom Backend)
+      return;
     });
 
     applyFilterBtn.addEventListener('click', () => {
@@ -352,13 +328,19 @@
 
     function persistLastUpdated(iso) {
       try { localStorage.setItem(LAST_UPDATED_KEY, iso); } catch { /* ignore */ }
-      lastUpdated.textContent = new Date(iso).toLocaleTimeString();
+      const d = new Date(iso);
+      lastUpdatedTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      lastUpdatedDate.textContent = d.toLocaleDateString();
     }
 
     function loadStoredLastUpdated() {
       try {
         const stored = localStorage.getItem(LAST_UPDATED_KEY);
-        if (stored) lastUpdated.textContent = new Date(stored).toLocaleTimeString();
+        if (stored) {
+          const d = new Date(stored);
+          lastUpdatedTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          lastUpdatedDate.textContent = d.toLocaleDateString();
+        }
       } catch { /* ignore */ }
     }
 
