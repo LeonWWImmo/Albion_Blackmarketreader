@@ -30,7 +30,8 @@ internal static class Program
     private const int DEFAULT_HISTORY_RETRY_DELAY_MS = 1200;
     private const int DEFAULT_HISTORY_SPAN_DELAY_MS = 1000;
     private const int DEFAULT_MAX_HISTORY_CONCURRENCY = 3;
-    private static readonly string BaseDir = AppContext.BaseDirectory;
+    // Verwende das aktuelle Arbeitsverzeichnis, damit ui/results.js im Repo geschrieben wird (auch in CI).
+    private static readonly string BaseDir = Directory.GetCurrentDirectory();
     private static readonly string UiDir = Path.Combine(BaseDir, "ui");
     private static readonly string PictureDir = Path.Combine(BaseDir, "picture");
     private static readonly string ProgressPath = Path.Combine(UiDir, "progress.json");
