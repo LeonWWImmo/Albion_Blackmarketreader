@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="animated-bg"></div>
   <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
   <div class="page">
     <div class="top-bar">
@@ -63,6 +64,19 @@
       <div class="feature-card">
         <h3>🏙 City Switching</h3>
         <p>Alle Städte sofort vergleichen.</p>
+      </div>
+    </section>
+
+    <section class="preview-showcase">
+      <div class="preview-wrapper">
+        <div class="preview-card left">
+          <img src="../picture/Silver-dashboard.png" alt="Dashboard Silver Profit" class="zoomable" />
+          <span class="preview-label">Dashboard Silver Profit</span>
+        </div>
+        <div class="preview-card right">
+          <img src="../picture/Profit-Dashboard.png" alt="Dashboard % Profit" class="zoomable" />
+          <span class="preview-label">Dashboard % Profit</span>
+        </div>
       </div>
     </section>
 
@@ -230,5 +244,25 @@
       <div>© 2025 · Transparent, API-konform, reine Client-Seite</div>
     </footer>
   </div>
+  <div id="lightbox" class="lightbox" style="display:none;">
+    <div class="lightbox-backdrop"></div>
+    <img id="lightbox-img" src="" alt="Preview" />
+  </div>
+  <script>
+    (() => {
+      const lb = document.getElementById('lightbox');
+      const lbImg = document.getElementById('lightbox-img');
+      document.querySelectorAll('.zoomable').forEach(img => {
+        img.addEventListener('click', () => {
+          lbImg.src = img.src;
+          lb.style.display = 'flex';
+        });
+      });
+      lb.addEventListener('click', () => {
+        lb.style.display = 'none';
+        lbImg.src = '';
+      });
+    })();
+  </script>
 </body>
 </html>

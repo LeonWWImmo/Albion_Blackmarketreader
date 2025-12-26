@@ -248,6 +248,10 @@
       loadResults()
         .then(() => {
           allData = window.results || [];
+          // Fallback: wenn kein gespeicherter Timestamp, nutze jetzt
+          if (!localStorage.getItem(LAST_UPDATED_KEY)) {
+            persistLastUpdated(new Date().toISOString());
+          }
           render();
           loadStoredLastUpdated();
         })
@@ -340,6 +344,9 @@
           const d = new Date(stored);
           lastUpdatedTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           lastUpdatedDate.textContent = d.toLocaleDateString();
+        } else {
+          lastUpdatedTime.textContent = '--:--';
+          lastUpdatedDate.textContent = '';
         }
       } catch { /* ignore */ }
     }
