@@ -1,0 +1,51 @@
+name: Data Sync - Topf 2 (Bridgewatch/Thetford/Caerleon)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  sync-topf2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Albion_ProfitChecker/Albion_ProfitChecker.csproj
+
+      - name: Run backend (Topf 2)
+        working-directory: Albion_ProfitChecker
+        run: dotnet run -- --run-once --bm-days 14 --bulk-batch-size 50 --bulk-delay-ms 1500 --history-parallel 1 --history-retries 1 --history-retry-delay-ms 2500 --history-span-delay-ms 1500 --cities "Bridgewatch,Thetford,Caerleon"
+
+      - name: Move results to results-2.js
+        run: mv Albion_ProfitChecker/ui/results.js Albion_ProfitChecker/ui/results-2.js
+
+      - name: Commit updated results-2 (falls vorhanden)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain Albion_ProfitChecker/ui/results-2.js)" ]; then
+            git add Albion_ProfitChecker/ui/results-2.js
+            git commit -m "chore: data refresh topf2"
+          else
+            echo "Keine Änderungen in results-2.js"
+          fi
+
+      - name: Push changes
+        if: success()
+        run: |
+          if [ -n "$(git log origin/$(git rev-parse --abbrev-ref HEAD)..HEAD)" ]; then
+            git push
+          else
+            echo "Nichts zu pushen"
+          fi

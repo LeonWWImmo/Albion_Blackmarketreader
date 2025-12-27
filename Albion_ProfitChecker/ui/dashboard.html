@@ -1,374 +1,747 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Albion Profit Radar - Dashboard</title>
-  <base href="/">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
+  <title>Albion Blackmarket Reader – Dashboard</title>
+  <meta name="description" content="Albion Blackmarket Reader Dashboard – Profitable Varianten, City-Vergleich, Silber-Filter und Black-Market-Insights." />
+  <link rel="icon" type="image/x-icon" href="logoicon.ico" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
-  <div class="page">
-    <div id="app" style="display:none;">
-      <div class="layout">
-        <div class="main-col">
-          <div class="top-row">
-            <div class="hero">
-              <div>
-                <h1>RomulusKings Market Reader</h1>
-                <p>&ge; 30% Profit &bull; Zeiträume 14 Tage &bull; Live-Daten Black Market</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="top-row" style="justify-content: flex-end; margin-top: -12px;">
-            <div class="hero-cta">
-              <div class="badge" id="refreshBtn" title="Letzte Aktualisierung">
-                <span style="font-weight:600;">Letzte Aktualisierung:</span>
-                <span id="lastUpdatedTime" style="font-weight:600; margin-left:6px;"></span>
-                <span id="lastUpdatedDate" style="font-weight:400; color: var(--muted); margin-left:8px;"></span>
-              </div>
-              <div style="font-size:12px; color: var(--muted); margin-top:4px; text-align:right;">Deals: <span id="dealCount">0</span></div>
-            </div>
-          </div>
-
-          <div class="filters">
-            <label for="minProfit">Profit ≥</label>
-            <input id="minProfit" type="number" step="1" value="0" />
-            <span>%</span>
-            <button id="applyFilter">Filter anwenden</button>
-            <button id="filterSilver" style="margin-left:6px;">Nach Silber filtern</button>
-            <button id="clearSilver" style="display:none;">×</button>
-          </div>
-
-          <div id="cards" class="grid"></div>
-        </div>
-
-        <aside class="aside">
-          <div class="city-panel">
-            <img id="cityCrestImg" src="../picture/Carleon.png" alt="City Crest" class="city-crest-img" />
-            <div class="city-panel-body">
-              <div class="city-panel-title">City</div>
-              <div class="city-panel-name" id="cityName">Alle Städte</div>
-              <select id="citySelect" class="city-select">
-                <option value="ALL">Alle Städte</option>
-                <option value="Lymhurst">Lymhurst</option>
-                <option value="Martlock">Martlock</option>
-                <option value="Fort Sterling">Fort Sterling</option>
-                <option value="Thetford">Thetford</option>
-                <option value="Bridgewatch">Bridgewatch</option>
-                <option value="Caerleon">Caerleon</option>
-              </select>
-            </div>
-          </div>
-        </aside>
-      </div>
+  <div class="static-bg" id="staticBg"></div>
+  <img src="picture/testo ohne background.png" alt="Logo" class="logo-fixed" onclick="window.location.href='index.html'" />
+  <div class="account-wrap">
+    <button id="accountBtn" class="account-btn" aria-label="Account">
+      <span class="account-dot"></span>
+      <span class="account-icon">👤</span>
+    </button>
+  </div>
+  <div id="toast" class="toast" style="display:none;"></div>
+  <div id="confirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <h3>Check your email</h3>
+      <p>Supabase Auth has sent you a mail. Please confirm your email before you log in.</p>
+      <button id="confirmClose" class="cta">Ok</button>
     </div>
-
-    <!-- Auth Modal -->
-    <div id="auth" class="auth" style="display:flex;">
-      <div class="auth-box">
-        <h2>Passwort</h2>
-        <p id="authMsg">Bitte Passwort eingeben.</p>
-        <input type="password" id="authInput" placeholder="Passwort" />
-        <button id="authBtn">Weiter</button>
+  </div>
+  <div id="accountPanel" class="account-panel">
+    <div class="account-header">
+      <h3>Account</h3>
+      <button id="accountClose" class="ghost small">✕</button>
+    </div>
+    <div class="account-body">
+      <div class="user-box">
+        <div class="avatar-circle">👤</div>
+        <div>
+          <strong id="accountEmail">-</strong>
+          <span class="account-label">eingeloggt</span>
+        </div>
       </div>
+      <button id="resetPw" class="account-btn-cta">🔐 Passwort ändern</button>
+      <button id="logout" class="account-btn-cta danger">🚪 Logout</button>
     </div>
   </div>
 
-  <script>
-    const loadResults = () => new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = `results.js?v=${Date.now()}`;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('results.js konnte nicht geladen werden'));
-      document.head.appendChild(s);
-    });
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Lade Daten...</div>
+  </div>
 
+  <div id="authModal" class="auth-modal" style="display:none;">
+    <div class="auth-card">
+      <div class="auth-header">
+        <img src="picture/testo ohne background.png" class="auth-logo" alt="Logo">
+        <h2>RomulusKings Market Reader</h2>
+        <p>Black Market Profit Tool</p>
+      </div>
+      <div class="auth-tabs">
+        <button id="tabLogin" class="tab active">Login</button>
+        <button id="tabRegister" class="tab">Registrieren</button>
+      </div>
+      <div id="loginForm">
+        <input id="authEmail" type="email" placeholder="E-Mail" />
+        <input id="authPassword" type="password" placeholder="Passwort" />
+        <div class="auth-actions">
+          <button id="btnLogin" class="cta">Login</button>
+          <button id="btnGoogle" class="ghost">Mit Google</button>
+        </div>
+        <p class="auth-hint">📩 Bitte bestätige deine E-Mail bevor du dich einloggst.</p>
+      </div>
+      <div id="registerForm" style="display:none;">
+        <input id="regName" type="text" placeholder="Display Name" />
+        <input id="regEmail" type="email" placeholder="E-Mail" />
+        <input id="regPassword" type="password" placeholder="Passwort" />
+        <div class="auth-actions">
+          <button id="btnRegister" class="cta">Registrieren</button>
+        </div>
+        <p class="auth-hint">📩 Nach der Registrierung erhältst du eine Bestätigungs-Mail. Erst danach einloggen.</p>
+      </div>
+      <div id="authError" class="auth-error"></div>
+      <div class="auth-footer">
+        <a href="mailto:blackmarketreader@gmail.com">Hilfe / Support: blackmarketreader@gmail.com</a>
+      </div>
+      <div class="auth-trust">🔒 Powered by Supabase · Secure Auth</div>
+    </div>
+  </div>
+
+  <div id="app" class="page" style="display:none;">
+    <div class="hero">
+      <div>
+        <h1>RomulusKings Market Reader</h1>
+        <p>>= 30% Profit · Zeiträume 14 Tage · Live-Daten Black Market</p>
+      </div>
+      <div class="hero-cta">
+        <div class="badge" id="lastUpdated">Letzte Aktualisierung: --:-- --.--.----</div>
+        <div class="pill-row">
+          <span class="pill" id="dealsCount">Deals: 0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="main-col">
+        <div class="filters">
+          Profit >= <input id="minProfit" type="number" value="0" /> %
+          <button id="applyFilter">Filter anwenden</button>
+          <button id="filterSilver">Nach Silber filtern</button>
+          <button id="clearSilver" style="display:none;">Reset</button>
+        </div>
+
+        <div id="cards" class="grid"></div>
+      </div>
+
+      <aside class="aside">
+        <div class="city-panel">
+          <img id="cityCrest" class="city-crest-img" src="picture/Carleon.png" alt="City Crest" />
+          <div class="city-panel-body">
+            <span class="city-panel-title">City</span>
+            <span class="city-panel-name" id="cityName">Alle Staedte</span>
+            <select id="citySelect" class="city-select">
+              <option value="ALL">Alle Staedte</option>
+              <option value="Lymhurst">Lymhurst</option>
+              <option value="Martlock">Martlock</option>
+              <option value="Fort Sterling">Fort Sterling</option>
+              <option value="Thetford">Thetford</option>
+              <option value="Bridgewatch">Bridgewatch</option>
+              <option value="Caerleon">Caerleon</option>
+            </select>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const SUPABASE_URL = 'https://wmfnwvedrhvqeodzzhkm.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_9EqbV7TTVf05rA3g5tPtOA_IsDmhVQC';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const loadingOverlay = document.getElementById('loadingOverlay');
     const app = document.getElementById('app');
-    const cards = document.getElementById('cards');
-    const minProfitInput = document.getElementById('minProfit');
-    const applyFilterBtn = document.getElementById('applyFilter');
-    const filterSilverBtn = document.getElementById('filterSilver');
-    const clearSilverBtn = document.getElementById('clearSilver');
-    const auth = document.getElementById('auth');
-    const authInput = document.getElementById('authInput');
-    const authBtn = document.getElementById('authBtn');
-    const authMsg = document.getElementById('authMsg');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const lastUpdatedTime = document.getElementById('lastUpdatedTime');
-    const lastUpdatedDate = document.getElementById('lastUpdatedDate');
-    const dealCountEl = document.getElementById('dealCount');
-    const LAST_UPDATED_KEY = 'albion_profit_last_updated';
-    const citySelect = document.getElementById('citySelect');
+    const cardsEl = document.getElementById('cards');
+    const minProfitEl = document.getElementById('minProfit');
+    const applyFilterEl = document.getElementById('applyFilter');
+    const filterSilverEl = document.getElementById('filterSilver');
+    const clearSilverEl = document.getElementById('clearSilver');
+    const lastUpdatedEl = document.getElementById('lastUpdated');
+    const dealsCountEl = document.getElementById('dealsCount');
+    const citySelectEl = document.getElementById('citySelect');
     const cityNameEl = document.getElementById('cityName');
-    const cityCrestImg = document.getElementById('cityCrestImg');
+    const cityCrestEl = document.getElementById('cityCrest');
+    const staticBg = document.getElementById('staticBg');
+
+    const authModal = document.getElementById('authModal');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    const regName = document.getElementById('regName');
+    const regEmail = document.getElementById('regEmail');
+    const regPassword = document.getElementById('regPassword');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const tabLogin = document.getElementById('tabLogin');
+    const tabRegister = document.getElementById('tabRegister');
+    const authError = document.getElementById('authError');
+    const btnLogin = document.getElementById('btnLogin');
+    const btnRegister = document.getElementById('btnRegister');
+    const btnGoogle = document.getElementById('btnGoogle');
+    const accountBtn = document.getElementById('accountBtn');
+    const accountPanel = document.getElementById('accountPanel');
+    const accountClose = document.getElementById('accountClose');
+    const accountEmail = document.getElementById('accountEmail');
+    const resetPw = document.getElementById('resetPw');
+    const logout = document.getElementById('logout');
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmClose = document.getElementById('confirmClose');
+
     const crestMap = {
-      "ALL": "../picture/Carleon.png",
-      "Lymhurst": "../picture/Lymhurstwappen.png",
-      "Martlock": "../picture/Martlockwappen.png",
-      "Fort Sterling": "../picture/Fortsterlingwappen.png",
-      "Thetford": "../picture/Thefortwappen.png",
-      "Bridgewatch": "../picture/Bridgewatch.png",
-      "Caerleon": "../picture/Carleon.png"
-    };
-    const bgMap = {
-      "ALL": 'radial-gradient(circle at 20% 20%, rgba(124, 255, 208, 0.08), transparent 30%), radial-gradient(circle at 80% 0%, rgba(117, 193, 255, 0.1), transparent 25%), var(--bg)',
-      "Lymhurst": 'radial-gradient(circle at 20% 20%, rgba(124, 255, 208, 0.08), transparent 30%), radial-gradient(circle at 80% 0%, rgba(117, 193, 255, 0.1), transparent 25%), var(--bg)',
-      "Fort Sterling": 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 32%), radial-gradient(circle at 80% 0%, rgba(200,200,200,0.08), transparent 25%), var(--bg)',
-      "Caerleon": 'radial-gradient(circle at 20% 20%, rgba(15,15,20,0.55), transparent 32%), radial-gradient(circle at 80% 0%, rgba(0,0,0,0.45), transparent 28%), var(--bg)',
-      "Bridgewatch": 'radial-gradient(circle at 20% 20%, rgba(255, 150, 60, 0.16), transparent 32%), radial-gradient(circle at 80% 0%, rgba(255, 110, 20, 0.12), transparent 28%), var(--bg)',
-      "Martlock": 'radial-gradient(circle at 20% 20%, rgba(90, 170, 255, 0.18), transparent 32%), radial-gradient(circle at 80% 0%, rgba(60, 130, 230, 0.14), transparent 28%), var(--bg)',
-      "Thetford": 'radial-gradient(circle at 20% 20%, rgba(180, 120, 255, 0.16), transparent 32%), radial-gradient(circle at 80% 0%, rgba(140, 80, 220, 0.14), transparent 28%), var(--bg)'
+      "ALL": "picture/Carleon.png",
+      "Lymhurst": "picture/Lymhurstwappen.png",
+      "Martlock": "picture/Martlockwappen.png",
+      "Fort Sterling": "picture/Fortsterlingwappen.png",
+      "Thetford": "picture/Thefortwappen.png",
+      "Bridgewatch": "picture/Bridgewatch.png",
+      "Caerleon": "picture/Carleon.png"
     };
 
     const nameMap = {
-      "MAIN_SWORD": "Broadsword","2H_CLAYMORE": "Claymore","DUAL_SWORD": "Dual Swords","2H_CLEAVER": "Carving Sword",
-      "2H_CLEAVER_HELL": "Carving Sword",
-      "2H_AXE": "Greataxe","2H_AXE_AVALON": "Realmbreaker",
-      "2H_ARCANESTAFF_CRYSTAL": "Astral Staff","2H_ARCANESTAFF_HELL": "Occult Staff","2H_ARCANE_RINGPAIR_AVALON": "Evensong",
-      "MAIN_AXE": "Battleaxe","2H_HALBERD": "Halberd","DUAL_AXE": "Bear Paws","2H_SCYTHE": "Infernal Scythe",
-      "2H_DUALAXE_KEEPER": "Bear Paws",
-      "MAIN_SPEAR": "Spear","2H_GLAIVE": "Glaive","2H_TRIDENT": "Trinity Spear","2H_HARPOON": "Heron Spear",
-      "2H_SPEAR": "Pike","2H_SPEAR_HELL": "Trinity Spear","2H_TRIDENT_UNDEAD": "Trinity Spear",
-      "2H_BOW": "Bow","2H_WARBOW": "Warbow","2H_LONGBOW": "Longbow","2H_SIEGE_BOW": "Wailing Bow",
-      "2H_BOW_AVALON": "Mistpiercer","2H_BOW_CRYSTAL": "Skystrider Bow","2H_BOW_HELL": "Wailing Bow","2H_BOW_KEEPER": "Bow of Badon","2H_LONGBOW_UNDEAD": "Whispering Bow",
-      "2H_CROSSBOW": "Crossbow","2H_HEAVYCROSSBOW": "Heavy Crossbow","2H_REPEATINGCROSSBOW": "Light Crossbow","2H_WEAPONIZEDCROSSBOW": "Energy Shaper",
-      "2H_CROSSBOWLARGE": "Heavy Crossbow","2H_CROSSBOWLARGE_MORGANA": "Siegebow","2H_CROSSBOW_CANNON_AVALON": "Energy Shaper","2H_REPEATINGCROSSBOW_UNDEAD": "Repeating Crossbow",
-      "MAIN_FIRESTAFF": "Fire Staff","2H_FIRESTAFF": "Great Fire Staff","2H_INFERNOSTAFF": "Infernal Staff","2H_WILDFIRESTAFF": "Wildfire Staff",
-      "2H_FIRESTAFF_HELL": "Infernal Staff","2H_FIRESTAFF_KEEPER": "Wildfire Staff",
-      "MAIN_FROSTSTAFF": "Frost Staff","2H_FROSTSTAFF": "Great Frost Staff","2H_GLACIALSTAFF": "Glacial Staff","2H_HOARFROSTSTAFF": "Hoarfrost Staff","2H_ICEGAUNTLETS": "Icicle Staff",
-      "2H_FROSTSTAFF_CRYSTAL": "Arctic Staff","2H_FROSTSTAFF_GLACIAL": "Glacial Staff",
-      "MAIN_HOLYSTAFF": "Holy Staff","2H_HOLYSTAFF": "Great Holy Staff","2H_DIVINESTAFF": "Divine Staff","2H_LIFETOUCHSTAFF": "Lifetouch Staff","2H_REDEMPTIONSTAFF": "Redemption Staff",
-      "2H_HOLYSTAFF_HELL": "Lifetouch Staff","2H_HOLYSTAFF_KEEPER": "Redemption Staff",
-      "MAIN_NATURESTAFF": "Nature Staff","2H_NATURESTAFF": "Great Nature Staff","2H_WILDSTAFF": "Wild Staff","2H_DRUIDSTAFF": "Druidic Staff","2H_IRONROOTSTAFF": "Ironroot Staff",
-      "2H_NATURESTAFF_HELL": "Blight Staff","2H_NATURESTAFF_KEEPER": "Druidic Staff",
-      "MAIN_CURSEDSTAFF": "Cursed Staff","2H_CURSEDSTAFF": "Great Cursed Staff","2H_DEMONICSTAFF": "Demonic Staff","2H_SHADOWSTAFF": "Shadowcaller",
+      "OFF_SHIELD": "Beginner's Shield",
+      "OFF_TOWERSHIELD_UNDEAD": "Sarcophagus",
+      "OFF_SHIELD_HELL": "Caitiff Shield",
+      "OFF_SPIKEDSHIELD_MORGANA": "Facebreaker",
+      "OFF_SHIELD_AVALON": "Astral Aegis",
+      "OFF_SHIELD_CRYSTAL": "Unbreakable Ward",
+      "OFF_BOOK": "Tome of Spells",
+      "OFF_ORB_MORGANA": "Eye of Secrets",
+      "OFF_DEMONSKULL_HELL": "Muisak",
+      "OFF_TOTEM_KEEPER": "Taproot",
+      "OFF_CENSER_AVALON": "Celestial Censer",
+      "OFF_TOME_CRYSTAL": "Timelocked Grimoire",
+      "OFF_TORCH": "Torch",
+      "OFF_HORN_KEEPER": "Mistcaller",
+      "OFF_TALISMAN_AVALON": "Sacred Scepter",
+      "OFF_LAMP_UNDEAD": "Cryptcandle",
+      "OFF_JESTERCANE_HELL": "Leering Cane",
+      "OFF_TORCH_CRYSTAL": "Blueflame Torch",
+      "HEAD_PLATE_SET1": "Soldier Helmet",
+      "ARMOR_PLATE_SET1": "Soldier Armor",
+      "SHOES_PLATE_SET1": "Soldier Boots",
+      "HEAD_PLATE_SET2": "Knight Helmet",
+      "ARMOR_PLATE_SET2": "Knight Armor",
+      "SHOES_PLATE_SET2": "Knight Boots",
+      "HEAD_PLATE_SET3": "Guardian Helmet",
+      "ARMOR_PLATE_SET3": "Guardian Armor",
+      "SHOES_PLATE_SET3": "Guardian Boots",
+      "HEAD_PLATE_UNDEAD": "Graveguard Helmet",
+      "ARMOR_PLATE_UNDEAD": "Graveguard Armor",
+      "SHOES_PLATE_UNDEAD": "Graveguard Boots",
+      "HEAD_PLATE_HELL": "Demon Helmet",
+      "ARMOR_PLATE_HELL": "Demon Armor",
+      "SHOES_PLATE_HELL": "Demon Boots",
+      "HEAD_PLATE_KEEPER": "Judicator Helmet",
+      "ARMOR_PLATE_KEEPER": "Judicator Armor",
+      "SHOES_PLATE_KEEPER": "Judicator Boots",
+      "HEAD_PLATE_FEY": "Duskweaver Helmet",
+      "ARMOR_PLATE_FEY": "Duskweaver Armor",
+      "SHOES_PLATE_FEY": "Duskweaver Boots",
+      "HEAD_PLATE_AVALON": "Helmet of Valor",
+      "ARMOR_PLATE_AVALON": "Armor of Valor",
+      "SHOES_PLATE_AVALON": "Boots of Valor",
+      "HEAD_LEATHER_SET1": "Beginner's Mercenary Hood",
+      "ARMOR_LEATHER_SET1": "Beginner's Mercenary Jacket",
+      "SHOES_LEATHER_SET1": "Beginner's Mercenary Shoes",
+      "HEAD_LEATHER_SET2": "Hunter Hood",
+      "ARMOR_LEATHER_SET2": "Hunter Jacket",
+      "SHOES_LEATHER_SET2": "Hunter Shoes",
+      "HEAD_LEATHER_SET3": "Assassin Hood",
+      "ARMOR_LEATHER_SET3": "Assassin Jacket",
+      "SHOES_LEATHER_SET3": "Assassin Shoes",
+      "HEAD_LEATHER_MORGANA": "Stalker Hood",
+      "ARMOR_LEATHER_MORGANA": "Stalker Jacket",
+      "SHOES_LEATHER_MORGANA": "Stalker Shoes",
+      "HEAD_LEATHER_HELL": "Hellion Hood",
+      "ARMOR_LEATHER_HELL": "Hellion Jacket",
+      "SHOES_LEATHER_HELL": "Hellion Shoes",
+      "HEAD_LEATHER_UNDEAD": "Specter Hood",
+      "ARMOR_LEATHER_UNDEAD": "Specter Jacket",
+      "SHOES_LEATHER_UNDEAD": "Specter Shoes",
+      "HEAD_LEATHER_FEY": "Mistwalker Hood",
+      "ARMOR_LEATHER_FEY": "Mistwalker Jacket",
+      "SHOES_LEATHER_FEY": "Mistwalker Shoes",
+      "HEAD_LEATHER_AVALON": "Hood of Tenacity",
+      "ARMOR_LEATHER_AVALON": "Jacket of Tenacity",
+      "SHOES_LEATHER_AVALON": "Shoes of Tenacity",
+      "HEAD_CLOTH_SET1": "Scholar Cowl",
+      "ARMOR_CLOTH_SET1": "Scholar Robe",
+      "SHOES_CLOTH_SET1": "Scholar Sandals",
+      "HEAD_CLOTH_SET2": "Cleric Cowl",
+      "ARMOR_CLOTH_SET2": "Cleric Robe",
+      "SHOES_CLOTH_SET2": "Cleric Sandals",
+      "HEAD_CLOTH_SET3": "Mage Cowl",
+      "ARMOR_CLOTH_SET3": "Mage Robe",
+      "SHOES_CLOTH_SET3": "Mage Sandals",
+      "HEAD_CLOTH_KEEPER": "Druid Cowl",
+      "ARMOR_CLOTH_KEEPER": "Druid Robe",
+      "SHOES_CLOTH_KEEPER": "Druid Sandals",
+      "HEAD_CLOTH_HELL": "Fiend Cowl",
+      "ARMOR_CLOTH_HELL": "Fiend Robe",
+      "SHOES_CLOTH_HELL": "Fiend Sandals",
+      "HEAD_CLOTH_MORGANA": "Cultist Cowl",
+      "ARMOR_CLOTH_MORGANA": "Cultist Robe",
+      "SHOES_CLOTH_MORGANA": "Cultist Sandals",
+      "HEAD_CLOTH_FEY": "Feyscale Hat",
+      "ARMOR_CLOTH_FEY": "Feyscale Robe",
+      "SHOES_CLOTH_FEY": "Feyscale Sandals",
+      "HEAD_CLOTH_AVALON": "Cowl of Purity",
+      "ARMOR_CLOTH_AVALON": "Robe of Purity",
+      "SHOES_CLOTH_AVALON": "Sandals of Purity",
+      "HEAD_CLOTH_ROYAL": "Royal Cowl",
+      "ARMOR_CLOTH_ROYAL": "Royal Robe",
+      "SHOES_CLOTH_ROYAL": "Royal Sandals",
+      "HEAD_LEATHER_ROYAL": "Royal Hood",
+      "ARMOR_LEATHER_ROYAL": "Royal Jacket",
+      "SHOES_LEATHER_ROYAL": "Royal Shoes",
+      "HEAD_PLATE_ROYAL": "Royal Helmet",
+      "ARMOR_PLATE_ROYAL": "Royal Armor",
+      "SHOES_PLATE_ROYAL": "Royal Boots",
+      "HEAD_GATHERER_FIBER": "Harvester Cap",
+      "ARMOR_GATHERER_FIBER": "Harvester Garb",
+      "SHOES_GATHERER_FIBER": "Harvester Workboots",
+      "HEAD_GATHERER_HIDE": "Skinner Cap",
+      "ARMOR_GATHERER_HIDE": "Skinner Garb",
+      "SHOES_GATHERER_HIDE": "Skinner Workboots",
+      "HEAD_GATHERER_ORE": "Miner Cap",
+      "ARMOR_GATHERER_ORE": "Miner Garb",
+      "SHOES_GATHERER_ORE": "Miner Workboots",
+      "HEAD_GATHERER_ROCK": "Quarrier Cap",
+      "ARMOR_GATHERER_ROCK": "Quarrier Garb",
+      "SHOES_GATHERER_ROCK": "Quarrier Workboots",
+      "HEAD_GATHERER_WOOD": "Lumberjack Cap",
+      "ARMOR_GATHERER_WOOD": "Lumberjack Garb",
+      "SHOES_GATHERER_WOOD": "Lumberjack Workboots",
+      "HEAD_GATHERER_FISH": "Fisherman Cap",
+      "ARMOR_GATHERER_FISH": "Fisherman Garb",
+      "SHOES_GATHERER_FISH": "Fisherman Workboots",
+      "2H_BOW": "Bow",
+      "2H_WARBOW": "Warbow",
+      "2H_LONGBOW": "Longbow",
+      "2H_LONGBOW_UNDEAD": "Whispering Bow",
+      "2H_BOW_HELL": "Wailing Bow",
+      "2H_BOW_KEEPER": "Bow of Badon",
+      "2H_BOW_AVALON": "Mistpiercer",
+      "2H_BOW_CRYSTAL": "Skystrider Bow",
+      "2H_CROSSBOW": "Crossbow",
+      "2H_CROSSBOWLARGE": "Heavy Crossbow",
+      "MAIN_1HCROSSBOW": "Light Crossbow",
+      "2H_REPEATINGCROSSBOW_UNDEAD": "Weeping Repeater",
+      "2H_DUALCROSSBOW_HELL": "Boltcasters",
+      "2H_CROSSBOWLARGE_MORGANA": "Siegebow",
+      "2H_CROSSBOW_CANNON_AVALON": "Energy Shaper",
+      "2H_DUALCROSSBOW_CRYSTAL": "Arclight Blasters",
+      "MAIN_CURSEDSTAFF": "Cursed Staff",
+      "2H_CURSEDSTAFF": "Great Cursed Staff",
+      "2H_DEMONICSTAFF": "Demonic Staff",
+      "MAIN_CURSEDSTAFF_UNDEAD": "Lifecurse Staff",
+      "2H_SKULLORB_HELL": "Cursed Skull",
       "2H_CURSEDSTAFF_MORGANA": "Damnation Staff",
-      "MAIN_ARCANESTAFF": "Arcane Staff","2H_ARCANESTAFF": "Great Arcane Staff","2H_ENIGMATICSTAFF": "Enigmatic Staff","2H_OCCULTSTAFF": "Occult Staff","2H_EYESTAFF": "Evensong",
-      "2H_OCCULTSTAFF_HELL": "Occult Staff",
-      "MAIN_DAGGER": "Dagger","2H_DAGGER": "Dagger Pair","DUAL_DAGGER": "Bloodletter","2H_CLAWPAIR": "Claws","2H_DEATHGIVERS": "Deathgivers",
-      "2H_DAGGERPAIR": "Dagger Pair","2H_DAGGERPAIR_CRYSTAL": "Bridled Fury","2H_DAGGER_KATAR_AVALON": "Bloodletter","2H_CLAWPAIR": "Claws","2H_HELLFIRE_HAND": "Hellfire Hands",
-      "MAIN_HAMMER": "Hammer","2H_HAMMER": "Great Hammer","2H_POLEHAMMER": "Polehammer","2H_RAMHAMMER": "Grovekeeper",
-      "2H_DUALHAMMER_AVALON": "Hand of Justice",
-      "2H_QUARTERSTAFF": "Quarterstaff","2H_IRONCLADEDSTAFF": "Ironclad Staff","2H_DOUBLEBLADEDSTAFF": "Double Bladed Staff","2H_COMBATSTAFF": "Black Monk Staff","2H_SOULSTAFF": "Soulscythe",
-      "2H_COMBATSTAFF_MORGANA": "Black Monk Stave","2H_SOULSTAFF": "Soulscythe","2H_SCYTHE_CRYSTAL": "Crystal Reaper","2H_SCYTHE_HELL": "Soulscythe","2H_TWINSCYTHE_HELL": "Twin Scythes",
-      "2H_FLAIL": "Morning Star","2H_FLAIL_MORGANA": "Soulscythe",
-      "OFF_SHIELD": "Shield","OFF_TORCH": "Torch","OFF_BOOK": "Tome","OFF_HORN": "Mistcaller","OFF_TALISMAN": "Sacred Scepter","OFF_CENSER": "Censer",
-      "OFF_CENSER_AVALON": "Celestial Censer","OFF_HORN_KEEPER": "Mistcaller","OFF_TALISMAN_AVALON": "Sacred Scepter",
-      "HEAD_PLATE_SET1": "Soldier Helmet","HEAD_PLATE_SET2": "Knight Helmet","HEAD_PLATE_SET3": "Guardian Helmet",
-      "HEAD_PLATE_AVALON": "Helmet of Valor","HEAD_PLATE_HELL": "Demon Helmet","HEAD_PLATE_FEY": "Duskweaver Helmet","HEAD_PLATE_KEEPER": "Judicator Helmet","HEAD_PLATE_UNDEAD": "Graveguard Helmet",
-      "ARMOR_PLATE_SET1": "Soldier Armor","ARMOR_PLATE_SET2": "Knight Armor","ARMOR_PLATE_SET3": "Guardian Armor",
-      "ARMOR_PLATE_AVALON": "Armor of Valor","ARMOR_PLATE_HELL": "Demon Armor","ARMOR_PLATE_FEY": "Duskweaver Armor","ARMOR_PLATE_KEEPER": "Judicator Armor","ARMOR_PLATE_UNDEAD": "Graveguard Armor",
-      "SHOES_PLATE_SET1": "Soldier Boots","SHOES_PLATE_SET2": "Knight Boots","SHOES_PLATE_SET3": "Guardian Boots",
-      "SHOES_PLATE_AVALON": "Boots of Valor","SHOES_PLATE_HELL": "Demon Boots","SHOES_PLATE_FEY": "Duskweaver Boots","SHOES_PLATE_KEEPER": "Judicator Boots","SHOES_PLATE_UNDEAD": "Graveguard Boots",
-      "HEAD_LEATHER_SET1": "Mercenary Hood","HEAD_LEATHER_SET2": "Hunter Hood","HEAD_LEATHER_SET3": "Assassin Hood",
-      "ARMOR_LEATHER_SET1": "Mercenary Jacket","ARMOR_LEATHER_SET2": "Hunter Jacket","ARMOR_LEATHER_SET3": "Assassin Jacket",
-      "SHOES_LEATHER_SET1": "Mercenary Shoes","SHOES_LEATHER_SET2": "Hunter Shoes","SHOES_LEATHER_SET3": "Assassin Shoes",
-      "HEAD_CLOTH_SET1": "Scholar Cowl","HEAD_CLOTH_SET2": "Cleric Cowl","HEAD_CLOTH_SET3": "Mage Cowl",
-      "ARMOR_CLOTH_SET1": "Scholar Robe","ARMOR_CLOTH_SET2": "Cleric Robe","ARMOR_CLOTH_SET3": "Mage Robe",
-      "SHOES_CLOTH_SET1": "Scholar Sandals","SHOES_CLOTH_SET2": "Cleric Sandals","SHOES_CLOTH_SET3": "Mage Sandals",
-      "CAPE": "Cape","BAG": "Bag"
+      "MAIN_CURSEDSTAFF_AVALON": "Shadowcaller",
+      "MAIN_CURSEDSTAFF_CRYSTAL": "Rotcaller Staff",
+      "MAIN_FIRESTAFF": "Fire Staff",
+      "2H_FIRESTAFF": "Great Fire Staff",
+      "2H_INFERNOSTAFF": "Infernal Staff",
+      "MAIN_FIRESTAFF_KEEPER": "Wildfire Staff",
+      "2H_FIRESTAFF_HELL": "Brimstone Staff",
+      "2H_INFERNOSTAFF_MORGANA": "Blazing Staff",
+      "2H_FIRE_RINGPAIR_AVALON": "Dawnsong",
+      "MAIN_FIRESTAFF_CRYSTAL": "Flamewalker Staff",
+      "MAIN_FROSTSTAFF": "Frost Staff",
+      "2H_FROSTSTAFF": "Great Frost Staff",
+      "2H_GLACIALSTAFF": "Glacial Staff",
+      "MAIN_FROSTSTAFF_KEEPER": "Hoarfrost Staff",
+      "2H_ICEGAUNTLETS_HELL": "Icicle Staff",
+      "2H_ICECRYSTAL_UNDEAD": "Permafrost Prism",
+      "MAIN_FROSTSTAFF_AVALON": "Chillhowl",
+      "2H_FROSTSTAFF_CRYSTAL": "Arctic Staff",
+      "MAIN_ARCANESTAFF": "Arcane Staff",
+      "2H_ARCANESTAFF": "Great Arcane Staff",
+      "2H_ENIGMATICSTAFF": "Enigmatic Staff",
+      "MAIN_ARCANESTAFF_UNDEAD": "Witchwork Staff",
+      "2H_ARCANESTAFF_HELL": "Occult Staff",
+      "2H_ENIGMATICORB_MORGANA": "Malevolent Locus",
+      "2H_ARCANE_RINGPAIR_AVALON": "Evensong",
+      "2H_ARCANESTAFF_CRYSTAL": "Astral Staff",
+      "MAIN_HOLYSTAFF": "Holy Staff",
+      "2H_HOLYSTAFF": "Great Holy Staff",
+      "2H_DIVINESTAFF": "Divine Staff",
+      "MAIN_HOLYSTAFF_MORGANA": "Lifetouch Staff",
+      "2H_HOLYSTAFF_HELL": "Fallen Staff",
+      "2H_HOLYSTAFF_UNDEAD": "Redemption Staff",
+      "MAIN_HOLYSTAFF_AVALON": "Hallowfall",
+      "2H_HOLYSTAFF_CRYSTAL": "Exalted Staff",
+      "MAIN_NATURESTAFF": "Nature Staff",
+      "2H_NATURESTAFF": "Great Nature Staff",
+      "2H_WILDSTAFF": "Wild Staff",
+      "MAIN_NATURESTAFF_KEEPER": "Druidic Staff",
+      "2H_NATURESTAFF_HELL": "Blight Staff",
+      "2H_NATURESTAFF_KEEPER": "Rampant Staff",
+      "MAIN_NATURESTAFF_AVALON": "Ironroot Staff",
+      "MAIN_NATURESTAFF_CRYSTAL": "Forgebark Staff",
+      "MAIN_DAGGER": "Dagger",
+      "2H_DAGGERPAIR": "Dagger Pair",
+      "2H_CLAWPAIR": "Claws",
+      "MAIN_RAPIER_MORGANA": "Bloodletter",
+      "MAIN_DAGGER_HELL": "Demonfang",
+      "2H_IRONGAUNTLETS_HELL": "Black Hands",
+      "2H_DUALSICKLE_UNDEAD": "Deathgivers",
+      "2H_DAGGER_KATAR_AVALON": "Bridled Fury",
+      "2H_DAGGERPAIR_CRYSTAL": "Twin Slayers",
+      "MAIN_SPEAR": "Spear",
+      "2H_SPEAR": "Pike",
+      "2H_GLAIVE": "Glaive",
+      "MAIN_SPEAR_KEEPER": "Heron Spear",
+      "2H_HARPOON_HELL": "Spirithunter",
+      "2H_TRIDENT_UNDEAD": "Trinity Spear",
+      "MAIN_SPEAR_LANCE_AVALON": "Daybreaker",
+      "2H_GLAIVE_CRYSTAL": "Rift Glaive",
+      "MAIN_AXE": "Battleaxe",
+      "2H_AXE": "Greataxe",
+      "2H_HALBERD": "Halberd",
+      "2H_HALBERD_MORGANA": "Carrioncaller",
+      "2H_SCYTHE_HELL": "Infernal Scythe",
+      "2H_DUALAXE_KEEPER": "Bear Paws",
+      "2H_AXE_AVALON": "Realmbreaker",
+      "2H_SCYTHE_CRYSTAL": "Crystal Reaper",
+      "MAIN_SWORD": "Beginner's Broadsword",
+      "2H_CLAYMORE": "Claymore",
+      "2H_DUALSWORD": "Dual Swords",
+      "MAIN_SCIMITAR_MORGANA": "Clarent Blade",
+      "2H_CLEAVER_HELL": "Carving Sword",
+      "2H_DUALSCIMITAR_UNDEAD": "Galatine Pair",
+      "2H_CLAYMORE_AVALON": "Kingmaker",
+      "MAIN_SWORD_CRYSTAL": "Infinity Blade",
+      "2H_QUARTERSTAFF": "Quarterstaff",
+      "2H_IRONCLADEDSTAFF": "Iron-clad Staff",
+      "2H_DOUBLEBLADEDSTAFF": "Double Bladed Staff",
+      "2H_COMBATSTAFF_MORGANA": "Black Monk Stave",
+      "2H_TWINSCYTHE_HELL": "Soulscythe",
+      "2H_ROCKSTAFF_KEEPER": "Staff of Balance",
+      "2H_QUARTERSTAFF_AVALON": "Grailseeker",
+      "2H_DOUBLEBLADEDSTAFF_CRYSTAL": "Phantom Twinblade",
+      "MAIN_HAMMER": "Hammer",
+      "2H_POLEHAMMER": "Polehammer",
+      "2H_HAMMER": "Great Hammer",
+      "2H_HAMMER_UNDEAD": "Tombhammer",
+      "2H_DUALHAMMER_HELL": "Forge Hammers",
+      "2H_RAM_KEEPER": "Grovekeeper",
+      "2H_HAMMER_AVALON": "Hand of Justice",
+      "2H_HAMMER_CRYSTAL": "Truebolt Hammer",
+      "MAIN_MACE": "Mace",
+      "2H_MACE": "Heavy Mace",
+      "2H_FLAIL": "Morning Star",
+      "MAIN_ROCKMACE_KEEPER": "Bedrock Mace",
+      "MAIN_MACE_HELL": "Incubus Mace",
+      "2H_MACE_MORGANA": "Camlann Mace",
+      "2H_DUALMACE_AVALON": "Oathkeepers",
+      "MAIN_MACE_CRYSTAL": "Dreadstorm Monarch",
+      "2H_KNUCKLES_SET1": "Brawler Gloves",
+      "2H_KNUCKLES_SET2": "Battle Bracers",
+      "2H_KNUCKLES_SET3": "Spiked Gauntlets",
+      "2H_KNUCKLES_KEEPER": "Ursine Maulers",
+      "2H_KNUCKLES_HELL": "Hellfire Hands",
+      "2H_KNUCKLES_MORGANA": "Ravenstrike Cestus",
+      "2H_KNUCKLES_AVALON": "Fists of Avalon",
+      "2H_KNUCKLES_CRYSTAL": "Forcepulse Bracers",
+      "2H_SHAPESHIFTER_SET1": "Prowling Staff",
+      "2H_SHAPESHIFTER_SET2": "Rootbound Staff",
+      "2H_SHAPESHIFTER_SET3": "Primal Staff",
+      "2H_SHAPESHIFTER_MORGANA": "Bloodmoon Staff",
+      "2H_SHAPESHIFTER_HELL": "Hellspawn Staff",
+      "2H_SHAPESHIFTER_KEEPER": "Earthrune Staff",
+      "2H_SHAPESHIFTER_AVALON": "Lightcaller",
+      "2H_SHAPESHIFTER_CRYSTAL": "Stillgaze Staff"
+    };
+
+    const bgMap = {
+      "ALL": "radial-gradient(circle at 20% 30%, rgba(92,240,200,0.14), transparent 40%), radial-gradient(circle at 80% 20%, rgba(125,211,255,0.12), transparent 35%), radial-gradient(circle at 60% 80%, rgba(92,240,200,0.10), transparent 40%), linear-gradient(180deg, #0a0d14, #080b12)",
+      "Lymhurst": "radial-gradient(circle at 20% 30%, rgba(92,240,200,0.18), transparent 40%), radial-gradient(circle at 80% 20%, rgba(92,240,200,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
+      "Martlock": "radial-gradient(circle at 20% 30%, rgba(94,199,255,0.18), transparent 40%), radial-gradient(circle at 80% 20%, rgba(118,187,255,0.12), transparent 35%), linear-gradient(180deg, #0b0f15, #0a0d14)",
+      "Fort Sterling": "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 75% 20%, rgba(180,180,180,0.08), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
+      "Thetford": "radial-gradient(circle at 20% 30%, rgba(158,117,255,0.16), transparent 42%), radial-gradient(circle at 75% 20%, rgba(118,87,255,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
+      "Bridgewatch": "radial-gradient(circle at 20% 30%, rgba(255,170,92,0.18), transparent 42%), radial-gradient(circle at 75% 20%, rgba(255,140,60,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
+      "Caerleon": "radial-gradient(circle at 20% 30%, rgba(30,30,30,0.22), transparent 42%), radial-gradient(circle at 75% 20%, rgba(0,0,0,0.14), transparent 35%), linear-gradient(180deg, #0b0f15, #080b12)"
     };
 
     let allData = [];
     let minProfitFilter = 0;
     let sortBySilver = false;
-    let cityFilter = 'ALL';
-    let authed = false;
-    let spinning = false;
-    let progressTimer = null;
-    const progressEl = document.createElement('span');
-    progressEl.style.display = 'none';
-    refreshBtn.appendChild(progressEl);
+    let cityFilter = "ALL";
+
+    function setBg(city) {
+      staticBg.style.background = bgMap[city] || bgMap.ALL;
+    }
+
+    function displayName(id) {
+      const baseNoEnchant = id.split("@")[0];
+      const parts = baseNoEnchant.split("_");
+      if (parts.length < 2) return id;
+      const tier = parts[0].replace("T", "");
+      const enchantMatch = id.match(/@([0-4])/);
+      const ench = enchantMatch ? "." + enchantMatch[1] : "";
+      const key = parts.slice(1).join("_"); // ohne Tier
+      const translated = nameMap[key] || key.replace(/_/g, " ");
+      return `${tier}${ench}\u00A0\u00A0${translated}`;
+    }
 
     function render() {
-      cards.innerHTML = "";
-      const source = allData.length > 0 ? allData : (window.results || []);
-      const data = source
-        .filter(r => (Number(r.profit ?? 0)) >= minProfitFilter)
-        .filter(r => cityFilter === 'ALL' ? true : (r.city || '').toLowerCase() === cityFilter.toLowerCase());
-      const sorted = [...data].sort((a, b) => {
-        if (sortBySilver) {
-          const sa = (a.bm ?? 0) - (a.lym ?? 0);
-          const sb = (b.bm ?? 0) - (b.lym ?? 0);
-          return sb - sa;
-        }
-        return (b.profit ?? 0) - (a.profit ?? 0);
-      });
-      dealCountEl.textContent = sorted.length;
-      if (!Array.isArray(data) || data.length === 0) {
-        const empty = document.createElement('div');
-        empty.style.color = 'var(--muted)';
-        empty.style.padding = '12px 4px';
-        empty.textContent = 'Keine Ergebnisse geladen.';
-        cards.appendChild(empty);
-        return;
-      }
-      sorted.forEach(r => {
-        const card = document.createElement('div');
-        const silverDiff = (r.bm ?? 0) - (r.lym ?? 0);
-        const profitValue = sortBySilver ? silverDiff : (r.profit ?? 0);
-        const profitClass = profitValue < 0 ? 'profit negative' : 'profit';
-        const match = /^T?(\d+)?_(.+?)(?:@(\d+))?$/i.exec(r.id) || [];
-        const tier = match[1];
-        const baseCode = (match[2] || r.id).trim().toUpperCase();
-        const enchant = match[3] ? parseInt(match[3], 10) : 0;
-        const baseLabel = nameMap[baseCode] || baseCode;
-        let displayName = baseLabel;
-        if (tier) {
-          const tierLabel = enchant ? `${tier}.${enchant}` : `${tier}`;
-          displayName = `${tierLabel}\u00A0\u00A0${baseLabel}`;
-        }
-        const tagClass = enchant ? `tag enchant-${enchant}` : '';
-        const tagHtml = tagClass ? `<span class="${tagClass}"></span>` : '';
-        const borderClass = enchant ? `border-enchant-${enchant}` : '';
-        card.className = `card card-box ${borderClass}`.trim();
+      cardsEl.innerHTML = "";
+      const filtered = allData.filter(item =>
+        item.profit >= minProfitFilter &&
+        (cityFilter === "ALL" || item.city === cityFilter)
+      );
+
+      const list = sortBySilver
+        ? [...filtered].sort((a, b) => (b.bm - b.lym) - (a.bm - a.lym))
+        : filtered;
+
+      dealsCountEl.textContent = `Deals: ${list.length}`;
+
+      for (const item of list) {
+        const profitText = sortBySilver
+          ? `Profit: ${(item.bm - item.lym).toLocaleString('de-DE')} Silber`
+          : `Profit: ${item.profit.toFixed(1)}%`;
+
+        const enchantClass = item.id.includes("@1") ? "border-enchant-1"
+          : item.id.includes("@2") ? "border-enchant-2"
+          : item.id.includes("@3") ? "border-enchant-3"
+          : item.id.includes("@4") ? "border-enchant-4"
+          : "";
+
+        const card = document.createElement("div");
+        card.className = `card ${enchantClass}`.trim();
         card.innerHTML = `
-          ${tagHtml}
-          <div class="title">${displayName}</div>
-          <div class="row"><span>ID</span><span class="val">${r.id}</span></div>
-          <div class="row"><span>${r.city || 'City'}</span><span class="val">${r.lym.toLocaleString()}</span></div>
-          <div class="row"><span>Black Market</span><span class="val">${r.bm.toLocaleString()}</span></div>
-          <div class="row"><span>Sold/Tag</span><span class="val">${(r.sold ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 })}</span></div>
-          <div class="${profitClass}">
-            ${sortBySilver
-              ? `Profit: ${profitValue.toLocaleString()}`
-              : `Profit: ${profitValue > 0 ? '+' : ''}${profitValue.toFixed(1)}%`}
-            <span class="span-tag">${r.span}</span>
-          </div>
+          <div class="title">${displayName(item.id)}</div>
+          <div class="row"><span>ID</span><span class="val">${item.id}</span></div>
+          <div class="row"><span>${item.city}</span><span class="val">${item.lym.toLocaleString('de-DE')}</span></div>
+          <div class="row"><span>Black Market</span><span class="val">${item.bm.toLocaleString('de-DE')}</span></div>
+          <div class="row"><span>Sold/Tag</span><span class="val">${item.sold ?? 0}</span></div>
+          <div class="profit">${profitText} <span class="pill">${item.span}</span></div>
         `;
-        cards.appendChild(card);
+        cardsEl.appendChild(card);
+      }
+    }
+
+    function loadResults() {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "results.js?v=" + Date.now();
+        s.onload = () => {
+          allData = window.results || [];
+          resolve();
+        };
+        s.onerror = reject;
+        document.body.appendChild(s);
       });
     }
 
-    function startApp() {
-      loadResults()
-        .then(() => {
-          allData = window.results || [];
-          // Fallback: wenn kein gespeicherter Timestamp, nutze jetzt
-          if (!localStorage.getItem(LAST_UPDATED_KEY)) {
-            persistLastUpdated(new Date().toISOString());
-          }
-          render();
-          loadStoredLastUpdated();
-        })
-        .catch(() => {
-          const empty = document.createElement('div');
-          empty.style.color = 'var(--muted)';
-          empty.style.padding = '12px 4px';
-          empty.textContent = 'results.js konnte nicht geladen werden.';
-          cards.appendChild(empty);
-        });
+    function renderLastUpdated(text) {
+      const parts = text.trim().split(/\s+/);
+      const time = parts[0] || "";
+      const date = parts[1] || "";
+      lastUpdatedEl.innerHTML = `Letzte Aktualisierung: <span class="lu-time">${time}</span> <span class="lu-date">${date}</span>`;
     }
 
-    function setSpinning(on) {
-      spinning = on;
-      refreshBtn.style.opacity = on ? '0.75' : '1';
-      refreshBtn.style.cursor = 'default';
-      if (!on) {
-        progressEl.textContent = '';
-        if (progressTimer) {
-          clearInterval(progressTimer);
-          progressTimer = null;
-        }
-      }
+    function setLastUpdated(text) {
+      renderLastUpdated(text);
+      localStorage.setItem("lastUpdatedText", text);
     }
 
-    async function pollProgress() {
-      try {
-        const resp = await fetch('/progress');
-        if (!resp.ok) return;
-        const { total = 0, done = 0 } = await resp.json();
-        if (total > 0) {
-          const pct = Math.min(100, Math.round((done / total) * 100));
-          progressEl.textContent = `${pct}%`;
-        }
-      } catch {
-        // ignore
-      }
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.classList.add('visible');
+      setTimeout(() => el.classList.remove('visible'), 4000);
+      setTimeout(() => { el.style.display = 'none'; }, 4500);
     }
 
-    refreshBtn.addEventListener('click', () => {
-      // bewusst keine Aktion mehr (Frontend getrennt vom Backend)
-      return;
-    });
-
-    applyFilterBtn.addEventListener('click', () => {
-      const val = parseFloat(minProfitInput.value);
-      minProfitFilter = isNaN(val) ? 0 : val;
-      render();
-    });
-
-    filterSilverBtn.addEventListener('click', () => {
-      sortBySilver = true;
-      clearSilverBtn.style.display = 'inline-flex';
-      render();
-    });
-
-    clearSilverBtn.addEventListener('click', () => {
-      sortBySilver = false;
-      clearSilverBtn.style.display = 'none';
-      render();
-    });
+    function loadStoredTimestamp() {
+      const val = localStorage.getItem("lastUpdatedText");
+      if (val) renderLastUpdated(val);
+    }
 
     function setCity(city) {
       cityFilter = city;
-      cityNameEl.textContent = cityFilter === 'ALL' ? 'Alle Städte' : cityFilter;
-      const crestSrc = crestMap[cityFilter] || crestMap.ALL;
-      cityCrestImg.src = crestSrc;
-      cityCrestImg.onerror = () => { cityCrestImg.onerror = null; cityCrestImg.src = crestMap.ALL; };
-      cityCrestImg.alt = `${cityNameEl.textContent} Crest`;
-      const bg = bgMap[cityFilter] || bgMap.ALL;
-      document.body.style.background = bg;
-    }
-
-    citySelect.addEventListener('change', () => {
-      setCity(citySelect.value);
+      cityNameEl.textContent = city === "ALL" ? "Alle Städte" : city;
+      cityCrestEl.src = crestMap[city] || crestMap.ALL;
+      setBg(city);
       render();
-    });
-
-    function persistLastUpdated(iso) {
-      try { localStorage.setItem(LAST_UPDATED_KEY, iso); } catch { /* ignore */ }
-      const d = new Date(iso);
-      lastUpdatedTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      lastUpdatedDate.textContent = d.toLocaleDateString();
     }
 
-    function loadStoredLastUpdated() {
-      try {
-        const stored = localStorage.getItem(LAST_UPDATED_KEY);
-        if (stored) {
-          const d = new Date(stored);
-          lastUpdatedTime.textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          lastUpdatedDate.textContent = d.toLocaleDateString();
-        } else {
-          lastUpdatedTime.textContent = '--:--';
-          lastUpdatedDate.textContent = '';
+    async function ensureAuth() {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        const userResp = await supabase.auth.getUser();
+        const user = userResp.data.user;
+        if (!user?.email_confirmed_at) {
+          await supabase.auth.signOut();
+          showToast("Bitte bestätige zuerst deine E-Mail.");
+          authModal.style.display = "flex";
+          app.style.display = "none";
+          return false;
         }
-      } catch { /* ignore */ }
+        authModal.style.display = "none";
+        app.style.display = "block";
+        accountEmail.textContent = user?.email || "-";
+        return true;
+      }
+      authModal.style.display = "flex";
+      return false;
     }
 
-    function tryAuth() {
-      const val = authInput.value.trim();
-      if (val === 'testo') {
-        authed = true;
-        auth.style.display = 'none';
-        app.style.display = 'block';
-        startApp();
-      } else {
-        authMsg.textContent = 'Falsches Passwort.';
-        authMsg.style.color = 'var(--danger)';
+    async function handleLogin() {
+      authError.textContent = "";
+      const email = authEmail.value.trim();
+      const password = authPassword.value.trim();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) authError.textContent = error.message;
+      else {
+        authModal.style.display = "none";
+        app.style.display = "block";
+        initApp();
       }
     }
 
-    authBtn.addEventListener('click', tryAuth);
-    authInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAuth(); });
+    async function handleRegister() {
+      authError.textContent = "";
+      const email = regEmail.value.trim();
+      const password = regPassword.value.trim();
+      const displayName = regName.value.trim();
+      if (!displayName || !email || !password) {
+        authError.textContent = "Bitte Display Name, E-Mail und Passwort ausfüllen.";
+        return;
+      }
+      // Prüfe Display-Name auf Duplikat (wenn Tabelle existiert)
+      try {
+        const { data: existingName } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('display_name', displayName)
+          .limit(1);
+        if (existingName && existingName.length > 0) {
+          authError.textContent = "Display Name ist bereits vergeben.";
+          return;
+        }
+      } catch (_) {
+        // Tabelle evtl. nicht vorhanden -> ignoriere
+      }
 
-    // Initial crest
-    setCity('ALL');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: displayName } }
+      });
+      if (error) {
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("already") || msg.includes("exists") || msg.includes("registered")) {
+          authError.textContent = "Account existiert bereits. Bitte einloggen.";
+        } else if (error.status === 429) {
+          authError.textContent = "Zu viele Versuche. Bitte kurz warten und erneut versuchen.";
+        } else {
+          authError.textContent = error.message;
+        }
+        return;
+      }
+
+      const userId = data?.user?.id;
+      if (userId && displayName) {
+        try {
+          await supabase.from('profiles').upsert({ id: userId, display_name: displayName });
+        } catch (_) { /* ignore */ }
+      }
+      // Wait until mail has been sent (signUp succeeded)
+      confirmModal.style.display = "flex";
+      await supabase.auth.signOut();
+      authModal.style.display = "flex";
+      app.style.display = "none";
+    }
+
+    async function handleGoogle() {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard.html` }
+      });
+    }
+
+    function formatDate(dt) {
+      const d = dt.getDate().toString().padStart(2, "0");
+      const m = (dt.getMonth() + 1).toString().padStart(2, "0");
+      const y = dt.getFullYear();
+      const h = dt.getHours().toString().padStart(2, "0");
+      const min = dt.getMinutes().toString().padStart(2, "0");
+      return `${h}:${min}  ${d}.${m}.${y}`;
+    }
+
+    async function initApp() {
+      loadingOverlay.style.display = "flex";
+      await loadResults();
+      const stamp = formatDate(new Date());
+      setLastUpdated(stamp);
+      render();
+      loadingOverlay.style.display = "none";
+    }
+
+    applyFilterEl.onclick = () => {
+      minProfitFilter = Number(minProfitEl.value) || 0;
+      render();
+    };
+    filterSilverEl.onclick = () => { sortBySilver = true; clearSilverEl.style.display = "inline-block"; render(); };
+    clearSilverEl.onclick = () => { sortBySilver = false; clearSilverEl.style.display = "none"; render(); };
+    citySelectEl.onchange = (e) => setCity(e.target.value);
+
+    btnLogin.onclick = handleLogin;
+    btnRegister.onclick = handleRegister;
+    btnGoogle.onclick = handleGoogle;
+    tabLogin.onclick = () => {
+      tabLogin.classList.add("active"); tabRegister.classList.remove("active");
+      loginForm.style.display = "block"; registerForm.style.display = "none";
+      authError.textContent = "";
+    };
+    tabRegister.onclick = () => {
+      tabRegister.classList.add("active"); tabLogin.classList.remove("active");
+      loginForm.style.display = "none"; registerForm.style.display = "block";
+      authError.textContent = "";
+    };
+    accountBtn.onclick = () => {
+      document.body.classList.add("panel-open");
+      accountPanel.classList.add("open");
+    };
+    accountClose.onclick = () => {
+      document.body.classList.remove("panel-open");
+      accountPanel.classList.remove("open");
+    };
+    resetPw.onclick = async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user?.email) return;
+      await supabase.auth.resetPasswordForEmail(user.email);
+      showToast(`Reset-Link wurde an ${user.email} gesendet.`);
+      document.body.classList.remove("panel-open");
+      accountPanel.classList.remove("open");
+      await supabase.auth.signOut();
+      app.style.display = "none";
+      authModal.style.display = "flex";
+    };
+    logout.onclick = async () => {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user?.email) showToast(`Logout: ${user.email}`);
+      await supabase.auth.signOut();
+      document.body.classList.remove("panel-open");
+      accountPanel.classList.remove("open");
+      app.style.display = "none";
+      authModal.style.display = "flex";
+    };
+    document.addEventListener("click", (e) => {
+      if (!accountPanel.contains(e.target) && !accountBtn.contains(e.target)) {
+        document.body.classList.remove("panel-open");
+        accountPanel.classList.remove("open");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        document.body.classList.remove("panel-open");
+        accountPanel.classList.remove("open");
+      }
+    });
+    confirmClose.onclick = () => { confirmModal.style.display = "none"; };
+
+    (async () => {
+      const ok = await ensureAuth();
+      if (ok) {
+        await initApp();
+        setCity("ALL");
+      }
+    })();
   </script>
 </body>
 </html>
