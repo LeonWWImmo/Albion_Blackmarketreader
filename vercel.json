@@ -1,4 +1,4 @@
 {
-  "buildCommand": "cd Albion_Blackmarketreader && mkdir -p Albion_ProfitChecker/ui && cat <<'EOF' > Albion_ProfitChecker/ui/env.js\nwindow.env = {\n  SUPABASE_URL: \"${SUPABASE_URL}\",\n  SUPABASE_ANON_KEY: \"${SUPABASE_ANON_KEY}\"\n};\nEOF",
+  "buildCommand": "cd Albion_Blackmarketreader && mkdir -p Albion_ProfitChecker/ui && printf 'window.env = {\\n  SUPABASE_URL: \"%s\",\\n  SUPABASE_ANON_KEY: \"%s\"\\n};\\n' \"$SUPABASE_URL\" \"$SUPABASE_ANON_KEY\" > Albion_ProfitChecker/ui/env.js",
   "outputDirectory": "Albion_Blackmarketreader/Albion_ProfitChecker/ui"
 }
