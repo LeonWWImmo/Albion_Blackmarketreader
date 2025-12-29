@@ -1,4 +1,4 @@
 {
-  "buildCommand": "cat > Albion_ProfitChecker/ui/env.js <<'EOF'\nwindow.env = {\n  SUPABASE_URL: \"${SUPABASE_URL}\",\n  SUPABASE_ANON_KEY: \"${SUPABASE_ANON_KEY}\"\n};\nEOF",
+  "buildCommand": "mkdir -p Albion_ProfitChecker/ui && cat <<'EOF' > Albion_ProfitChecker/ui/env.js\nwindow.env = {\n  SUPABASE_URL: \"${SUPABASE_URL}\",\n  SUPABASE_ANON_KEY: \"${SUPABASE_ANON_KEY}\"\n};\nEOF",
   "outputDirectory": "Albion_ProfitChecker/ui"
 }
