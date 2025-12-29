@@ -1,51 +1,69 @@
-<!doctype html>
-<html lang="de">
+﻿<!doctype html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Albion Blackmarket Reader – Dashboard</title>
-  <meta name="description" content="Albion Blackmarket Reader Dashboard – Profitable Varianten, City-Vergleich, Silber-Filter und Black-Market-Insights." />
-  <link rel="icon" type="image/x-icon" href="logoicon.ico" />
+  <meta name="description" content="Albion Blackmarket Reader Dashboard – Profitable items, city comparison, silver filters and Black Market insights." />
+  <link rel="icon" type="image/x-icon" href="picture/logoicon.ico" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
   <div class="static-bg" id="staticBg"></div>
+
   <img src="picture/testo ohne background.png" alt="Logo" class="logo-fixed" onclick="window.location.href='index.html'" />
+  <button class="mobile-back" onclick="window.location.href='index.html'">← Back</button>
+
   <div class="account-wrap">
     <button id="accountBtn" class="account-btn" aria-label="Account">
-      <span class="account-dot"></span>
-      <span class="account-icon">👤</span>
+      <img id="avatarIcon" src="picture/avatars/default.png" alt="Avatar" />
     </button>
   </div>
+
   <div id="toast" class="toast" style="display:none;"></div>
+
   <div id="confirmModal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
       <h3>Check your email</h3>
-      <p>Supabase Auth has sent you a mail. Please confirm your email before you log in.</p>
-      <button id="confirmClose" class="cta">Ok</button>
+      <p>We sent you a confirmation email. Please verify it before logging in.</p>
+      <button id="confirmClose" class="cta">OK</button>
     </div>
   </div>
+
   <div id="accountPanel" class="account-panel">
     <div class="account-header">
-      <h3>Account</h3>
-      <button id="accountClose" class="ghost small">✕</button>
-    </div>
-    <div class="account-body">
-      <div class="user-box">
-        <div class="avatar-circle">👤</div>
-        <div>
-          <strong id="accountEmail">-</strong>
-          <span class="account-label">eingeloggt</span>
-        </div>
+      <img id="profileAvatar" class="avatar-big" src="picture/avatars/default.png" alt="Avatar" />
+      <div class="user-info">
+        <span class="email" id="accountEmail">-</span>
+        <span class="status">Logged in</span>
       </div>
-      <button id="resetPw" class="account-btn-cta">🔐 Passwort ändern</button>
-      <button id="logout" class="account-btn-cta danger">🚪 Logout</button>
+      <button id="accountClose" class="close-btn">✕</button>
+    </div>
+
+    <div class="avatar-select">
+      <h4>Select profile avatar</h4>
+      <div class="avatar-grid">
+        <img src="picture/Bridgewatch.png" data-avatar="picture/Bridgewatch.png" alt="Bridgewatch">
+        <img src="picture/Carleon.png" data-avatar="picture/Carleon.png" alt="Caerleon">
+        <img src="picture/Martlockwappen.png" data-avatar="picture/Martlockwappen.png" alt="Martlock">
+        <img src="picture/Lymhurstwappen.png" data-avatar="picture/Lymhurstwappen.png" alt="Lymhurst">
+        <img src="picture/Thefortwappen.png" data-avatar="picture/Thefortwappen.png" alt="Thetford">
+      </div>
+    </div>
+
+    <button id="resetPw" class="btn primary">🔒 Change password</button>
+    <button id="logout" class="btn danger">Logout</button>
+
+    <div class="account-help">
+      <span>Need help?</span>
+      <a href="mailto:blackmarketreader@gmail.com">blackmarketreader@gmail.com</a>
     </div>
   </div>
 
   <div id="loadingOverlay" class="loading-overlay">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Lade Daten...</div>
+    <div class="loading-text">Loading data...</div>
   </div>
 
   <div id="authModal" class="auth-modal" style="display:none;">
@@ -55,33 +73,41 @@
         <h2>RomulusKings Market Reader</h2>
         <p>Black Market Profit Tool</p>
       </div>
+
       <div class="auth-tabs">
         <button id="tabLogin" class="tab active">Login</button>
-        <button id="tabRegister" class="tab">Registrieren</button>
+        <button id="tabRegister" class="tab">Register</button>
       </div>
+
       <div id="loginForm">
-        <input id="authEmail" type="email" placeholder="E-Mail" />
-        <input id="authPassword" type="password" placeholder="Passwort" />
+        <input id="authEmail" type="email" placeholder="Email" />
+        <input id="authPassword" type="password" placeholder="Password" />
         <div class="auth-actions">
           <button id="btnLogin" class="cta">Login</button>
-          <button id="btnGoogle" class="ghost">Mit Google</button>
+          <button id="btnGoogle" class="ghost btn-google">
+            <img src="picture/Googleicon.png" alt="Google Login">
+          </button>
         </div>
-        <p class="auth-hint">📩 Bitte bestätige deine E-Mail bevor du dich einloggst.</p>
+        <p class="auth-hint">📩 Please confirm your email before logging in.</p>
       </div>
+
       <div id="registerForm" style="display:none;">
         <input id="regName" type="text" placeholder="Display Name" />
-        <input id="regEmail" type="email" placeholder="E-Mail" />
-        <input id="regPassword" type="password" placeholder="Passwort" />
+        <input id="regEmail" type="email" placeholder="Email" />
+        <input id="regPassword" type="password" placeholder="Password" />
         <div class="auth-actions">
-          <button id="btnRegister" class="cta">Registrieren</button>
+          <button id="btnRegister" class="cta">Register</button>
         </div>
-        <p class="auth-hint">📩 Nach der Registrierung erhältst du eine Bestätigungs-Mail. Erst danach einloggen.</p>
+        <p class="auth-hint">📩 You will receive a confirmation email after registration.</p>
       </div>
+
       <div id="authError" class="auth-error"></div>
+
       <div class="auth-footer">
-        <a href="mailto:blackmarketreader@gmail.com">Hilfe / Support: blackmarketreader@gmail.com</a>
+        <a href="mailto:blackmarketreader@gmail.com">Support: blackmarketreader@gmail.com</a>
       </div>
-      <div class="auth-trust">🔒 Powered by Supabase · Secure Auth</div>
+
+      <div class="auth-trust">🔒 Powered by Supabase · Secure Authentication</div>
     </div>
   </div>
 
@@ -89,10 +115,10 @@
     <div class="hero">
       <div>
         <h1>RomulusKings Market Reader</h1>
-        <p>>= 30% Profit · Zeiträume 14 Tage · Live-Daten Black Market</p>
+        <p>>= 30% Profit · 14-Day Range · Live Black Market Data</p>
       </div>
       <div class="hero-cta">
-        <div class="badge" id="lastUpdated">Letzte Aktualisierung: --:-- --.--.----</div>
+        <div class="badge" id="lastUpdated">Last update: --:-- --.--.----</div>
         <div class="pill-row">
           <span class="pill" id="dealsCount">Deals: 0</span>
         </div>
@@ -102,9 +128,9 @@
     <div class="layout">
       <div class="main-col">
         <div class="filters">
-          Profit >= <input id="minProfit" type="number" value="0" /> %
-          <button id="applyFilter">Filter anwenden</button>
-          <button id="filterSilver">Nach Silber filtern</button>
+          Profit ≥ <input id="minProfit" type="number" value="0" /> %
+          <button id="applyFilter">Apply filter</button>
+          <button id="filterSilver">Sort by silver</button>
           <button id="clearSilver" style="display:none;">Reset</button>
         </div>
 
@@ -113,12 +139,12 @@
 
       <aside class="aside">
         <div class="city-panel">
-          <img id="cityCrest" class="city-crest-img" src="picture/Carleon.png" alt="City Crest" />
+          <img id="cityCrest" class="city-crest-img" src="picture/Carleon.png" />
           <div class="city-panel-body">
             <span class="city-panel-title">City</span>
-            <span class="city-panel-name" id="cityName">Alle Staedte</span>
+            <span class="city-panel-name" id="cityName">All Cities</span>
             <select id="citySelect" class="city-select">
-              <option value="ALL">Alle Staedte</option>
+              <option value="ALL">All Cities</option>
               <option value="Lymhurst">Lymhurst</option>
               <option value="Martlock">Martlock</option>
               <option value="Fort Sterling">Fort Sterling</option>
@@ -132,11 +158,18 @@
     </div>
   </div>
 
+
+  <script src="env.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    const SUPABASE_URL = 'https://wmfnwvedrhvqeodzzhkm.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_9EqbV7TTVf05rA3g5tPtOA_IsDmhVQC';
+    const SUPABASE_URL = window.env?.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.env?.SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      alert("Supabase configuration missing. Please set SUPABASE_URL and SUPABASE_ANON_KEY in env.js.");
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const loadingOverlay = document.getElementById('loadingOverlay');
@@ -171,6 +204,8 @@
     const accountPanel = document.getElementById('accountPanel');
     const accountClose = document.getElementById('accountClose');
     const accountEmail = document.getElementById('accountEmail');
+    const avatarIcon = document.getElementById('avatarIcon');
+    const profileAvatar = document.getElementById('profileAvatar');
     const resetPw = document.getElementById('resetPw');
     const logout = document.getElementById('logout');
     const confirmModal = document.getElementById('confirmModal');
@@ -453,6 +488,16 @@
       "Caerleon": "radial-gradient(circle at 20% 30%, rgba(30,30,30,0.22), transparent 42%), radial-gradient(circle at 75% 20%, rgba(0,0,0,0.14), transparent 35%), linear-gradient(180deg, #0b0f15, #080b12)"
     };
 
+    async function loadAvatar() {
+      const { data } = await supabase.auth.getUser();
+      if (!data?.user) return;
+      const metaAvatar = data.user.user_metadata?.avatar || data.user.user_metadata?.avatar_url || data.user.user_metadata?.picture;
+      const avatar = metaAvatar || "picture/Carleon.png";
+      accountEmail.textContent = data.user.email || "-";
+      avatarIcon.src = avatar;
+      profileAvatar.src = avatar;
+    }
+
     let allData = [];
     let minProfitFilter = 0;
     let sortBySilver = false;
@@ -529,7 +574,7 @@
       const parts = text.trim().split(/\s+/);
       const time = parts[0] || "";
       const date = parts[1] || "";
-      lastUpdatedEl.innerHTML = `Letzte Aktualisierung: <span class="lu-time">${time}</span> <span class="lu-date">${date}</span>`;
+      lastUpdatedEl.innerHTML = `Last updated: <span class="lu-time">${time}</span> <span class="lu-date">${date}</span>`;
     }
 
     function setLastUpdated(text) {
@@ -553,7 +598,7 @@
 
     function setCity(city) {
       cityFilter = city;
-      cityNameEl.textContent = city === "ALL" ? "Alle Städte" : city;
+      cityNameEl.textContent = city === "ALL" ? "All Cities" : city;
       cityCrestEl.src = crestMap[city] || crestMap.ALL;
       setBg(city);
       render();
@@ -566,7 +611,7 @@
         const user = userResp.data.user;
         if (!user?.email_confirmed_at) {
           await supabase.auth.signOut();
-          showToast("Bitte bestätige zuerst deine E-Mail.");
+          showToast("Bitte bestÃ¤tige zuerst deine E-Mail.");
           authModal.style.display = "flex";
           app.style.display = "none";
           return false;
@@ -589,6 +634,7 @@
       else {
         authModal.style.display = "none";
         app.style.display = "block";
+        await loadProfile();
         initApp();
       }
     }
@@ -599,10 +645,10 @@
       const password = regPassword.value.trim();
       const displayName = regName.value.trim();
       if (!displayName || !email || !password) {
-        authError.textContent = "Bitte Display Name, E-Mail und Passwort ausfüllen.";
+        authError.textContent = "Bitte Display Name, E-Mail und Passwort ausfÃ¼llen.";
         return;
       }
-      // Prüfe Display-Name auf Duplikat (wenn Tabelle existiert)
+      // PrÃ¼fe Display-Name auf Duplikat (wenn Tabelle existiert)
       try {
         const { data: existingName } = await supabase
           .from('profiles')
@@ -721,6 +767,16 @@
       app.style.display = "none";
       authModal.style.display = "flex";
     };
+    document.querySelectorAll(".avatar-grid img").forEach(img => {
+      img.addEventListener("click", async () => {
+        const avatar = img.getAttribute("data-avatar") || img.src;
+        const { data } = await supabase.auth.getUser();
+        if (!data?.user) return;
+        await supabase.auth.updateUser({ data: { avatar } });
+        avatarIcon.src = avatar;
+        profileAvatar.src = avatar;
+      });
+    });
     document.addEventListener("click", (e) => {
       if (!accountPanel.contains(e.target) && !accountBtn.contains(e.target)) {
         document.body.classList.remove("panel-open");
@@ -738,6 +794,7 @@
     (async () => {
       const ok = await ensureAuth();
       if (ok) {
+        await loadAvatar();
         await initApp();
         setCity("ALL");
       }

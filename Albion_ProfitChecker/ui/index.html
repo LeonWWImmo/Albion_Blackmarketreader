@@ -1,271 +1,290 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Albion Blackmarket Reader</title>
-  <meta name="description" content="Albion Blackmarket Reader – Live Black-Market Preise, Profit-Analyse, City-Vergleich und Silber-Filter. Finde schnell die profitabelsten Items in Albion Online.">
-  <meta name="keywords" content="Albion Online, Black Market, Preise, Profit, Silber Filter, City Vergleich, Markt Analyse">
+  <meta name="description" content="Albion Blackmarket Reader – Live Black Market prices, profit analysis, city comparison and silver filters. Find the most profitable items in Albion Online." />
+  <meta name="keywords" content="Albion Online, Black Market, Prices, Profit, Silver Filter, City Comparison, Market Analysis">
   <link rel="icon" href="../picture/logoicon.ico">
   <base href="/">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="animated-bg"></div>
-  <a href="index.html"><img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" /></a>
-  <div class="page">
-    <div class="top-bar">
-      <a class="cta" href="dashboard.html">Zum Dashboard</a>
-    </div>
 
-    <section class="hero hero-landing">
-      <div class="hero-left">
-        <span class="badge-glow">🚀 Albion Black Market Tool</span>
-        <h1>
-          Maximiere deinen<br>
-          <span class="gradient-text">Albion Profit</span>
-        </h1>
-        <p>
-          Live Black-Market Scans · Profit-Analyse · City-Vergleich ·
-          In Sekunden sehen, was sich wirklich lohnt.
-        </p>
+<div class="animated-bg"></div>
 
-        <div class="hero-actions">
-          <a href="dashboard.html" class="cta primary">Zum Dashboard</a>
-          <a href="#features" class="cta ghost">Features ansehen</a>
-        </div>
+<a href="index.html">
+  <img class="logo-fixed" src="../picture/testo%20ohne%20background.png" alt="Logo" />
+</a>
 
-        <div class="hero-stats">
-          <div><strong>14 / 30 / 60</strong><span>Tage Analyse</span></div>
-          <div><strong>Live</strong><span>BM Preise</span></div>
-          <div><strong>Smart</strong><span>Profit Filter</span></div>
-        </div>
+<div class="page">
+
+  <div class="top-bar">
+    <a class="cta" href="dashboard.html">Go to Dashboard</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero hero-landing">
+    <div class="hero-left">
+      <span class="badge-glow">🚀 Albion Black Market Tool</span>
+
+      <h1>
+        Maximize your<br>
+        <span class="gradient-text">Albion Profit</span>
+      </h1>
+
+      <p>
+        Live Black Market scans · Profit analysis · City comparison ·
+        See instantly what is really worth it.
+      </p>
+
+      <div class="hero-actions">
+        <a href="dashboard.html" class="cta primary">Open Dashboard</a>
+        <a href="#features" class="cta ghost">View Features</a>
       </div>
 
-      <div class="hero-right">
-        <img src="../picture/Anzeige-preis.png" class="hero-preview" alt="Preiskarte Vorschau">
-      </div>
-    </section>
-
-    <section id="features" class="feature-grid">
-      <div class="feature-card">
-        <h3>📈 Live Profit Scan</h3>
-        <p>Vergleicht City-Preise mit Black Market in Echtzeit.</p>
-      </div>
-
-      <div class="feature-card">
-        <h3>💰 Silber-Filter</h3>
-        <p>Zeigt dir direkt die profitabelsten Items.</p>
-      </div>
-
-      <div class="feature-card">
-        <h3>⚡ Auto Sync</h3>
-        <p>Aktualisiert Preise automatisch mit Retry-System.</p>
-      </div>
-
-      <div class="feature-card">
-        <h3>🏙 City Switching</h3>
-        <p>Alle Städte sofort vergleichen.</p>
-      </div>
-    </section>
-
-    <section class="preview-showcase">
-      <div class="preview-wrapper">
-        <div class="preview-card left">
-          <img src="../picture/Silver-dashboard.png" alt="Dashboard Silver Profit" class="zoomable" />
-          <span class="preview-label">Dashboard Silver Profit</span>
-        </div>
-        <div class="preview-card right">
-          <img src="../picture/Profit-Dashboard.png" alt="Dashboard % Profit" class="zoomable" />
-          <span class="preview-label">Dashboard % Profit</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="how-it-works">
-      <h2>So funktioniert’s</h2>
-      <div class="how-steps">
-        <div class="step-card">
-          <div class="step-icon">1️⃣</div>
-          <h3>Stadt wählen</h3>
-          <p>City im Dropdown auswählen – Wappen & Hintergrund wechseln mit.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-icon">2️⃣</div>
-          <h3>Profit/Silber filtern</h3>
-          <p>Prozent oder absoluter Silber-Gewinn, sofort sortiert.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-icon">3️⃣</div>
-          <h3>Kaufen & verkaufen</h3>
-          <p>Items checken, Markt handeln, Profit mitnehmen.</p>
-        </div>
-      </div>
-    </section>
-
-    <div class="article">
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Preiskarten lesen</h2>
-          <p>Die Karten zeigen City-Buy, Black-Market-History und Sold/Tag. Enchant-Tags sind farbig: @1 grün, @2 blau, @3 lila, @4 gold. Negative Profite bleiben sichtbar.</p>
-          <ul>
-            <li><strong>ID</strong> zeigt Tier/Enchant-Kombination.</li>
-            <li><strong>Sold/Tag</strong> = Nachfrage, je höher desto liquider.</li>
-            <li><strong>Profit</strong> farbig hinterlegt, Span zeigt verwendeten Zeitraum.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Anzeige-preis.png" alt="Preiskarte" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Profit filtern</h2>
-          <p>Setze den Mindest-Profit in % und klicke „Filter anwenden“. Das Dashboard zeigt nur Varianten mit Profit ≥ deinem Wert und sortiert danach.</p>
-          <ul>
-            <li>Filter greift sofort auf die geladenen Ergebnisse.</li>
-            <li>Negative Profite bleiben, wenn der Schwellenwert ≤ 0 ist.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Filter-anwenden.png" alt="Filter anwenden" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Silber-Filter</h2>
-          <p>Mit „Nach Silber filtern“ wechselst du von Prozent-Profit auf absoluten Silber-Gewinn. Die Karten zeigen dann direkt den Gewinn in Silber (BM − City) und werden danach sortiert.</p>
-          <ul>
-            <li>Anzeige: z. B. „Profit: 230.000“ statt „+120.0%“.</li>
-            <li>Sortierung: höchste Silber-Gewinne zuerst.</li>
-            <li>Nochmals klicken oder X nutzen, um zurück zu Prozent zu gehen.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Silber-Filter.png" alt="Silber-Filter" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Neue Daten sync</h2>
-          <p>Der Sync holt City-Bulk-Preise, dann BM-History mit Retries/Spans. Währenddessen siehst du den Fortschritt in % und kannst danach sofort filtern.</p>
-          <ul>
-            <li>Bulk City Prices (Lymhurst) mit Frische-Check.</li>
-            <li>History mit 14/30/60 Tagen, Retries bei leeren Antworten.</li>
-            <li>Ergebnisse ersetzen sich automatisch.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Datensync.png" alt="Datensync" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Sync läuft gerade</h2>
-          <p>Wenn der Ring dreht und die Prozentzahl steigt, bitte warten und nicht neu laden. Der Lauf kann je nach Item-Menge und API-Limit bis zu ca. 15 Minuten dauern.</p>
-          <ul>
-            <li>Keine Aktion nötig, Fortschritt aktualisiert sich automatisch.</li>
-            <li>Bei 429/Rate Limit wird intern verzögert und erneut angefragt.</li>
-            <li>Nach Abschluss sind die neuen Daten sofort im Dashboard.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Sync-amlaufen.png" alt="Sync läuft" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Deals-Zähler</h2>
-          <p>„Deals“ zeigt, wie viele Karten aktuell angezeigt werden. Er reagiert auf Filter und Stadtauswahl und hilft, die Trefferanzahl im Blick zu behalten.</p>
-          <ul>
-            <li>Passt sich an Profit-/Silber-Filter und City-Wechsel an.</li>
-            <li>Steigt oder sinkt sofort, wenn du Filter setzt oder entfernst.</li>
-            <li>Zeigt die Treffer, die du wirklich siehst.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Deals.bild.png" alt="Deals Zähler" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>City wechseln</h2>
-          <p>Über die City-Kachel stellst du die Stadt um. Karten, Deals-Zähler und Hintergrund-Schimmer passen sich an die gewählte Stadt an.</p>
-          <ul>
-            <li>Dropdown: Lymhurst, Martlock, Fort Sterling, Thetford, Bridgewatch, Caerleon.</li>
-            <li>Wappen und Hintergrundfarbe wechseln zur Stadt.</li>
-            <li>Karten zeigen nur Preise/Profite für die gewählte Stadt.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/City-anpasssen.png" alt="City auswählen" />
-        </div>
-      </div>
-
-      <div class="article-block">
-        <div class="article-text">
-          <h2>Logo</h2>
-          <p>Das Molekül-Logo oben links bringt dich zur Landing-Seite zurück. Es ist als kleines Easter Egg (Testosteron-Symbol) und Home-Button gedacht.</p>
-          <ul>
-            <li>Klick = Zur Startseite springen.</li>
-            <li>Hilft, schnell die Erklärungen oder den Dashboard-Link zu finden.</li>
-          </ul>
-        </div>
-        <div class="article-media">
-          <img src="../picture/Testosteronlogoerklaerung.png" alt="Testosteron-Logo" />
-        </div>
+      <div class="hero-stats">
+        <div><strong>14 / 30 / 60</strong><span>Day Analysis</span></div>
+        <div><strong>Live</strong><span>BM Prices</span></div>
+        <div><strong>Smart</strong><span>Profit Filter</span></div>
       </div>
     </div>
 
-    <section class="why-tool">
-      <h2>Warum dieses Tool?</h2>
-      <div class="why-grid">
-        <div class="why-card">
-          <h3>❌ Stundenlang Preise vergleichen</h3>
-          <p>Manuell switchen zwischen Cities kostet Zeit.</p>
-        </div>
-        <div class="why-card">
-          <h3>❌ Falsche Items kaufen</h3>
-          <p>Ohne Daten verpasst du Margen oder kaufst zu teuer.</p>
-        </div>
-        <div class="why-card">
-          <h3>✅ Sofort sehen, was sich lohnt</h3>
-          <p>Profit Radar zeigt klar: welche Items, welche Stadt, wie viel Gewinn.</p>
-        </div>
-      </div>
-    </section>
+    <div class="hero-right">
+      <img src="../picture/Anzeige-preis.png" class="hero-preview" alt="Price preview">
+    </div>
+  </section>
 
-    <footer class="footer">
-      <div>Albion Profit Radar · Für Trader gebaut, nicht von Sandbox Interactive</div>
-      <div>© 2025 · Transparent, API-konform, reine Client-Seite</div>
-    </footer>
+  <!-- FEATURES -->
+  <section id="features" class="feature-grid">
+    <div class="feature-card">
+      <h3>📈 Live Profit Scan</h3>
+      <p>Compares city prices with the Black Market in real time.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>💰 Silver Filter</h3>
+      <p>Instantly shows the most profitable items.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>⚡ Auto Sync</h3>
+      <p>Automatically updates prices with retry logic.</p>
+    </div>
+
+    <div class="feature-card">
+      <h3>🏙 City Switching</h3>
+      <p>Compare all cities instantly.</p>
+    </div>
+  </section>
+
+  <!-- PREVIEW -->
+  <section class="preview-showcase">
+    <div class="preview-wrapper">
+      <div class="preview-card">
+        <img src="../picture/Silver-dashboard.png" class="zoomable" alt="Silver Profit Dashboard">
+        <span class="preview-label">Silver Profit View</span>
+      </div>
+      <div class="preview-card">
+        <img src="../picture/Profit-Dashboard.png" class="zoomable" alt="Profit Dashboard">
+        <span class="preview-label">Percentage Profit View</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works">
+    <h2>How it works</h2>
+
+    <div class="how-steps">
+      <div class="step-card">
+        <div class="step-icon">1️⃣</div>
+        <h3>Select a city</h3>
+        <p>Choose a city – crest and background update automatically.</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-icon">2️⃣</div>
+        <h3>Filter profit / silver</h3>
+        <p>Switch between percentage or absolute silver profit.</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-icon">3️⃣</div>
+        <h3>Buy & sell</h3>
+        <p>Check items, trade smart, maximize your profit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARTICLES -->
+  <section class="article">
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Reading price cards</h2>
+        <p>Cards show city price, Black Market price and sales per day.</p>
+        <ul>
+          <li><strong>ID</strong> shows tier & enchant level.</li>
+          <li><strong>Sold/day</strong> indicates demand.</li>
+          <li><strong>Profit</strong> color shows profitability.</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Anzeige-preis.png" alt="Price card">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Profit filtering</h2>
+        <p>Set a minimum profit percentage and apply the filter.</p>
+        <ul>
+          <li>Updates instantly</li>
+          <li>Only profitable items remain</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Filter-anwenden.png" alt="Filter example">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>City selection</h2>
+        <p>Select your target city and the dashboard updates instantly.</p>
+        <ul>
+          <li>City-specific prices</li>
+          <li>Dynamic background</li>
+          <li>Instant recalculation</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/City-anpasssen.png" alt="City selection">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Silver filter</h2>
+        <p>Switch from percentage profit to absolute silver gain.</p>
+        <ul>
+          <li>Shows exact silver profit</li>
+          <li>Sorted by highest gain</li>
+          <li>One click to reset</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Silber-Filter.png" alt="Silver filter">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Last update</h2>
+        <p>The dashboard shows the timestamp of the last data update.</p>
+        <ul>
+          <li>Daily refresh between 08:00–09:00 UTC</li>
+          <li>Exact time displayed</li>
+          <li>Deal count updates automatically</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Aktualisierung.png" alt="Last update">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Account & Avatar</h2>
+        <p>Manage your account and avatar from the account menu.</p>
+        <ul>
+          <li>Click avatar to open account panel</li>
+          <li>Change profile picture</li>
+          <li>Logout or reset password</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Carleon.png" alt="Account">
+      </div>
+    </div>
+
+    <div class="article-block">
+      <div class="article-text">
+        <h2>Deals counter</h2>
+        <p>Shows how many profitable deals are currently displayed.</p>
+        <ul>
+          <li>Updates instantly</li>
+          <li>Reflects filters and city selection</li>
+          <li>Always accurate</li>
+        </ul>
+      </div>
+      <div class="article-media">
+        <img src="../picture/Deals.bild.png" alt="Deals counter">
+      </div>
+    </div>
+
+  </section>
+
+  <section class="why-tool">
+    <h2>Why this tool?</h2>
+    <div class="why-grid">
+      <div class="why-card">
+        <h3>❌ Manual price comparison</h3>
+        <p>Switching cities manually wastes time.</p>
+      </div>
+      <div class="why-card">
+        <h3>❌ Buying wrong items</h3>
+        <p>Without data, profits are easy to miss.</p>
+      </div>
+      <div class="why-card">
+        <h3>✅ Clear profit overview</h3>
+        <p>Instantly see what is worth trading.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox overlay -->
+  <div class="lightbox" id="lightbox" style="display:none;">
+    <div class="lightbox-backdrop" id="lightboxBackdrop"></div>
+    <img id="lightboxImg" alt="Preview">
   </div>
-  <div id="lightbox" class="lightbox" style="display:none;">
-    <div class="lightbox-backdrop"></div>
-    <img id="lightbox-img" src="" alt="Preview" />
-  </div>
-  <script>
-    (() => {
-      const lb = document.getElementById('lightbox');
-      const lbImg = document.getElementById('lightbox-img');
-      document.querySelectorAll('.zoomable').forEach(img => {
-        img.addEventListener('click', () => {
-          lbImg.src = img.src;
-          lb.style.display = 'flex';
-        });
-      });
-      lb.addEventListener('click', () => {
-        lb.style.display = 'none';
-        lbImg.src = '';
-      });
-    })();
-  </script>
+
+  <footer class="footer">
+    <div>Albion Profit Radar · Built for traders</div>
+    <div>© 2025 · API compliant · Client-side only</div>
+  </footer>
+
+</div>
+
+<script>
+  (function setupLightbox() {
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightboxImg');
+    const lbBg = document.getElementById('lightboxBackdrop');
+    if (!lb || !lbImg || !lbBg) return;
+
+    const open = (src, alt) => {
+      lbImg.src = src;
+      lbImg.alt = alt || 'Preview';
+      lb.style.display = 'flex';
+    };
+    const close = () => {
+      lb.style.display = 'none';
+      lbImg.src = '';
+    };
+
+    document.querySelectorAll('.zoomable').forEach(img => {
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', () => open(img.src, img.alt));
+    });
+    lbBg.addEventListener('click', close);
+    lb.addEventListener('click', e => { if (e.target === lb) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  })();
+</script>
+
 </body>
 </html>
