@@ -16,6 +16,7 @@ Dieses Verzeichnis dokumentiert die sicherheitstechnische Härtung einer **real 
 | **[risikomatrix.md](risikomatrix.md)** | Risikobewertung aller Befunde → daraus abgeleitete Reihenfolge |
 | **[findings.md](findings.md)** | Befund-Tracker (Status pro Schwachstelle, Risiko vorher/nachher) |
 | **[projektplan.md](projektplan.md)** | Detailplan aller 10 Blöcke (To-dos, Nachweise, Zeit) |
+| **[block1-zugriffskontrolle.md](block1-zugriffskontrolle.md)** | ✅ Block 1 – Zugriffskontrolle/RLS (auditiert & verifiziert) |
 
 > Der Fortschritt ist über die Git-Historie auf dem `security`-Branch nachvollziehbar: **ein Commit-Strang pro Block**, jeweils mit Before/After.
 

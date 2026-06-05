@@ -8,7 +8,7 @@ Status-Board der geplanten Härtungsmaßnahmen. Wird während der Umsetzung gepf
 
 | ID | Härtungsmaßnahme | Block | Priorität | Status | Risiko nachher | Nachweis |
 |---|---|---|---|---|---|---|
-| H-01 | Zugriffskontrolle serverseitig durchsetzen (Auth + RLS) | 1 | 🔴 hoch | ⚪ geplant | – | – |
+| H-01 | Zugriffskontrolle serverseitig durchsetzen (Auth + RLS) | 1 | 🔴 hoch | 🟢 verifiziert | 🟢 niedrig | [Block 1](block1-zugriffskontrolle.md) |
 | H-02 | Verfügbarkeit härten (Rate-Limiting / Überlastschutz) | 2 | 🔴 hoch | ⚪ geplant | – | – |
 | H-03 | Logging & Audit-Trail einführen | 3 | 🔴 hoch | ⚪ geplant | – | – |
 | H-04 | Schlüssel-/Secret-Handling absichern & dokumentieren | 4 | 🟡 mittel | ⚪ geplant | – | – |
@@ -25,9 +25,9 @@ Status-Board der geplanten Härtungsmaßnahmen. Wird während der Umsetzung gepf
 
 > Pro Maßnahme werden nach der Umsetzung dokumentiert: Ausgangslage (allgemein), umgesetzter Fix und Verifikation (Re-Test). Konkrete Nachweise erscheinen hier erst nach Behebung des jeweiligen Punkts.
 
-### H-01 — Zugriffskontrolle (Sessionhandling, Auth & Autorisierung)
-- **Ausgangslage (allgemein):** Zugriffskontrolle wird aktuell überwiegend clientseitig durchgesetzt; sie soll serverseitig und auf Datenbankebene (RLS) verankert werden.
-- **Geplanter Fix:** Authentifizierter Daten-Endpunkt + Row Level Security je Tabelle.
-- **Verifikation:** _wird nach Umsetzung ergänzt._
+### H-01 — Zugriffskontrolle (Sessionhandling, Auth & Autorisierung) ✅
+- **Ergebnis des Audits:** RLS ist auf allen public-Tabellen (`profiles`, `subscriptions`) aktiv; die Lese-Policy ist restriktiv (`auth.uid() = id`), Schreibzugriff durch Clients ist standardmäßig verboten.
+- **Bewertung:** Zugriffskontrolle serverseitig korrekt umgesetzt – kein Handlungsbedarf.
+- **Nachweis:** [block1-zugriffskontrolle.md](block1-zugriffskontrolle.md) inkl. Screenshots.
 
 _(H-02 … H-10 folgen nach gleichem Schema – jeweils nach Umsetzung.)_
