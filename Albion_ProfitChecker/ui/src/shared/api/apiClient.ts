@@ -8,6 +8,8 @@ export interface FetchJsonOptions extends RequestInit {
 export class ApiError extends Error {
   readonly status: number;
   readonly causeData: unknown;
+  /** Vom Server gefordertes Backoff bei 429/503 (aus Retry-After), in ms. */
+  retryAfterMs?: number;
 
   constructor(message: string, status: number, causeData?: unknown) {
     super(message);
@@ -57,11 +59,21 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
 
         if (!response.ok) {
           const body = await response.text().catch(() => "");
-          throw new ApiError(
+          const apiError = new ApiError(
             `Request failed (${response.status}) for ${url}`,
             response.status,
             body
           );
+          // Bei Rate-Limit / Ueberlast (429/503) das vom Server geforderte
+          // Backoff respektieren statt sofort erneut zu feuern.
+          if (response.status === 429 || response.status === 503) {
+            const retryAfter = response.headers.get("retry-after");
+            const seconds = retryAfter ? Number(retryAfter) : NaN;
+            if (Number.isFinite(seconds) && seconds > 0) {
+              apiError.retryAfterMs = Math.min(seconds * 1000, 5000);
+            }
+          }
+          throw apiError;
         }
 
         return (await response.json()) as T;
@@ -69,7 +81,11 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
         clearTimeout(timeout);
         lastError = error;
         if (attempt < retries) {
-          await sleep(retryDelayMs * (attempt + 1));
+          const backoffMs =
+            error instanceof ApiError && error.retryAfterMs
+              ? error.retryAfterMs
+              : retryDelayMs * (attempt + 1);
+          await sleep(backoffMs);
           continue;
         }
       }

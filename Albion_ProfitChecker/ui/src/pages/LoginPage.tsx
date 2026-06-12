@@ -57,6 +57,8 @@ export function LoginPage() {
   const [regPassword, setRegPassword] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
 
   const nextPath = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -119,9 +121,21 @@ export function LoginPage() {
 
   async function onLogin() {
     if (!authService) return;
+
+    // Client-seitiger Brute-Force-Schutz (Defense in Depth, ergaenzt die
+    // serverseitigen Supabase-Rate-Limits): nach mehreren Fehlversuchen
+    // eine kurze Abkuehlphase erzwingen.
+    const now = Date.now();
+    if (cooldownUntil > now) {
+      const waitSec = Math.ceil((cooldownUntil - now) / 1000);
+      setAuthError(`Zu viele Login-Versuche. Bitte ${waitSec}s warten.`);
+      return;
+    }
+
     setAuthError("");
     try {
       await authService.signInWithPassword(authEmail.trim(), authPassword.trim());
+      setLoginAttempts(0);
 
       let sessionReady = false;
       for (let i = 0; i < 34; i += 1) {
@@ -149,6 +163,15 @@ export function LoginPage() {
       }
       navigateToInternalPath(nextPath);
     } catch (error: any) {
+      setLoginAttempts((n) => {
+        const next = n + 1;
+        if (next >= 5) {
+          // 5 Fehlversuche -> 30s Cooldown
+          setCooldownUntil(Date.now() + 30000);
+          return 0;
+        }
+        return next;
+      });
       setAuthError(error?.message || "Login failed");
     }
   }
