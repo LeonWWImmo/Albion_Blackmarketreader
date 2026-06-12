@@ -118,7 +118,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 |---|---|---|---|---|---|
 | H-01 | Zugriffskontrolle (Auth + RLS) | 1 | 🔴 hoch | 🟢 verifiziert | 🟢 niedrig |
 | H-02 | Verfügbarkeit (Überlastschutz / Rate-Limiting) | 2 | 🔴 hoch | 🟢 umgesetzt & belegt | 🟢 niedrig |
-| H-03 | Logging & Audit-Trail | 3 | 🔴 hoch | ⚪ geplant | – |
+| H-03 | Logging & Monitoring (Audit-Trail) | 3 | 🔴 hoch | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-04 | Schlüssel/Secrets | 4 | 🟡 mittel | ⚪ geplant | – |
 | H-05 | Eingabevalidierung | 5 | 🟡 mittel | ⚪ geplant | – |
 | H-06 | Security-Header & Repo-Hygiene | 6 | 🟡 mittel | ⚪ geplant | – |
@@ -313,5 +313,68 @@ if (cooldownUntil > now) {
 
 ---
 
-### Block 3–10 — ⏳ ausstehend
+### Block 3 — Logging & Monitoring (Audit-Trail) ✅ <a id="block-3"></a>
+**M183 Kap. 6 · OWASP A09 · Status: umgesetzt & belegt**
+
+**Ziel:** Sicherheitsrelevante Ereignisse müssen sichtbar & nachvollziehbar sein (Audit-Trail), Auffälligkeiten sollen auffallen (Monitoring/Alerting) – **ohne sensible Daten zu protokollieren**.
+
+**Analyse:** Die App hat keine eigenen Serverless-Functions; das Logging kommt daher aus den Plattformen (Supabase, Vercel, GitHub) und wird um app-seitige Log-Hygiene + CI-Alerting ergänzt.
+
+#### Ebene 1 — Audit-Trail (Supabase)
+Supabase protokolliert serverseitig Auth- und Datenbank-Ereignisse (erfolgreiche/fehlgeschlagene Logins, Sign-ups, API-Zugriffe) → Audit-Trail für sicherheitsrelevante Aktionen.
+
+#### Ebene 2 — Monitoring (Vercel Analytics + Firewall)
+Für das Anwendungs-Monitoring sind **Vercel Web Analytics** und **Speed Insights** eingebunden (Traffic/Performance = passives Monitoring). Setup:
+```bash
+npm install @vercel/analytics @vercel/speed-insights
+```
+```tsx
+// src/main.tsx
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
+// ...
+<App />
+<Analytics />
+<SpeedInsights />
+```
+Ergänzend liefert die **Vercel-Firewall** (siehe Block 2) das Sicherheits-Monitoring (Allowed/Challenged/Rate-Limited).
+
+#### Ebene 3 — Änderungs-Audit-Trail (Git / CI)
+Jede Änderung ist über die **Git-Historie** und die **GitHub-Actions-Logs** nachvollziehbar (wer/was/wann) – entspricht ISO 27001 A.12.4 (Logging) und A.14.2 (geregelte Änderungen).
+
+#### Ebene 4 — Log-Hygiene (Code)
+M183-Regel: **keine sensiblen Daten ins Log**. Verifiziert – der gesamte `src`-Code enthält **keine** `console.*`-Aufrufe (also auch kein Logging von Passwörtern/Tokens/Keys):
+```bash
+grep -rEn "console\.(log|info|warn|error|debug)" Albion_ProfitChecker/ui/src
+# -> keine Treffer
+```
+
+#### Ebene 5 — Alerting (CI + Dependabot)
+**a)** Workflow `.github/workflows/security-scan.yml`: läuft bei Push/PR/wöchentlich und **schlägt bei high/critical-Funden fehl** → roter Build = Alarm:
+```yaml
+- name: Audit – Fehler bei high/critical
+  run: npm audit --omit=dev --audit-level=high
+```
+**b)** **Dependabot** ist aktiv und meldet verwundbare Abhängigkeiten automatisch. Aktueller Stand: 1 kritische (in der **Dev**-Abhängigkeit `vitest` → wird nicht ausgeliefert) + 1 moderate (`react-router`). Deshalb bleibt der `--omit=dev --audit-level=high`-Scan **grün**; die Behebung erfolgt in Block 7.
+
+#### Nachweise
+
+*Ebene 1 — Supabase Auth-/DB-Logs (Connection-/Auth-Events, `scram-sha-256`):*
+![Supabase Auth-Log](evidence/block3/S1-Auth-log.png)
+![Supabase Auth-Log Detail](evidence/block3/S1-Detail-Auth-log.png)
+
+*Ebene 2 — Vercel Web Analytics (Traffic-/Seiten-Monitoring):*
+![Vercel Analytics](evidence/block3/S2-Vercel-Analytics.png)
+
+*Ebene 2 — Vercel Speed Insights (Performance-Monitoring, Real Experience Score 100):*
+![Vercel Speed Insights](evidence/block3/S2-Vercel-Speed-insights.png)
+
+*Ebene 5 — Dependabot meldet verwundbare Abhängigkeiten (1 kritisch [Dev: vitest], 1 moderat [react-router]):*
+![Dependabot Alerts](evidence/block3/Dependabot-alerts.png)
+
+**Fazit:** Sicherheitsrelevante Ereignisse werden serverseitig protokolliert (Supabase-Audit-Trail), Traffic/Performance werden überwacht (Vercel Analytics/Speed Insights + Firewall), Änderungen sind über Git/CI nachvollziehbar, der Code loggt nichts Sensibles, und Schwachstellen lösen über CI + Dependabot einen Alarm aus. **Block 3 erfüllt.**
+
+---
+
+### Block 4–10 — ⏳ ausstehend
 Werden nach gleichem Schema dokumentiert (Analyse → Maßnahme → Nachweis), sobald umgesetzt.

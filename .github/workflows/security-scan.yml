@@ -1,0 +1,36 @@
+name: Security Scan
+
+# Block 3 (Logging & Monitoring / Alerting): Schlaegt bei bekannten
+# Schwachstellen in den Produktiv-Abhaengigkeiten fehl -> roter Build = Alarm.
+# Tiefergehende Lieferketten-Haertung (Pinning etc.) folgt in Block 7,
+# SAST/DAST in Block 8.
+
+on:
+  push:
+    branches: [ main, security ]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # woechentlich, Montag 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (Produktiv-Abhaengigkeiten)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Albion_ProfitChecker/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Albion_ProfitChecker/ui/package-lock.json
+      - name: Abhaengigkeiten installieren (Lockfile-treu)
+        run: npm ci
+      - name: Audit – Fehler bei high/critical
+        run: npm audit --omit=dev --audit-level=high
