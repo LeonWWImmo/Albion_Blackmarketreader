@@ -156,6 +156,8 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 
 **M183 Kap. 2 · OWASP A01/A07 · Status: auditiert & verifiziert**
 
+> 💡 **Worum geht's?** Jeder Nutzer soll nur seine eigenen Daten sehen/ändern können – durchgesetzt direkt in der Datenbank, nicht nur im Browser.
+
 **Ziel:** Jeder Benutzer darf nur auf die eigenen Daten zugreifen; die Kontrolle ist serverseitig in der Datenbank (RLS) verankert, nicht nur im Browser.
 
 **Vorgehen:** Die App liest/schreibt `profiles` aus dem Browser mit dem öffentlichen Anon-Key. Der wirksame Schutz muss daher per RLS erfolgen. Geprüft wurde: RLS aktiv? Policy restriktiv? Alle public-Tabellen abgedeckt?
@@ -223,6 +225,8 @@ where schemaname='public' and tablename='profiles';
 - `getUserProfile` wird aus der Session abgeleitet (kein zusätzlicher Call)
 - gleichzeitige Session-Reads werden zu **einem** Aufruf zusammengefasst
 
+**Vorher → Nachher:** Vorher war nicht belegt, ob die DB-Zugriffskontrolle wirklich greift (Schutz schien nur clientseitig). Nachher ist verifiziert: RLS auf allen Tabellen aktiv, nur die eigene Zeile lesbar, Schreiben durch Clients gesperrt.
+
 **Fazit:** Zugriffskontrolle serverseitig korrekt umgesetzt. Ein Benutzer kann ausschliesslich die eigene Profilzeile lesen; Schreiben durch Clients ist unterbunden. **Block 1 erfüllt** – Zustand durch Audit belegt.
 
 ---
@@ -230,6 +234,8 @@ where schemaname='public' and tablename='profiles';
 ### Block 2 — Verfügbarkeit: DoS-/Flooding-Schutz ✅ <a id="block-2"></a>
 
 **M183 Kap. 6 (WAF/Monitoring) · OWASP A06 · Status: umgesetzt & belegt**
+
+> 💡 **Worum geht's?** Die Seite soll für echte Nutzer erreichbar bleiben, auch wenn jemand sie mit massenhaften Anfragen flutet.
 
 **Ziel:** Die Seite muss für echte Nutzer erreichbar bleiben, auch wenn jemand sie mit Anfragen flutet (DoS/Flooding). Kein einzelner Endpunkt darf den Betrieb lahmlegen.
 
@@ -376,6 +382,8 @@ _Supabase Auth-Rate-Limits (Token-Refresh 150/5min, Verification 30/5min, Anonym
 - sehr grosse `Retry-After`-Werte werden auf 5000 ms gedeckelt
 - sonstige Fehler → `ApiError` mit Status, ohne `retryAfterMs`
 
+**Vorher → Nachher:** Vorher gab es app-seitig keinen Schutz gegen Anfrage-Fluten (kein Backoff, kein Login-Limit). Nachher: 429-Backoff im API-Client, Login-Cooldown nach 5 Fehlversuchen, Asset-Caching + Vercel-DDoS/Firewall greifen.
+
 **Fazit:** Verfügbarkeit über drei Ebenen abgesichert – CDN-Caching/DDoS-Mitigation (Vercel), Auth-Rate-Limits (Supabase) und app-seitiger 429-Backoff + Login-Cooldown. **Block 2 erfüllt.**
 
 ---
@@ -383,6 +391,8 @@ _Supabase Auth-Rate-Limits (Token-Refresh 150/5min, Verification 30/5min, Anonym
 ### Block 3 — Logging & Monitoring (Audit-Trail) ✅ <a id="block-3"></a>
 
 **M183 Kap. 6 · OWASP A09 · Status: umgesetzt & belegt**
+
+> 💡 **Worum geht's?** Sicherheitsrelevante Ereignisse sollen sichtbar protokolliert und Probleme automatisch gemeldet werden.
 
 **Ziel:** Sicherheitsrelevante Ereignisse müssen sichtbar & nachvollziehbar sein (Audit-Trail), Auffälligkeiten sollen auffallen (Monitoring/Alerting) – **ohne sensible Daten zu protokollieren**.
 
@@ -451,12 +461,16 @@ _Ebene 5 — Dependabot meldet verwundbare Abhängigkeiten (1 kritisch [Dev: vit
 
 **Unit-Tests:** Keine dedizierten Unit-Tests – Logging/Monitoring beruht auf Plattform-Diensten (Supabase/Vercel) und dem CI-Workflow. Der Alarm-Mechanismus wird durch den Lauf von [`security-scan.yml`](../../.github/workflows/security-scan.yml) selbst geprüft.
 
+**Vorher → Nachher:** Vorher war keine zentrale Protokollierung/Alarmierung dokumentiert. Nachher: Supabase-Audit-Trail + Vercel-Monitoring belegt, CI-Alerting-Workflow aktiv, Log-Hygiene (kein Logging von Secrets) verifiziert.
+
 **Fazit:** Sicherheitsrelevante Ereignisse werden serverseitig protokolliert (Supabase-Audit-Trail), Traffic/Performance werden überwacht (Vercel Analytics/Speed Insights + Firewall), Änderungen sind über Git/CI nachvollziehbar, der Code loggt nichts Sensibles, und Schwachstellen lösen über CI + Dependabot einen Alarm aus. **Block 3 erfüllt.**
 
 ---
 
 ### Block 4 — Verschlüsselung & Schlüssel/Secrets ✅ <a id="block-4"></a>
 **M183 Kap. 3 · OWASP A04 · Status: umgesetzt & belegt**
+
+> 💡 **Worum geht's?** Daten sollen verschlüsselt übertragen werden, und geheime Schlüssel dürfen nie im Browser/Repo landen.
 
 **Ziel:** Daten im Transport verschlüsseln, Passwörter nur als Hash, geheime Schlüssel nie im Client/Repo.
 
@@ -521,6 +535,8 @@ _Gültiges, vertrauenswürdiges TLS-Zertifikat (Let's Encrypt R12, SHA256withRSA
 🔗 **Vollständiger SSL-Labs-Report** (zum eigenständigen Nachprüfen durch die Lehrperson): <https://www.ssllabs.com/ssltest/analyze.html?d=blackmarketreader.com>
 
 > Hinweis: SSL Labs vergibt für die Vercel-Domain keine Gesamtnote (mehrere TLS-Server hinter einer IP / No-SNI-Fallback); das per SNI ausgelieferte Zertifikat ist gültig & vertrauenswürdig (siehe oben).
+
+**Vorher → Nachher:** Vorher war die Secret-Hygiene nicht verifiziert und es gab keinen automatischen Schutz dagegen. Nachher: belegt, dass keine Geheimnisse im Client/Repo liegen, ein CI-Secret-Guard verhindert künftige Lecks, und das TLS-Zertifikat ist als gültig/vertrauenswürdig nachgewiesen.
 
 **Fazit:** Transport (TLS/hybrid) und Passwort-Hashing (bcrypt) sind plattformseitig korrekt; im Client/Repo liegen **keine Geheimnisse** (verifiziert + CI-Guard); das einzige Restrisiko (Token in `localStorage`) ist bewusst mitigiert. **Block 4 erfüllt.**
 
