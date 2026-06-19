@@ -34,3 +34,17 @@ jobs:
         run: npm ci
       - name: Audit – Fehler bei high/critical
         run: npm audit --omit=dev --audit-level=high
+
+  secret-guard:
+    name: Secret-Guard (kein Service-Role-Key im Client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Client-Code/Config auf Service-Role-Secrets pruefen
+        run: |
+          if grep -rInE "service_role|SUPABASE_SERVICE_ROLE_KEY" \
+               Albion_ProfitChecker/ui/src Albion_ProfitChecker/ui/public; then
+            echo "::error::Service-Role-Referenz im Client gefunden – darf dort nie vorkommen!"
+            exit 1
+          fi
+          echo "OK: keine Service-Role-Secrets im Client."
