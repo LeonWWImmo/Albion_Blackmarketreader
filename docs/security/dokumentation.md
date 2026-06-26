@@ -19,7 +19,8 @@
   - [Block 3 — Logging & Monitoring ✅](#block-3)
   - [Block 4 — Verschlüsselung & Secrets ✅](#block-4)
   - [Block 5 — Input-Validierung & Injection ✅](#block-5)
-  - Block 6–10 — ⏳ ausstehend
+  - [Block 6 — Hardening & Security-Header ✅](#block-6)
+  - Block 7–10 — ⏳ ausstehend
 
 ---
 
@@ -143,7 +144,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-03 | Logging & Monitoring (Audit-Trail)             | 3     | 🔴 hoch   | 🟢 umgesetzt & belegt | 🟢 niedrig     |
 | H-04 | Schlüssel/Secret-Handling | 4 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-05 | Eingabevalidierung | 5 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
-| H-06 | Security-Header & Repo-Hygiene                 | 6     | 🟡 mittel | ⚪ geplant            | –              |
+| H-06 | Security-Header & Repo-Hygiene | 6 | 🟡 mittel | 🟢 umgesetzt & belegt (Note A) | 🟢 niedrig |
 | H-07 | Lieferkette                                    | 7     | 🟡 mittel | ⚪ geplant            | –              |
 | H-08 | SAST/DAST                                      | 8     | 🔧        | ⚪ geplant            | –              |
 | H-09 | Backup & Restore                               | 9     | 🟡 mittel | ⚪ geplant            | –              |
@@ -597,6 +598,49 @@ Code-Audit (oben, 0 XSS-Sinks) + grüne Unit-Tests. Optional: DevTools-Screensho
 
 ---
 
-### Block 6–10 — ⏳ ausstehend
+### Block 6 — Hardening & Security-Header ✅ <a id="block-6"></a>
+**M183 Kap. 1 · OWASP A02 · Status: umgesetzt & belegt (securityheaders.com: Note A); CSP-Enforce als Folgeschritt**
+
+> 💡 **Worum geht's?** Viele Angriffe scheitern schon an richtig gesetzten HTTP-Schutz-Headern und sauberer Konfiguration – „den Airbag aktivieren".
+
+**Ziel:** Schutz-Header vollständig setzen, kein Quellcode-Leak, Repo frei von Artefakten/Secrets.
+
+#### Ebene 1 — Security-Header (`vercel.json`)
+Bereits vorhanden: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, `frame-ancestors`. **Ergänzt:**
+- **Strict-Transport-Security (HSTS):** `max-age=63072000; includeSubDomains` — erzwingt HTTPS.
+- **Permissions-Policy:** `camera=(), microphone=(), geolocation=(), payment=(), usb=()` — deaktiviert ungenutzte Browser-Features.
+- **Content-Security-Policy (Report-Only):** beschränkt erlaubte Quellen für Skripte/Styles/Verbindungen:
+```text
+default-src 'self'; object-src 'none'; frame-ancestors 'none';
+img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com data:;
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self';
+connect-src 'self' https://*.supabase.co wss://*.supabase.co
+  https://vitals.vercel-insights.com https://va.vercel-scripts.com; form-action 'self'
+```
+> Bewusst **zuerst Report-Only**: blockt nichts, meldet Verstösse nur in der Browser-Konsole → **null Breakage-Risiko**. Die CSP wurde aus einer Inventur gebaut (Supabase, Vercel-Analytics, Google-Fonts, eigene Bilder). Nach Verifikation (keine Verstösse auf einem Preview-Deploy) wird der Header in `Content-Security-Policy` (scharf) umbenannt.
+
+#### Ebene 2 — Source-Maps aus
+Explizit `build: { sourcemap: false }` in `vite.config.ts` → der Produktions-Build enthält **keine** `.map`-Dateien (verifiziert: `find dist -name "*.map"` → **0**), der Originalquellcode ist nicht im Browser einsehbar.
+
+#### Ebene 3 — Repo-Hygiene (verifiziert)
+- Build-Artefakte (`bin/`, `obj/`) sind **nicht getrackt** (gitignored, `git ls-files` → 0).
+- Keine Tool-/Secret-Dateien committet (`.claude` nicht getrackt; vgl. Block 4: keine Secrets im Repo).
+
+#### Ebene 4 — CORS
+Keine eigenen Serverless-Endpunkte → kein CORS-Vektor (N/A).
+
+#### Nachweise
+_securityheaders.com – Gesamtnote **A**, alle 6 Schutz-Header gesetzt (Content-Security-Policy, Permissions-Policy, Referrer-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options):_
+![securityheaders.com – Note A](evidence/block6/01-securityheaders.png)
+
+- Build-Log: 0 `.map`-Dateien im `dist/` (Source-Maps aus).
+
+**Vorher → Nachher:** Vorher fehlten HSTS, Permissions-Policy und eine echte CSP; Source-Maps nur implizit aus. Nachher: HSTS + Permissions-Policy scharf aktiv, CSP als Report-Only (vor Enforce), Source-Maps explizit aus, Repo-Hygiene belegt.
+
+**Fazit:** Schutz-Header vervollständigt (HSTS/Permissions-Policy aktiv, CSP risikolos via Report-Only), Source-Maps aus, Repo artefakt-/secret-frei – extern bestätigt mit **securityheaders.com-Note A**. **Block 6 erfüllt.** (Optionaler Folgeschritt: CSP von Report-Only auf scharf umstellen, sobald die Browser-Konsole keine Verstösse zeigt.)
+
+---
+
+### Block 7–10 — ⏳ ausstehend
 
 Werden nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.

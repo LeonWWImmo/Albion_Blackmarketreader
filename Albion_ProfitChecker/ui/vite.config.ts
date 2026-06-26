@@ -7,6 +7,11 @@ const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // Block 6 (Hardening): keine Source-Maps in Produktion ausliefern
+  // (verhindert, dass der Originalquellcode im Browser einsehbar ist).
+  build: {
+    sourcemap: false
+  },
   resolve: {
     alias: {
       "@shared": path.resolve(rootDir, "src/shared")
