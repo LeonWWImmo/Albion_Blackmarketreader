@@ -18,7 +18,8 @@
   - [Block 2 — Verfügbarkeit / DoS-Schutz ✅](#block-2)
   - [Block 3 — Logging & Monitoring ✅](#block-3)
   - [Block 4 — Verschlüsselung & Secrets ✅](#block-4)
-  - Block 5–10 — ⏳ ausstehend
+  - [Block 5 — Input-Validierung & Injection ✅](#block-5)
+  - Block 6–10 — ⏳ ausstehend
 
 ---
 
@@ -141,7 +142,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-02 | Verfügbarkeit (Überlastschutz / Rate-Limiting) | 2     | 🔴 hoch   | 🟢 umgesetzt & belegt | 🟢 niedrig     |
 | H-03 | Logging & Monitoring (Audit-Trail)             | 3     | 🔴 hoch   | 🟢 umgesetzt & belegt | 🟢 niedrig     |
 | H-04 | Schlüssel/Secret-Handling | 4 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
-| H-05 | Eingabevalidierung                             | 5     | 🟡 mittel | ⚪ geplant            | –              |
+| H-05 | Eingabevalidierung | 5 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-06 | Security-Header & Repo-Hygiene                 | 6     | 🟡 mittel | ⚪ geplant            | –              |
 | H-07 | Lieferkette                                    | 7     | 🟡 mittel | ⚪ geplant            | –              |
 | H-08 | SAST/DAST                                      | 8     | 🔧        | ⚪ geplant            | –              |
@@ -542,6 +543,60 @@ _Gültiges, vertrauenswürdiges TLS-Zertifikat (Let's Encrypt R12, SHA256withRSA
 
 ---
 
-### Block 5–10 — ⏳ ausstehend
+### Block 5 — Input-Validierung & Injection-Schutz ✅ <a id="block-5"></a>
+**M183 Kap. 1/4 · OWASP A05 · Status: umgesetzt & belegt**
+
+> 💡 **Worum geht's?** Eingaben (Formulare, URL-Parameter) dürfen keinen Schadcode einschleusen können – XSS, SQL-Injection, Open Redirect.
+
+**Ziel:** Alle Stellen, an denen Eingaben/URL-Parameter verarbeitet werden, sind gegen Injection abgesichert.
+
+#### Ebene 1 — XSS (Cross-Site Scripting)
+Code-Audit auf gefährliche Render-Sinks:
+```bash
+grep -rEn "dangerouslySetInnerHTML|innerHTML|eval\(|document\.write|new Function\(" Albion_ProfitChecker/ui/src
+# -> keine Treffer
+```
+Ergebnis **0 Treffer**: Die App rendert ausschliesslich über JSX → React **escapt** alle Werte automatisch, es gibt keinen Roh-HTML-Pfad.
+
+#### Ebene 2 — SQL-Injection
+Alle DB-Zugriffe laufen über den **Supabase-Query-Builder**, der Werte **parametrisiert** (kein String-Zusammenbau von SQL):
+```ts
+client.from("profiles").select("id").eq("display_name", displayName)
+```
+
+#### Ebene 3 — Eingabe-Validierung / Allowlist (Kern)
+Das `next`-Redirect-Ziel wird über eine **Allowlist** validiert (Open-Redirect-Schutz), ausgelagert in eine eigene, getestete Util (`shared/security/safeNextPath.ts`):
+```ts
+if (!trimmed.startsWith("/")) return null;   // nur interne Pfade
+if (trimmed.startsWith("//")) return null;   // kein protocol-relative
+if (trimmed.includes("://")) return null;    // keine absolute URL
+if (!ALLOWED_NEXT_PATHS.has(url.pathname)) return null; // nur erlaubte Ziele
+```
+Zusätzlich werden Region-Eingaben auf `eu`/`us` normalisiert (`normalizeRegion`).
+
+#### Ebene 4 — .NET-Datensync
+Der `AlbionApiService` baut API-URLs aus **fest definierten Item-IDs**, **nicht aus Nutzereingaben** → kein Injection-Vektor.
+
+#### Ebene 5 — Automatisierte Erkennung (Querverweis)
+Tiefergehendes Injection-Scanning via **CodeQL** folgt in Block 8.
+
+#### Unit-Tests
+[`safeNextPath.test.ts`](../../Albion_ProfitChecker/ui/src/shared/security/safeNextPath.test.ts) (6 Tests):
+- erlaubt Allowlist-Pfade, behält Query/Hash
+- blockt externe Ziele (absolute URL, `//`, `javascript:`, Backslash-Trick)
+- blockt nicht erlaubte/sensible Pfade (`/admin`, `/login`)
+- normalisiert Path-Traversal (`/dashboard/../admin` → blockiert)
+- `null` bei leerem/ungültigem Input
+
+#### Nachweise
+Code-Audit (oben, 0 XSS-Sinks) + grüne Unit-Tests. Optional: DevTools-Screenshot, dass ein XSS-Payload als **Text** (escaped) angezeigt wird, oder ein Open-Redirect-Test (`?next=https://evil.com` → landet auf `/dashboard`).
+
+**Vorher → Nachher:** Vorher steckte die `next`-Validierung ungetestet in der Login-Seite. Nachher: in eine wiederverwendbare Util ausgelagert und mit **6 Unit-Tests** abgesichert; XSS- und SQL-Injection per Audit belegt.
+
+**Fazit:** Injection ist framework-seitig abgefangen (React-Escaping, Supabase-Parametrisierung) und an der einzigen kritischen Eingabestelle (Redirect-Ziel) per getesteter Allowlist gesichert. **Block 5 erfüllt.**
+
+---
+
+### Block 6–10 — ⏳ ausstehend
 
 Werden nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.

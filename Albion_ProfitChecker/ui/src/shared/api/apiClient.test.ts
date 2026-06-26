@@ -50,7 +50,7 @@ describe("fetchJson – Backoff/Verfügbarkeit (Block 2)", () => {
     fetchMock.mockResolvedValue(new Response("nope", { status: 404 }));
     const err = await fetchJson("/missing", { retries: 0, dedupeKey: "404" }).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
-    expect(err.status).toBe(404);
-    expect(err.retryAfterMs).toBeUndefined();
+    expect((err as ApiError).status).toBe(404);
+    expect((err as ApiError).retryAfterMs).toBeUndefined();
   });
 });

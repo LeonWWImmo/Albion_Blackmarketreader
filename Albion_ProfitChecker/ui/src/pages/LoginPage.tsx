@@ -1,38 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { assetUrl, createAuthService } from "@shared/index";
 import type { AuthService } from "@shared/index";
+import { getSafeNextPath } from "@shared/security/safeNextPath";
 import "./login.css";
 
 type AuthMode = "login" | "register";
-
-const ALLOWED_NEXT_PATHS = new Set([
-  "/",
-  "/dashboard",
-  "/bm-crafter",
-  "/crafting-calculator",
-  "/refining-calculator",
-  "/food-potion-crafter",
-  "/community",
-  "/legal"
-]);
-
-function getSafeNextPath(value: string | null): string | null {
-  if (!value) return null;
-  const trimmed = String(value).trim();
-  if (!trimmed.startsWith("/")) return null;
-  if (trimmed.startsWith("//")) return null;
-  if (trimmed.includes("://")) return null;
-  if (trimmed === "/login") return null;
-
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    if (url.origin !== window.location.origin) return null;
-    if (!ALLOWED_NEXT_PATHS.has(url.pathname)) return null;
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return null;
-  }
-}
 
 function navigateToInternalPath(path: string) {
   const safePath = getSafeNextPath(path) || "/dashboard";
