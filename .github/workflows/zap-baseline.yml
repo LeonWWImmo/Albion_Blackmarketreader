@@ -1,0 +1,26 @@
+name: ZAP Baseline (DAST)
+
+# Block 8: Dynamischer Scan von aussen (Blackbox) mit OWASP ZAP.
+# Bewusst PASSIVER Baseline-Scan und NICHT bei jedem Push, sondern nur
+# manuell/woechentlich -> schont die Prod-Seite und loest die Rate-Limits/
+# Firewall aus Block 2 nicht aus.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"   # woechentlich, Montag 04:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  zap-baseline:
+    name: OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "https://blackmarketreader.com"
+          fail_action: false          # Baseline-Warnungen sollen den Lauf nicht rot machen
+          allow_issue_writing: false   # kein Auto-Issue; Report kommt als Artefakt/Job-Summary

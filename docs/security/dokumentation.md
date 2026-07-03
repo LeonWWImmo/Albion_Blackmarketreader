@@ -21,7 +21,8 @@
   - [Block 5 — Input-Validierung & Injection ✅](#block-5)
   - [Block 6 — Hardening & Security-Header ✅](#block-6)
   - [Block 7 — Lieferkette & Abhängigkeiten ✅](#block-7)
-  - Block 8–10 — ⏳ ausstehend
+  - [Block 8 — SAST + DAST (CodeQL + ZAP) 🟠](#block-8)
+  - Block 9–10 — ⏳ ausstehend
 
 ---
 
@@ -147,7 +148,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-05 | Eingabevalidierung | 5 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-06 | Security-Header & Repo-Hygiene | 6 | 🟡 mittel | 🟢 umgesetzt & belegt (Note A) | 🟢 niedrig |
 | H-07 | Lieferkette | 7 | 🟡 mittel | 🟢 Überwachung belegt (2 Funde bewusst offen als Demo) | 🟡 react-router (prod) offen |
-| H-08 | SAST/DAST                                      | 8     | 🔧        | ⚪ geplant            | –              |
+| H-08 | SAST/DAST | 8 | 🔧 | 🟠 Workflows umgesetzt, Screenshots offen | 🟢 niedrig (erwartet) |
 | H-09 | Backup & Restore                               | 9     | 🟡 mittel | ⚪ geplant            | –              |
 | H-10 | Risikobewertung & Bericht                      | 10    | 📄        | ⚪ geplant            | –              |
 
@@ -677,6 +678,42 @@ CI installiert mit **`npm ci`** (statt `npm install`) → exakt nach `package-lo
 
 ---
 
-### Block 8–10 — ⏳ ausstehend
+### Block 8 — IT-Security-Tools: SAST + DAST 🟠 <a id="block-8"></a>
+**M183 Kap. 4 · OWASP-Querschnitt · Status: Workflows umgesetzt, Report-Screenshots ausstehend**
+
+> 💡 **Worum geht's?** Mit Werkzeugen automatisch nach Schwachstellen suchen – **SAST** liest den Quellcode (Whitebox), **DAST** greift die laufende Seite von aussen an (Blackbox).
+
+**Ziel:** Automatisierte Schwachstellen-Scans in der CI mit nachvollziehbaren Reports.
+
+#### Ebene 1 — SAST: GitHub CodeQL
+`.github/workflows/codeql.yml` analysiert bei **Push/PR + wöchentlich** den JavaScript/TypeScript-Code und meldet Funde unter **Security → Code scanning** (für öffentliche Repos gratis):
+```yaml
+- uses: github/codeql-action/init@v3
+  with:
+    languages: javascript-typescript
+- uses: github/codeql-action/analyze@v3
+```
+
+#### Ebene 2 — DAST: OWASP ZAP (Baseline/passiv)
+`.github/workflows/zap-baseline.yml` führt einen **passiven Baseline-Scan** gegen die Live-Seite aus – **manuell/wöchentlich** ausgelöst (nicht bei jedem Push), damit die Prod-Seite nicht gehämmert und die **Block-2-Firewall/Rate-Limits nicht ausgelöst** werden. Der ZAP-Report wird als Workflow-Artefakt abgelegt.
+
+#### Ebene 3 — Triage
+Gefundene Punkte werden bewertet (echt vs. false positive). Da die App aus Block 5 sauber ist (React-Escaping, Supabase parametrisiert), sind wenige/keine ernsten Funde zu erwarten – **das „wenig/keine Funde" ist selbst der Beleg**, dass die Tools laufen und der Code hält.
+
+#### Nachweise
+| # | Nachweis | Wo | Datei |
+|---|---|---|---|
+| S1 | CodeQL-Ergebnis (Funde oder „no alerts") | GitHub → Security → Code scanning | `evidence/block8/01-codeql.png` |
+| S2 | ZAP-Baseline-Report | GitHub → Actions → ZAP-Run (Artefakt/Summary) | `evidence/block8/02-zap.png` |
+
+> 📸 Ablage unter `evidence/block8/`; werden eingebettet, sobald vorhanden. (CodeQL läuft nach dem Push automatisch; ZAP über **Actions → „ZAP Baseline" → Run workflow** manuell starten.)
+
+**Vorher → Nachher:** Vorher gab es keine automatisierten Sicherheits-Scans. Nachher: **SAST (CodeQL)** bei jedem Push + **DAST (ZAP)** auf Abruf, beide mit Reports.
+
+**Fazit:** Zwei etablierte Security-Tools (Whitebox + Blackbox) sind als CI-Workflows verankert und liefern reproduzierbare Reports. **Block 8 umgesetzt** (Nachweis-Screenshots folgen nach dem ersten Lauf).
+
+---
+
+### Block 9–10 — ⏳ ausstehend
 
 Werden nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.
