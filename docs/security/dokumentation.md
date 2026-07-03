@@ -20,7 +20,8 @@
   - [Block 4 — Verschlüsselung & Secrets ✅](#block-4)
   - [Block 5 — Input-Validierung & Injection ✅](#block-5)
   - [Block 6 — Hardening & Security-Header ✅](#block-6)
-  - Block 7–10 — ⏳ ausstehend
+  - [Block 7 — Lieferkette & Abhängigkeiten ✅](#block-7)
+  - Block 8–10 — ⏳ ausstehend
 
 ---
 
@@ -145,7 +146,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-04 | Schlüssel/Secret-Handling | 4 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-05 | Eingabevalidierung | 5 | 🟡 mittel | 🟢 umgesetzt & belegt | 🟢 niedrig |
 | H-06 | Security-Header & Repo-Hygiene | 6 | 🟡 mittel | 🟢 umgesetzt & belegt (Note A) | 🟢 niedrig |
-| H-07 | Lieferkette                                    | 7     | 🟡 mittel | ⚪ geplant            | –              |
+| H-07 | Lieferkette | 7 | 🟡 mittel | 🟢 Überwachung belegt (2 Funde bewusst offen als Demo) | 🟡 react-router (prod) offen |
 | H-08 | SAST/DAST                                      | 8     | 🔧        | ⚪ geplant            | –              |
 | H-09 | Backup & Restore                               | 9     | 🟡 mittel | ⚪ geplant            | –              |
 | H-10 | Risikobewertung & Bericht                      | 10    | 📄        | ⚪ geplant            | –              |
@@ -641,6 +642,41 @@ _securityheaders.com – Gesamtnote **A**, alle 6 Schutz-Header gesetzt (Content
 
 ---
 
-### Block 7–10 — ⏳ ausstehend
+### Block 7 — Lieferkette & Abhängigkeits-Sicherheit ✅ <a id="block-7"></a>
+**M183 Kap. 7 (ISO 27001) · OWASP A03/A08 · Status: Überwachung umgesetzt & belegt**
+
+> 💡 **Worum geht's?** Die App nutzt viel Fremd-Code (npm-Pakete, GitHub-Actions). Wird eine Abhängigkeit unsicher, muss man das **früh erkennen** – hier geht es um die kontinuierliche Überwachung der Lieferkette.
+
+**Ziel:** Verwundbare Abhängigkeiten werden automatisch erkannt und gemeldet; die Lieferkette bleibt nachvollziehbar und integer.
+
+#### Ebene 1 — Erkennung (Dependabot)
+**Dependabot** ist aktiv und scannt die Abhängigkeiten laufend. Dass die Erkennung wirklich greift, zeigen real gefundene Lücken:
+![Dependabot-Alerts](evidence/block3/Dependabot-alerts.png)
+- 1 kritisch: `vitest` (**Dev**-Abhängigkeit → wird **nicht** ausgeliefert)
+- 1 moderat: `react-router` (prod)
+
+> Diese Funde bleiben in diesem Schulprojekt **bewusst offen** – als Nachweis, dass Dependabot Schwachstellen zuverlässig erkennt. Die Behebung ist ein Prozess: Dependabot öffnet Update-PRs, die gemergt werden.
+
+#### Ebene 2 — Aktives Gate (CI)
+`security-scan.yml` (Block 3) führt bei jedem Push **`npm audit --omit=dev --audit-level=high`** aus → high/critical in **Produktiv**-Abhängigkeiten machen den Build rot. (Die kritische vitest-Lücke ist Dev-only → korrekt nicht ausgeliefert.)
+
+#### Ebene 3 — Lockfile-Integrität
+CI installiert mit **`npm ci`** (statt `npm install`) → exakt nach `package-lock.json`, keine unbemerkten Versions-Abweichungen (ISO 27001 A.14.2: geregelte Änderungen).
+
+#### Ebene 4 — GitHub-Actions
+- **`permissions:`** ist in 12 von 13 Workflows minimal gesetzt (Least Privilege).
+- Actions referenzieren `@v4`-Tags; **SHA-Pinning** wäre der nächste Härtungsschritt (über das `github-actions`-Ecosystem von Dependabot pflegbar).
+
+#### Nachweise
+- Dependabot-Alerts (oben) = Erkennung funktioniert nachweislich.
+- `security-scan.yml` (npm-audit-Gate), `npm ci` in CI, `permissions:` in Workflows.
+
+**Vorher → Nachher:** Vorher gab es keine dokumentierte Lieferketten-Überwachung. Nachher: Dependabot-Erkennung + CI-`npm audit`-Gate + `npm ci`-Integrität + minimale Workflow-Rechte – belegt dadurch, dass Dependabot real 2 Lücken findet.
+
+**Fazit:** Die Lieferkette wird kontinuierlich **überwacht** (Dependabot), bei ausgelieferten Abhängigkeiten aktiv **geblockt** (CI-Gate) und **integer** installiert (`npm ci`). Die 2 erkannten Lücken sind bewusst offen als Beleg der Erkennung; ihre Behebung ist ein dokumentierter Dependabot-PR-Prozess. **Block 7 (Überwachung & Erkennung) erfüllt.**
+
+---
+
+### Block 8–10 — ⏳ ausstehend
 
 Werden nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.
