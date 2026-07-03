@@ -2,19 +2,19 @@
 
 **Modul M183 · Albion Blackmarket Reader · Branch `security`**
 
-> 📄 Dieses Dokument enthält **Threat Model, Risikomatrix, Härtungs-Tracker und die Nachweise pro Block**. Die Block-Definitionen und der Zeitplan stehen in **[planung.md](planung.md)**.
+> 📄 Dieses Dokument bündelt Threat Model, Risikomatrix, den Härtungs-Tracker und die Nachweise zu jedem Block. Die Blockdefinitionen und den Zeitplan findest du in [planung.md](planung.md).
 
-> ⚠️ **Verantwortungsvolle Offenlegung (Responsible Disclosure):** Repo öffentlich, App produktiv. Daher **keine konkreten Exploit-Anleitungen/Pfade/PoCs zu noch offenen Punkten**. Detail-Nachweise werden zu einem Punkt erst ergänzt, **nachdem er umgesetzt ist**.
+> ⚠️ **Responsible Disclosure:** Das Repo ist öffentlich und die App läuft produktiv. Deshalb stehen hier keine fertigen Exploit-Anleitungen oder genauen Pfade zu noch offenen Schwachstellen. Konkrete Nachweise kommen immer erst dann dazu, wenn der jeweilige Punkt behoben ist.
 
 ---
 
 ## Management-Summary <a id="summary"></a>
 
-Der **Albion Blackmarket Reader** (React/TypeScript-Frontend, Supabase-Auth/DB, Vercel-Hosting, .NET-Datensync via GitHub-Actions) wurde im Rahmen des Moduls **M183** systematisch abgesichert. In **10 Blöcken** wurden Zugriffskontrolle, Verfügbarkeit, Logging/Monitoring, Verschlüsselung/Secrets, Injection-Schutz, Hardening/Security-Header, Lieferkette, SAST/DAST, Backup und Risikomanagement bearbeitet – jeweils nach dem Muster **Analyse → Massnahme → Nachweis**.
+Der Albion Blackmarket Reader ist eine öffentlich erreichbare Web-App: React/TypeScript im Frontend, Supabase für Login und Datenbank, gehostet auf Vercel, dazu ein .NET-Datensync über GitHub-Actions. Im Modul M183 wurde die App in zehn Schritten abgesichert – von der Zugriffskontrolle über Verfügbarkeit, Logging, Verschlüsselung, Eingabeprüfung, Header-Härtung und Lieferkette bis zu automatischen Scans, Backup und einer Risikobewertung. Jeder Block läuft nach demselben Muster: analysieren, umsetzen, belegen.
 
-**Stand:** 9 von 10 Blöcken abgeschlossen und belegt; Block 8 (SAST/DAST) ist umgesetzt, die Report-Screenshots folgen nach dem ersten CI-Lauf. Alle Code-Änderungen sind verifiziert (TypeScript-Typecheck grün, 71 Unit-Tests grün, Produktions-Build grün).
+Neun der zehn Blöcke sind abgeschlossen und mit Nachweisen hinterlegt. Block 8 (SAST/DAST) ist umgesetzt; die Report-Screenshots kommen nach dem ersten CI-Lauf dazu. Alle Code-Änderungen sind geprüft – Typecheck, 71 Unit-Tests und der Produktions-Build laufen grün.
 
-**Bewusst akzeptierte Restrisiken:** eine moderate `react-router`-Lücke bleibt als Dependabot-Nachweis offen; das Nutzerdaten-Backup ist wegen des Supabase-Free-Plans manuell; die CSP läuft zunächst als Report-Only. Details je Block unten und im [Härtungs-Tracker](#tracker).
+Ein paar Restrisiken bleiben bewusst offen und werden ehrlich benannt: eine moderate react-router-Lücke dient als Beispiel dafür, dass Dependabot Schwachstellen erkennt; das Backup der Nutzerdaten ist im Supabase-Free-Plan nur manuell möglich; und die CSP läuft vorerst im Report-Only-Modus. Die Details stehen bei den einzelnen Blöcken und im [Härtungs-Tracker](#tracker).
 
 ---
 
@@ -172,13 +172,11 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 
 **M183 Kap. 2 · OWASP A01/A07 · Status: auditiert & verifiziert**
 
-> 💡 **Worum geht's?** Jeder Nutzer soll nur seine eigenen Daten sehen/ändern können – durchgesetzt direkt in der Datenbank, nicht nur im Browser.
+> 💡 **Worum geht's?** Jeder Nutzer soll nur seine eigenen Daten sehen und ändern können – und zwar erzwungen in der Datenbank, nicht bloss in der Oberfläche.
 
-**Ziel:** Jeder Benutzer darf nur auf die eigenen Daten zugreifen; die Kontrolle ist serverseitig in der Datenbank (RLS) verankert, nicht nur im Browser.
+Die App liest und schreibt die Tabelle `profiles` direkt aus dem Browser, mit dem öffentlichen Anon-Key. Ein Schutz, der nur im Frontend sitzt, bringt hier also nichts – entscheidend ist Row Level Security (RLS) in Supabase. Geprüft wurde deshalb dreierlei: Ist RLS aktiv? Gibt die Policy wirklich nur die eigene Zeile frei? Und sind alle öffentlichen Tabellen abgedeckt?
 
-**Vorgehen:** Die App liest/schreibt `profiles` aus dem Browser mit dem öffentlichen Anon-Key. Der wirksame Schutz muss daher per RLS erfolgen. Geprüft wurde: RLS aktiv? Policy restriktiv? Alle public-Tabellen abgedeckt?
-
-**Soll-Konfiguration** (so wird der Schutz hergestellt – Supabase → SQL Editor):
+So sieht die Konfiguration aus, die diesen Schutz herstellt (Supabase → SQL Editor):
 
 ```sql
 -- RLS für die Tabelle aktivieren
@@ -241,9 +239,9 @@ where schemaname='public' and tablename='profiles';
 - `getUserProfile` wird aus der Session abgeleitet (kein zusätzlicher Call)
 - gleichzeitige Session-Reads werden zu **einem** Aufruf zusammengefasst
 
-**Vorher → Nachher:** Vorher war nicht belegt, ob die DB-Zugriffskontrolle wirklich greift (Schutz schien nur clientseitig). Nachher ist verifiziert: RLS auf allen Tabellen aktiv, nur die eigene Zeile lesbar, Schreiben durch Clients gesperrt.
+Früher war gar nicht belegt, ob die Zugriffskontrolle in der Datenbank wirklich greift – von aussen sah der Schutz nur clientseitig aus. Inzwischen ist es geprüft: RLS läuft auf allen Tabellen, jeder liest nur die eigene Zeile, und Schreiben durch Clients ist gesperrt.
 
-**Fazit:** Zugriffskontrolle serverseitig korrekt umgesetzt. Ein Benutzer kann ausschliesslich die eigene Profilzeile lesen; Schreiben durch Clients ist unterbunden. **Block 1 erfüllt** – Zustand durch Audit belegt.
+Damit sitzt die Zugriffskontrolle dort, wo sie hingehört: serverseitig in der Datenbank, belegt durchs Audit. ✅
 
 ---
 
@@ -251,11 +249,9 @@ where schemaname='public' and tablename='profiles';
 
 **M183 Kap. 6 (WAF/Monitoring) · OWASP A06 · Status: umgesetzt & belegt**
 
-> 💡 **Worum geht's?** Die Seite soll für echte Nutzer erreichbar bleiben, auch wenn jemand sie mit massenhaften Anfragen flutet.
+> 💡 **Worum geht's?** Die Seite soll für echte Nutzer erreichbar bleiben, auch wenn jemand sie mit massenhaften Anfragen flutet (DoS/Flooding). Kein einzelner Endpunkt darf den Betrieb lahmlegen können.
 
-**Ziel:** Die Seite muss für echte Nutzer erreichbar bleiben, auch wenn jemand sie mit Anfragen flutet (DoS/Flooding). Kein einzelner Endpunkt darf den Betrieb lahmlegen.
-
-**Architektur-Analyse (Floodflächen):** Die App ist ein statisches SPA + JSON, ausgeliefert über das Vercel-CDN; die dynamische Fläche ist Supabase (Login/Profiles). Volumetrische Angriffe treffen daher v. a. das CDN-Edge. Der Schutz wird als **Defense in Depth über drei Ebenen** umgesetzt.
+Wo kann so ein Flood überhaupt ansetzen? Die App ist im Kern ein statisches SPA mit JSON-Dateien, die über das Vercel-CDN ausgeliefert werden; die einzige dynamische Fläche ist Supabase (Login, Profile). Grosse Anfragewellen treffen also vor allem das CDN-Edge. Der Schutz ist bewusst mehrschichtig aufgebaut (Defense in Depth):
 
 #### Ebene 1 — Edge/CDN (Vercel)
 
@@ -398,9 +394,9 @@ _Supabase Auth-Rate-Limits (Token-Refresh 150/5min, Verification 30/5min, Anonym
 - sehr grosse `Retry-After`-Werte werden auf 5000 ms gedeckelt
 - sonstige Fehler → `ApiError` mit Status, ohne `retryAfterMs`
 
-**Vorher → Nachher:** Vorher gab es app-seitig keinen Schutz gegen Anfrage-Fluten (kein Backoff, kein Login-Limit). Nachher: 429-Backoff im API-Client, Login-Cooldown nach 5 Fehlversuchen, Asset-Caching + Vercel-DDoS/Firewall greifen.
+Vorher fing app-seitig nichts einen Anfrage-Flood ab – kein Backoff, kein Login-Limit. Jetzt greifen ein 429-Backoff im API-Client, ein Login-Cooldown nach fünf Fehlversuchen sowie Asset-Caching und die Vercel-DDoS/Firewall.
 
-**Fazit:** Verfügbarkeit über drei Ebenen abgesichert – CDN-Caching/DDoS-Mitigation (Vercel), Auth-Rate-Limits (Supabase) und app-seitiger 429-Backoff + Login-Cooldown. **Block 2 erfüllt.**
+Die Erreichbarkeit ist damit über drei Ebenen abgesichert: CDN und DDoS-Schutz von Vercel, Rate-Limits von Supabase und der zusätzliche Schutz im eigenen Code. ✅
 
 ---
 
@@ -408,9 +404,7 @@ _Supabase Auth-Rate-Limits (Token-Refresh 150/5min, Verification 30/5min, Anonym
 
 **M183 Kap. 6 · OWASP A09 · Status: umgesetzt & belegt**
 
-> 💡 **Worum geht's?** Sicherheitsrelevante Ereignisse sollen sichtbar protokolliert und Probleme automatisch gemeldet werden.
-
-**Ziel:** Sicherheitsrelevante Ereignisse müssen sichtbar & nachvollziehbar sein (Audit-Trail), Auffälligkeiten sollen auffallen (Monitoring/Alerting) – **ohne sensible Daten zu protokollieren**.
+> 💡 **Worum geht's?** Sicherheitsrelevante Ereignisse sollen sichtbar und nachvollziehbar sein (Audit-Trail), und Auffälligkeiten sollen auffallen (Monitoring/Alerting) – und zwar ohne dabei sensible Daten wie Passwörter mitzuloggen.
 
 **Analyse:** Die App hat keine eigenen Serverless-Functions; das Logging kommt daher aus den Plattformen (Supabase, Vercel, GitHub) und wird um app-seitige Log-Hygiene + CI-Alerting ergänzt.
 
@@ -477,18 +471,16 @@ _Ebene 5 — Dependabot meldet verwundbare Abhängigkeiten (1 kritisch [Dev: vit
 
 **Unit-Tests:** Keine dedizierten Unit-Tests – Logging/Monitoring beruht auf Plattform-Diensten (Supabase/Vercel) und dem CI-Workflow. Der Alarm-Mechanismus wird durch den Lauf von [`security-scan.yml`](../../.github/workflows/security-scan.yml) selbst geprüft.
 
-**Vorher → Nachher:** Vorher war keine zentrale Protokollierung/Alarmierung dokumentiert. Nachher: Supabase-Audit-Trail + Vercel-Monitoring belegt, CI-Alerting-Workflow aktiv, Log-Hygiene (kein Logging von Secrets) verifiziert.
+Vorher war nirgends festgehalten, wer was wann tut oder wann etwas schiefläuft. Jetzt liefert Supabase den Audit-Trail, Vercel das Traffic-Monitoring, die CI schlägt bei Funden Alarm, und der eigene Code loggt bewusst nichts Sensibles.
 
-**Fazit:** Sicherheitsrelevante Ereignisse werden serverseitig protokolliert (Supabase-Audit-Trail), Traffic/Performance werden überwacht (Vercel Analytics/Speed Insights + Firewall), Änderungen sind über Git/CI nachvollziehbar, der Code loggt nichts Sensibles, und Schwachstellen lösen über CI + Dependabot einen Alarm aus. **Block 3 erfüllt.**
+Damit werden Auffälligkeiten sichtbar, statt unbemerkt zu bleiben – und Änderungen sind über Git und CI jederzeit nachvollziehbar. ✅
 
 ---
 
 ### Block 4 — Verschlüsselung & Schlüssel/Secrets ✅ <a id="block-4"></a>
 **M183 Kap. 3 · OWASP A04 · Status: umgesetzt & belegt**
 
-> 💡 **Worum geht's?** Daten sollen verschlüsselt übertragen werden, und geheime Schlüssel dürfen nie im Browser/Repo landen.
-
-**Ziel:** Daten im Transport verschlüsseln, Passwörter nur als Hash, geheime Schlüssel nie im Client/Repo.
+> 💡 **Worum geht's?** Daten sollen verschlüsselt übertragen werden, Passwörter nur als Hash gespeichert sein, und geheime Schlüssel dürfen nie im Browser oder im Repo landen.
 
 #### Ebene 1 — Transportverschlüsselung (HTTPS/TLS)
 HTTPS wird von Vercel erzwungen. TLS ist ein **hybrides Verfahren** (M183 Kap. 3): asymmetrischer Schlüsselaustausch (Zertifikat) + symmetrische Bulk-Verschlüsselung (AES) für die eigentlichen Daten. Veraltetes SSL/TLS wird abgelehnt (Windows PowerShell 5.1 verbindet erst nach Aktivierung von TLS 1.2).
@@ -552,18 +544,16 @@ _Gültiges, vertrauenswürdiges TLS-Zertifikat (Let's Encrypt R12, SHA256withRSA
 
 > Hinweis: SSL Labs vergibt für die Vercel-Domain keine Gesamtnote (mehrere TLS-Server hinter einer IP / No-SNI-Fallback); das per SNI ausgelieferte Zertifikat ist gültig & vertrauenswürdig (siehe oben).
 
-**Vorher → Nachher:** Vorher war die Secret-Hygiene nicht verifiziert und es gab keinen automatischen Schutz dagegen. Nachher: belegt, dass keine Geheimnisse im Client/Repo liegen, ein CI-Secret-Guard verhindert künftige Lecks, und das TLS-Zertifikat ist als gültig/vertrauenswürdig nachgewiesen.
+Vorher war nicht überprüft, ob wirklich keine Geheimnisse im ausgelieferten Code stecken. Jetzt ist belegt, dass Client und Repo frei von Secrets sind, ein CI-Guard verhindert künftige Lecks, und das TLS-Zertifikat ist als gültig und vertrauenswürdig nachgewiesen.
 
-**Fazit:** Transport (TLS/hybrid) und Passwort-Hashing (bcrypt) sind plattformseitig korrekt; im Client/Repo liegen **keine Geheimnisse** (verifiziert + CI-Guard); das einzige Restrisiko (Token in `localStorage`) ist bewusst mitigiert. **Block 4 erfüllt.**
+Transport (TLS) und Passwort-Hashing (bcrypt) übernimmt zuverlässig die Plattform. Das einzige Restrisiko – das Session-Token im `localStorage` – ist bewusst abgewogen und mit CSP, kurzer Laufzeit und RLS abgefedert. ✅
 
 ---
 
 ### Block 5 — Input-Validierung & Injection-Schutz ✅ <a id="block-5"></a>
 **M183 Kap. 1/4 · OWASP A05 · Status: umgesetzt & belegt**
 
-> 💡 **Worum geht's?** Eingaben (Formulare, URL-Parameter) dürfen keinen Schadcode einschleusen können – XSS, SQL-Injection, Open Redirect.
-
-**Ziel:** Alle Stellen, an denen Eingaben/URL-Parameter verarbeitet werden, sind gegen Injection abgesichert.
+> 💡 **Worum geht's?** Eingaben (Formulare, URL-Parameter) dürfen keinen Schadcode einschleusen können – also kein XSS, keine SQL-Injection und kein Open Redirect. Jede Stelle, die Eingaben verarbeitet, muss abgesichert sein.
 
 #### Ebene 1 — XSS (Cross-Site Scripting)
 Code-Audit auf gefährliche Render-Sinks:
@@ -606,18 +596,16 @@ Tiefergehendes Injection-Scanning via **CodeQL** folgt in Block 8.
 #### Nachweise
 Code-Audit (oben, 0 XSS-Sinks) + grüne Unit-Tests. Optional: DevTools-Screenshot, dass ein XSS-Payload als **Text** (escaped) angezeigt wird, oder ein Open-Redirect-Test (`?next=https://evil.com` → landet auf `/dashboard`).
 
-**Vorher → Nachher:** Vorher steckte die `next`-Validierung ungetestet in der Login-Seite. Nachher: in eine wiederverwendbare Util ausgelagert und mit **6 Unit-Tests** abgesichert; XSS- und SQL-Injection per Audit belegt.
+Vorher steckte die Prüfung des `next`-Ziels ungetestet mitten in der Login-Seite. Jetzt liegt sie in einer eigenen, wiederverwendbaren Funktion mit sechs Unit-Tests; XSS und SQL-Injection sind zusätzlich per Audit abgeklopft.
 
-**Fazit:** Injection ist framework-seitig abgefangen (React-Escaping, Supabase-Parametrisierung) und an der einzigen kritischen Eingabestelle (Redirect-Ziel) per getesteter Allowlist gesichert. **Block 5 erfüllt.**
+Injection ist damit doppelt abgedeckt: das Framework fängt das meiste automatisch ab (React-Escaping, parametrisiertes Supabase), und die einzige kritische Eingabestelle hat eine getestete Allowlist. ✅
 
 ---
 
 ### Block 6 — Hardening & Security-Header ✅ <a id="block-6"></a>
 **M183 Kap. 1 · OWASP A02 · Status: umgesetzt & belegt (securityheaders.com: Note A); CSP-Enforce als Folgeschritt**
 
-> 💡 **Worum geht's?** Viele Angriffe scheitern schon an richtig gesetzten HTTP-Schutz-Headern und sauberer Konfiguration – „den Airbag aktivieren".
-
-**Ziel:** Schutz-Header vollständig setzen, kein Quellcode-Leak, Repo frei von Artefakten/Secrets.
+> 💡 **Worum geht's?** Viele Angriffe scheitern schon an richtig gesetzten HTTP-Schutz-Headern und sauberer Konfiguration – quasi „den Airbag aktivieren". Konkret: alle Schutz-Header setzen, keinen Quellcode in den Browser leaken und das Repo frei von Build-Artefakten und Secrets halten.
 
 #### Ebene 1 — Security-Header (`vercel.json`)
 Bereits vorhanden: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, `frame-ancestors`. **Ergänzt:**
@@ -649,18 +637,16 @@ _securityheaders.com – Gesamtnote **A**, alle 6 Schutz-Header gesetzt (Content
 
 - Build-Log: 0 `.map`-Dateien im `dist/` (Source-Maps aus).
 
-**Vorher → Nachher:** Vorher fehlten HSTS, Permissions-Policy und eine echte CSP; Source-Maps nur implizit aus. Nachher: HSTS + Permissions-Policy scharf aktiv, CSP als Report-Only (vor Enforce), Source-Maps explizit aus, Repo-Hygiene belegt.
+Vorher fehlten HSTS, eine Permissions-Policy und eine echte CSP, und Source-Maps waren nur implizit aus. Jetzt sind HSTS und Permissions-Policy scharf gesetzt, die CSP läuft (vorerst als Report-Only), Source-Maps sind explizit deaktiviert und die Repo-Hygiene ist belegt.
 
-**Fazit:** Schutz-Header vervollständigt (HSTS/Permissions-Policy aktiv, CSP risikolos via Report-Only), Source-Maps aus, Repo artefakt-/secret-frei – extern bestätigt mit **securityheaders.com-Note A**. **Block 6 erfüllt.** (Optionaler Folgeschritt: CSP von Report-Only auf scharf umstellen, sobald die Browser-Konsole keine Verstösse zeigt.)
+Die Konfiguration ist damit deutlich gehärtet – extern bestätigt durch die securityheaders.com-Note A. Offen bleibt nur der optionale Schritt, die CSP von Report-Only auf scharf zu stellen, sobald die Browser-Konsole keine Verstösse mehr zeigt. ✅
 
 ---
 
 ### Block 7 — Lieferkette & Abhängigkeits-Sicherheit ✅ <a id="block-7"></a>
 **M183 Kap. 7 (ISO 27001) · OWASP A03/A08 · Status: Überwachung umgesetzt & belegt**
 
-> 💡 **Worum geht's?** Die App nutzt viel Fremd-Code (npm-Pakete, GitHub-Actions). Wird eine Abhängigkeit unsicher, muss man das **früh erkennen** – hier geht es um die kontinuierliche Überwachung der Lieferkette.
-
-**Ziel:** Verwundbare Abhängigkeiten werden automatisch erkannt und gemeldet; die Lieferkette bleibt nachvollziehbar und integer.
+> 💡 **Worum geht's?** Die App nutzt viel Fremd-Code (npm-Pakete, GitHub-Actions). Wird eine dieser Abhängigkeiten unsicher, muss das früh auffallen. Ziel ist also eine laufende Überwachung: verwundbare Abhängigkeiten werden automatisch erkannt und gemeldet, und die Lieferkette bleibt nachvollziehbar und unverändert.
 
 #### Ebene 1 — Erkennung (Dependabot)
 **Dependabot** ist aktiv und scannt die Abhängigkeiten laufend. Dass die Erkennung wirklich greift, zeigen real gefundene Lücken:
@@ -684,18 +670,16 @@ CI installiert mit **`npm ci`** (statt `npm install`) → exakt nach `package-lo
 - Dependabot-Alerts (oben) = Erkennung funktioniert nachweislich.
 - `security-scan.yml` (npm-audit-Gate), `npm ci` in CI, `permissions:` in Workflows.
 
-**Vorher → Nachher:** Vorher gab es keine dokumentierte Lieferketten-Überwachung. Nachher: Dependabot-Erkennung + CI-`npm audit`-Gate + `npm ci`-Integrität + minimale Workflow-Rechte – belegt dadurch, dass Dependabot real 2 Lücken findet.
+Vorher gab es keine dokumentierte Überwachung der Abhängigkeiten. Jetzt erkennt Dependabot verwundbare Pakete, das `npm audit`-Gate blockt ausgelieferte Lücken in der CI, `npm ci` sorgt für ein unverändertes Lockfile, und die Workflows laufen mit minimalen Rechten.
 
-**Fazit:** Die Lieferkette wird kontinuierlich **überwacht** (Dependabot), bei ausgelieferten Abhängigkeiten aktiv **geblockt** (CI-Gate) und **integer** installiert (`npm ci`). Die 2 erkannten Lücken sind bewusst offen als Beleg der Erkennung; ihre Behebung ist ein dokumentierter Dependabot-PR-Prozess. **Block 7 (Überwachung & Erkennung) erfüllt.**
+Dass die Erkennung wirklich funktioniert, zeigen die zwei real gefundenen Lücken – sie bleiben bewusst offen als Beleg, ihre Behebung läuft über Dependabot-PRs. Die Überwachung der Lieferkette steht. ✅
 
 ---
 
 ### Block 8 — IT-Security-Tools: SAST + DAST 🟠 <a id="block-8"></a>
 **M183 Kap. 4 · OWASP-Querschnitt · Status: Workflows umgesetzt, Report-Screenshots ausstehend**
 
-> 💡 **Worum geht's?** Mit Werkzeugen automatisch nach Schwachstellen suchen – **SAST** liest den Quellcode (Whitebox), **DAST** greift die laufende Seite von aussen an (Blackbox).
-
-**Ziel:** Automatisierte Schwachstellen-Scans in der CI mit nachvollziehbaren Reports.
+> 💡 **Worum geht's?** Mit Werkzeugen automatisch nach Schwachstellen suchen: **SAST** liest den Quellcode (Whitebox), **DAST** greift die laufende Seite von aussen an (Blackbox). Beides soll in der CI laufen und nachvollziehbare Reports liefern.
 
 #### Ebene 1 — SAST: GitHub CodeQL
 CodeQL (statische Code-Analyse für JavaScript/TypeScript) ist im Repo über das **GitHub-„Default Setup"** aktiv und meldet Funde unter **Security → Code scanning** (für öffentliche Repos gratis). Ein zusätzlich angelegter eigener `codeql.yml`-Workflow wurde bewusst wieder **entfernt**, weil er mit dem bereits aktiven Default-Setup kollidiert (Details unter „Nachweise") — CodeQL ist also weiterhin aktiv, nur nicht doppelt konfiguriert.
@@ -716,9 +700,9 @@ Gefundene Punkte werden bewertet (echt vs. false positive). Da die App aus Block
 
 **ZAP (DAST):** Workflow implementiert, aber noch nicht ausgelöst → folgt (manueller Run über Actions).
 
-**Vorher → Nachher:** Vorher gab es keine automatisierten Sicherheits-Scans. Nachher: **SAST (CodeQL)** bei jedem Push + **DAST (ZAP)** auf Abruf, beide mit Reports.
+Vorher liefen keine automatischen Sicherheits-Scans. Jetzt gibt es beides als CI-Workflow: CodeQL prüft den Code (SAST), OWASP ZAP die laufende Seite (DAST).
 
-**Fazit:** Zwei etablierte Security-Tools (Whitebox + Blackbox) sind als CI-Workflows verankert und liefern reproduzierbare Reports. **Block 8 umgesetzt** (Nachweis-Screenshots folgen nach dem ersten Lauf).
+Damit sind beide Blickwinkel abgedeckt – von innen auf den Code und von aussen auf die App. Die Report-Screenshots kommen nach dem ersten Lauf dazu. 🟠
 
 ---
 
@@ -776,9 +760,9 @@ git checkout <commit> -- Albion_ProfitChecker/ui/public/data/bm-crafter-eu.json 
 
 ![Supabase Free vs. Pro – Daily Backups nur im Pro-Plan](evidence/block9/01-supabase-free-no-backup.png)
 
-**Vorher → Nachher:** Vorher gab es kein dokumentiertes Backup-Konzept und keine Klarheit über die Free-Plan-Grenze. Nachher: klares 3-2-1-Konzept mit RPO/RTO, Git-Versionierung als belegter Wiederherstellungspunkt und ein bewusstes manuelles Offline-Backup für die Nutzerdaten.
+Vorher gab es weder ein dokumentiertes Backup-Konzept noch Klarheit über die Grenze des Free-Plans. Jetzt steht ein klares 3-2-1-Konzept mit RPO/RTO: die Marktdaten sind über Git versioniert (und dort ist der Restore belegt), die Nutzerdaten werden per regelmässiger, lokal und offline gespeicherter Kopie gesichert.
 
-**Fazit:** Da Supabase-Auto-Backups im Free-Plan fehlen, ist das Backup bewusst über **Git-Versionierung (Marktdaten/Code)** und **regelmässige, lokal/offline gespeicherte manuelle Kopien (Nutzerdaten)** gelöst — inkl. dokumentiertem, für die Marktdaten **belegtem** Restore. **Block 9 erfüllt.** (Restrisiko: Nutzerdaten nur so aktuell wie die letzte manuelle Kopie — bewusst akzeptiert, da wenig/unkritische Daten.)
+Weil Supabase im Free-Plan keine automatischen Backups bietet, ist das der pragmatische, tragfähige Weg. Bewusstes Restrisiko: die Nutzerdaten sind nur so aktuell wie die letzte Kopie – bei den wenigen, unkritischen Daten vertretbar. ✅
 
 ---
 
@@ -826,6 +810,6 @@ git checkout <commit> -- Albion_ProfitChecker/ui/public/data/bm-crafter-eu.json 
 #### Abschluss
 Die App wurde entlang der 10 M183-/OWASP-Themen systematisch gehärtet: serverseitige Zugriffskontrolle (RLS), Verfügbarkeitsschutz, Logging/Monitoring + Alerting, Transport-/Secret-Kryptografie, Injection-Schutz, vollständige Security-Header (Note A), Lieferketten-Überwachung, SAST/DAST-Automatisierung und ein Backup-Konzept. Jeder Block ist nach dem Muster *Analyse → Massnahme → Nachweis* dokumentiert; verbleibende Restrisiken sind transparent benannt und bewusst akzeptiert.
 
-**Vorher → Nachher:** Vorher gab es keine dokumentierte Sicherheits-Gesamtsicht. Nachher: durchgängige Härtung mit Nachweisen, Standard-Mapping (ASVS/ISO 27001) und einer ehrlichen Restrisiko-Bewertung.
+Vorher fehlte eine Gesamtsicht auf die Sicherheit der App. Jetzt gibt es sie: durchgängige Härtung mit Nachweisen, ein Mapping auf OWASP ASVS und ISO 27001 und eine ehrliche Bewertung der Restrisiken.
 
-**Fazit:** Sicherheitsprojekt abgeschlossen — 10 Blöcke bearbeitet, Ergebnisse belegt, Restrisiken dokumentiert. **Block 10 erfüllt.**
+Damit ist das Sicherheitsprojekt abgeschlossen – zehn Blöcke bearbeitet, Ergebnisse belegt, offene Punkte transparent benannt. ✅
