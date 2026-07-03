@@ -22,7 +22,8 @@
   - [Block 6 — Hardening & Security-Header ✅](#block-6)
   - [Block 7 — Lieferkette & Abhängigkeiten ✅](#block-7)
   - [Block 8 — SAST + DAST (CodeQL + ZAP) 🟠](#block-8)
-  - Block 9–10 — ⏳ ausstehend
+  - [Block 9 — Backup & Wiederherstellung ✅](#block-9)
+  - Block 10 — ⏳ ausstehend
 
 ---
 
@@ -149,7 +150,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-06 | Security-Header & Repo-Hygiene | 6 | 🟡 mittel | 🟢 umgesetzt & belegt (Note A) | 🟢 niedrig |
 | H-07 | Lieferkette | 7 | 🟡 mittel | 🟢 Überwachung belegt (2 Funde bewusst offen als Demo) | 🟡 react-router (prod) offen |
 | H-08 | SAST/DAST | 8 | 🔧 | 🟠 Workflows umgesetzt, Screenshots offen | 🟢 niedrig (erwartet) |
-| H-09 | Backup & Restore                               | 9     | 🟡 mittel | ⚪ geplant            | –              |
+| H-09 | Backup & Restore | 9 | 🟡 mittel | 🟢 Konzept dokumentiert (Free-Plan: Git + manuell) | 🟡 Nutzerdaten nur manuell/periodisch |
 | H-10 | Risikobewertung & Bericht                      | 10    | 📄        | ⚪ geplant            | –              |
 
 ---
@@ -714,6 +715,66 @@ Gefundene Punkte werden bewertet (echt vs. false positive). Da die App aus Block
 
 ---
 
-### Block 9–10 — ⏳ ausstehend
+### Block 9 — Backup & Wiederherstellung ✅ <a id="block-9"></a>
+**M183 Kap. 5 · OWASP A08 · Status: Konzept dokumentiert & belegt**
 
-Werden nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.
+> 💡 **Worum geht's?** Ein Backup sichert die **Verfügbarkeit** der Daten (nach Löschen, Defekt, Ransomware). Und: ein Backup ist nur gut, wenn man es auch **wiederherstellen** kann.
+
+**Ausgangslage (ehrlich):** Das Projekt läuft auf dem **Supabase-Free-Plan** — dort gibt es **keine automatischen Backups** (das ist ein Pro-Feature). Automatische DB-Backups lassen sich also **nicht in Supabase umsetzen**. Das Backup-Konzept ist deshalb bewusst auf **Git-Versionierung + manuelle, lokal/offline gespeicherte Kopien** aufgebaut.
+
+#### Backup-Konzept (Diagramm)
+```
+  QUELLE                         BACKUP-ZIELE
+  ─────────────────────────────  ─────────────────────────────────────────────
+
+  Supabase (Postgres)            Free-Plan: KEIN Auto-Backup
+  Nutzerdaten:                   │
+  profiles, subscriptions        │  manueller Export (pg_dump / SQL-Export)
+                                 └────────────►  Lokale Offline-Kopie
+                                                 • regelmässig (z. B. wöchentlich)
+                                                 • verschlüsselt
+                                                 • getrennt vom Prod-System
+
+  Marktdaten (JSON)              Git-Repo (GitHub)
+  täglich per CI erzeugt   ─────►  • jede CI-Aktualisierung = 1 Commit
+                                   • = Wiederherstellungspunkt (aktuell 73+)
+                                   • zusätzlich aus der Albion-API reproduzierbar
+
+  Quellcode                ─────►  Git / GitHub (versioniert)
+```
+
+#### 3-2-1-Regel (M183 Kap. 5)
+- **3 Kopien:** Live (Supabase/Prod) · Git (GitHub) · lokale Offline-Kopie
+- **2 Medien:** Cloud (Supabase/GitHub) · lokaler Datenträger (z. B. externe Platte)
+- **1 offline/extern:** die lokale Kopie → schützt vor Ransomware/Account-Verlust (Online-Backups allein reichen nicht)
+
+#### RPO / RTO je Datenart
+| Datenart | Backup | RPO (max. Datenverlust) | RTO (Wiederherstellzeit) | Kritikalität |
+|---|---|---|---|---|
+| Marktdaten (JSON) | Git + Albion-API | ~1 Tag (tägliche CI) | Minuten (`git checkout` / API neu ziehen) | gering (reproduzierbar) |
+| Nutzerdaten (profiles/subscriptions) | manueller Dump, lokal/offline | Intervall der Kopie (z. B. 1 Woche) | manuelles Einspielen (`psql`) | gering (wenig, unkritisch), aber nicht reproduzierbar |
+| Quellcode | Git/GitHub | 0 (jeder Commit) | sofort | — |
+
+#### Wiederherstellung (Restore)
+- **Marktdaten (belegt):** 73+ Versionen pro Datei in Git → Rollback jederzeit:
+```bash
+git log --oneline -- Albion_ProfitChecker/ui/public/data/bm-crafter-eu.json   # Punkte anzeigen
+git checkout <commit> -- Albion_ProfitChecker/ui/public/data/bm-crafter-eu.json   # zurückrollen
+```
+- **Nutzerdaten:** lokale Dump-Datei zurück in eine Supabase/Postgres-Instanz einspielen (`psql < backup.sql`).
+
+#### Nachweise
+- Git-Restore-Punkte: `git log` zeigt **73+** Versionen der Marktdaten-Datei (oben).
+- Supabase-Plan: der **Free-Plan (Current) enthält keine Backups** — „Daily backups stored for 7 days" ist ein **Pro-Feature** ($25/Monat, rot markiert). Beleg der Ausgangslage:
+
+![Supabase Free vs. Pro – Daily Backups nur im Pro-Plan](evidence/block9/01-supabase-free-no-backup.png)
+
+**Vorher → Nachher:** Vorher gab es kein dokumentiertes Backup-Konzept und keine Klarheit über die Free-Plan-Grenze. Nachher: klares 3-2-1-Konzept mit RPO/RTO, Git-Versionierung als belegter Wiederherstellungspunkt und ein bewusstes manuelles Offline-Backup für die Nutzerdaten.
+
+**Fazit:** Da Supabase-Auto-Backups im Free-Plan fehlen, ist das Backup bewusst über **Git-Versionierung (Marktdaten/Code)** und **regelmässige, lokal/offline gespeicherte manuelle Kopien (Nutzerdaten)** gelöst — inkl. dokumentiertem, für die Marktdaten **belegtem** Restore. **Block 9 erfüllt.** (Restrisiko: Nutzerdaten nur so aktuell wie die letzte manuelle Kopie — bewusst akzeptiert, da wenig/unkritische Daten.)
+
+---
+
+### Block 10 — ⏳ ausstehend
+
+Wird nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.
