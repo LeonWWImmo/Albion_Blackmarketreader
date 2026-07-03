@@ -698,13 +698,7 @@ CI installiert mit **`npm ci`** (statt `npm install`) → exakt nach `package-lo
 **Ziel:** Automatisierte Schwachstellen-Scans in der CI mit nachvollziehbaren Reports.
 
 #### Ebene 1 — SAST: GitHub CodeQL
-`.github/workflows/codeql.yml` analysiert bei **Push/PR + wöchentlich** den JavaScript/TypeScript-Code und meldet Funde unter **Security → Code scanning** (für öffentliche Repos gratis):
-```yaml
-- uses: github/codeql-action/init@v3
-  with:
-    languages: javascript-typescript
-- uses: github/codeql-action/analyze@v3
-```
+CodeQL (statische Code-Analyse für JavaScript/TypeScript) ist im Repo über das **GitHub-„Default Setup"** aktiv und meldet Funde unter **Security → Code scanning** (für öffentliche Repos gratis). Ein zusätzlich angelegter eigener `codeql.yml`-Workflow wurde bewusst wieder **entfernt**, weil er mit dem bereits aktiven Default-Setup kollidiert (Details unter „Nachweise") — CodeQL ist also weiterhin aktiv, nur nicht doppelt konfiguriert.
 
 #### Ebene 2 — DAST: OWASP ZAP (Baseline/passiv)
 `.github/workflows/zap-baseline.yml` führt einen **passiven Baseline-Scan** gegen die Live-Seite aus – **manuell/wöchentlich** ausgelöst (nicht bei jedem Push), damit die Prod-Seite nicht gehämmert und die **Block-2-Firewall/Rate-Limits nicht ausgelöst** werden. Der ZAP-Report wird als Workflow-Artefakt abgelegt.
@@ -712,13 +706,15 @@ CI installiert mit **`npm ci`** (statt `npm install`) → exakt nach `package-lo
 #### Ebene 3 — Triage
 Gefundene Punkte werden bewertet (echt vs. false positive). Da die App aus Block 5 sauber ist (React-Escaping, Supabase parametrisiert), sind wenige/keine ernsten Funde zu erwarten – **das „wenig/keine Funde" ist selbst der Beleg**, dass die Tools laufen und der Code hält.
 
-#### Nachweise
-| # | Nachweis | Wo | Datei |
-|---|---|---|---|
-| S1 | CodeQL-Ergebnis (Funde oder „no alerts") | GitHub → Security → Code scanning | `evidence/block8/01-codeql.png` |
-| S2 | ZAP-Baseline-Report | GitHub → Actions → ZAP-Run (Artefakt/Summary) | `evidence/block8/02-zap.png` |
+#### Nachweise (Stand)
+**CI-Sicherheits-Pipeline „Security Scan" – grün** (Jobs `npm audit` + `Secret-Guard`), ausgelöst durch Push auf `security`:
+![Security Scan – beide Jobs grün](evidence/block8/01-ci-pipeline-green.png)
 
-> 📸 Ablage unter `evidence/block8/`; werden eingebettet, sobald vorhanden. (CodeQL läuft nach dem Push automatisch; ZAP über **Actions → „ZAP Baseline" → Run workflow** manuell starten.)
+**CodeQL (SAST) – Konfliktbefund:** Der eigene `codeql.yml`-Workflow schlug fehl, **nicht** wegen des Codes, sondern wegen eines Konflikts: im Repo ist bereits das **CodeQL „Default Setup"** aktiv, das eine eigene (advanced) Workflow-Konfiguration blockiert (*„CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled"*):
+![CodeQL – Konflikt mit aktivem Default-Setup](evidence/block8/02-codeql-defaultsetup-conflict.png)
+→ **Entscheidung:** Da CodeQL bereits über das Default-Setup läuft, wurde der eigene Workflow (`codeql.yml`) wieder entfernt — kein doppeltes, kollidierendes Setup. CodeQL bleibt aktiv; der saubere Nachweis kommt aus **Security → Code scanning** (Screenshot folgt). Dieser Konflikt ist bewusst dokumentiert, weil das Erkennen und Auflösen genau der Lernwert bei so einem Tool ist.
+
+**ZAP (DAST):** Workflow implementiert, aber noch nicht ausgelöst → folgt (manueller Run über Actions).
 
 **Vorher → Nachher:** Vorher gab es keine automatisierten Sicherheits-Scans. Nachher: **SAST (CodeQL)** bei jedem Push + **DAST (ZAP)** auf Abruf, beide mit Reports.
 
