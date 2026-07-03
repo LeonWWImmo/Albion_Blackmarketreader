@@ -8,8 +8,19 @@
 
 ---
 
+## Management-Summary <a id="summary"></a>
+
+Der **Albion Blackmarket Reader** (React/TypeScript-Frontend, Supabase-Auth/DB, Vercel-Hosting, .NET-Datensync via GitHub-Actions) wurde im Rahmen des Moduls **M183** systematisch abgesichert. In **10 Blöcken** wurden Zugriffskontrolle, Verfügbarkeit, Logging/Monitoring, Verschlüsselung/Secrets, Injection-Schutz, Hardening/Security-Header, Lieferkette, SAST/DAST, Backup und Risikomanagement bearbeitet – jeweils nach dem Muster **Analyse → Massnahme → Nachweis**.
+
+**Stand:** 9 von 10 Blöcken abgeschlossen und belegt; Block 8 (SAST/DAST) ist umgesetzt, die Report-Screenshots folgen nach dem ersten CI-Lauf. Alle Code-Änderungen sind verifiziert (TypeScript-Typecheck grün, 71 Unit-Tests grün, Produktions-Build grün).
+
+**Bewusst akzeptierte Restrisiken:** eine moderate `react-router`-Lücke bleibt als Dependabot-Nachweis offen; das Nutzerdaten-Backup ist wegen des Supabase-Free-Plans manuell; die CSP läuft zunächst als Report-Only. Details je Block unten und im [Härtungs-Tracker](#tracker).
+
+---
+
 ## Inhaltsverzeichnis
 
+- [Management-Summary](#summary)
 - [1. Threat Model](#1-threat-model)
 - [2. Risikomatrix & Umsetzungsreihenfolge](#risikomatrix)
 - [3. Härtungs-Tracker (Status aller Massnahmen)](#tracker)
@@ -23,7 +34,7 @@
   - [Block 7 — Lieferkette & Abhängigkeiten ✅](#block-7)
   - [Block 8 — SAST + DAST (CodeQL + ZAP) 🟠](#block-8)
   - [Block 9 — Backup & Wiederherstellung ✅](#block-9)
-  - Block 10 — ⏳ ausstehend
+  - [Block 10 — Risikomanagement & Abschluss ✅](#block-10)
 
 ---
 
@@ -151,7 +162,7 @@ Primär nach Risiko (🔴 → 🟡), korrigiert um technische Abhängigkeiten:
 | H-07 | Lieferkette | 7 | 🟡 mittel | 🟢 Überwachung belegt (2 Funde bewusst offen als Demo) | 🟡 react-router (prod) offen |
 | H-08 | SAST/DAST | 8 | 🔧 | 🟠 Workflows umgesetzt, Screenshots offen | 🟢 niedrig (erwartet) |
 | H-09 | Backup & Restore | 9 | 🟡 mittel | 🟢 Konzept dokumentiert (Free-Plan: Git + manuell) | 🟡 Nutzerdaten nur manuell/periodisch |
-| H-10 | Risikobewertung & Bericht                      | 10    | 📄        | ⚪ geplant            | –              |
+| H-10 | Risikobewertung & Bericht | 10 | 📄 | 🟢 abgeschlossen | – |
 
 ---
 
@@ -775,6 +786,50 @@ git checkout <commit> -- Albion_ProfitChecker/ui/public/data/bm-crafter-eu.json 
 
 ---
 
-### Block 10 — ⏳ ausstehend
+### Block 10 — Risikomanagement, Standards & Abschluss ✅ <a id="block-10"></a>
+**M183 Kap. 7/8 · OWASP ASVS / ISO 27001 · Status: abgeschlossen**
 
-Wird nach gleichem Schema dokumentiert (Analyse → Massnahme → Nachweis), sobald umgesetzt.
+> 💡 **Worum geht's?** Zum Abschluss alle Ergebnisse zusammenführen, gegen anerkannte Standards spiegeln und die verbleibenden Risiken ehrlich bewerten.
+
+#### Status-Übersicht aller Blöcke
+| Block | Thema | OWASP | Status | Risiko nachher | Nachweis |
+|---|---|---|---|---|---|
+| 1 | Zugriffskontrolle / RLS | A01/A07 | ✅ | 🟢 niedrig | Screenshots (RLS/Policy) |
+| 2 | Verfügbarkeit / DoS | A06 | ✅ | 🟢 niedrig | Code + Screenshots (Firewall/Cooldown) |
+| 3 | Logging & Monitoring | A09 | ✅ | 🟢 niedrig | Screenshots (Logs/Analytics/Dependabot) |
+| 4 | Verschlüsselung & Secrets | A04 | ✅ | 🟢 niedrig | Secret-Scan + TLS-Zertifikat |
+| 5 | Input-Validierung / Injection | A05 | ✅ | 🟢 niedrig | Audit + 6 Unit-Tests |
+| 6 | Hardening & Security-Header | A02 | ✅ | 🟢 niedrig | securityheaders Note A |
+| 7 | Lieferkette & Abhängigkeiten | A03/A08 | ✅¹ | 🟡 react-router offen | Dependabot-Erkennung |
+| 8 | SAST + DAST | Querschnitt | 🟠² | 🟢 (erwartet) | CodeQL-/ZAP-Workflows |
+| 9 | Backup & Wiederherstellung | A08 | ✅ | 🟡 Nutzerdaten manuell | Git-Restore + Free-Plan-Beleg |
+| 10 | Risikomanagement & Abschluss | ASVS | ✅ | – | dieser Abschnitt |
+
+¹ Überwachung erfüllt; 2 Funde bewusst offen als Dependabot-Demo. ² Workflows umgesetzt; Report-Screenshots nach erstem CI-Lauf.
+
+#### Restrisiken (bewusst akzeptiert)
+- **`react-router`** (moderat, prod) offen — als Dependabot-Nachweis belassen; Behebung = 1 Merge.
+- **Nutzerdaten-Backup** nur manuell/periodisch (Supabase-Free-Plan, keine Auto-Backups).
+- **CSP** aktuell Report-Only (Enforce nach Konsolen-Verifikation).
+- Einzelne **Tool-Screenshots** (Block 8) folgen nach dem ersten CI-Lauf.
+
+#### Standards-Mapping (OWASP ASVS / ISO 27001)
+| Block | OWASP ASVS | ISO 27001 (Anhang A) |
+|---|---|---|
+| 1 Zugriffskontrolle | V4 Access Control | A.9 Zugriffssteuerung |
+| 2 Verfügbarkeit | V1 Architektur / Ressourcen | A.17 Verfügbarkeit |
+| 3 Logging & Monitoring | V7 Logging & Error Handling | A.12.4 Protokollierung |
+| 4 Verschlüsselung/Secrets | V6/V9 Krypto & Kommunikation | A.10 Kryptographie |
+| 5 Input-Validierung | V5 Validation, Sanitization, Encoding | A.14.2 Sichere Entwicklung |
+| 6 Hardening/Header | V14 Configuration | A.12.6 / A.14.1 |
+| 7 Lieferkette | V1/V10 (Abhängigkeiten) | A.12.6 / A.14.2 |
+| 8 SAST/DAST | V1 (Testing im SDLC) | A.14.2.8 Systemtests |
+| 9 Backup | — | A.12.3 Backup |
+| 10 Risikomanagement | ASVS-Gesamtstruktur | A.5 / A.8 Risiken & Werte |
+
+#### Abschluss
+Die App wurde entlang der 10 M183-/OWASP-Themen systematisch gehärtet: serverseitige Zugriffskontrolle (RLS), Verfügbarkeitsschutz, Logging/Monitoring + Alerting, Transport-/Secret-Kryptografie, Injection-Schutz, vollständige Security-Header (Note A), Lieferketten-Überwachung, SAST/DAST-Automatisierung und ein Backup-Konzept. Jeder Block ist nach dem Muster *Analyse → Massnahme → Nachweis* dokumentiert; verbleibende Restrisiken sind transparent benannt und bewusst akzeptiert.
+
+**Vorher → Nachher:** Vorher gab es keine dokumentierte Sicherheits-Gesamtsicht. Nachher: durchgängige Härtung mit Nachweisen, Standard-Mapping (ASVS/ISO 27001) und einer ehrlichen Restrisiko-Bewertung.
+
+**Fazit:** Sicherheitsprojekt abgeschlossen — 10 Blöcke bearbeitet, Ergebnisse belegt, Restrisiken dokumentiert. **Block 10 erfüllt.**
