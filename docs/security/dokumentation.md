@@ -698,7 +698,7 @@ Gefundene Punkte werden bewertet (echt vs. false positive). Da die App aus Block
 ![CodeQL – Konflikt mit aktivem Default-Setup](evidence/block8/02-codeql-defaultsetup-conflict.png)
 → **Entscheidung:** Da CodeQL bereits über das Default-Setup läuft, wurde der eigene Workflow (`codeql.yml`) wieder entfernt — kein doppeltes, kollidierendes Setup. CodeQL bleibt aktiv; der saubere Nachweis kommt aus **Security → Code scanning** (Screenshot folgt). Dieser Konflikt ist bewusst dokumentiert, weil das Erkennen und Auflösen genau der Lernwert bei so einem Tool ist.
 
-**ZAP (DAST):** Workflow implementiert, aber noch nicht ausgelöst → folgt (manueller Run über Actions).
+**ZAP (DAST):** Der Scan läuft über den Workflow [`zap-baseline.yml`](../../.github/workflows/zap-baseline.yml) (automatischer Lauf ist an den `main`-Branch gebunden). Der Merge nach `main` passiert bewusst erst, wenn der `security`-Branch komplett sauber abgeschlossen ist – deshalb gibt es aktuell **noch keinen Screenshot eines Pipeline-Durchlaufs**. Über den Link oben ist der fertige Workflow aber einsehbar; der Report-Screenshot kommt nach dem ersten Lauf auf `main` dazu.
 
 Vorher liefen keine automatischen Sicherheits-Scans. Jetzt gibt es beides als CI-Workflow: CodeQL prüft den Code (SAST), OWASP ZAP die laufende Seite (DAST).
 
