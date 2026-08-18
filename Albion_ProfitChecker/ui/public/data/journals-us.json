@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T11:01:28.051Z",
+  "generatedAt": "2026-08-18T11:00:59.503Z",
   "region": "us",
   "cities": [
     "Lymhurst",
@@ -27,237 +27,280 @@
     "warrior": {
       "4": {
         "empty": {
-          "Lymhurst": 1939,
-          "Martlock": 3961,
-          "Fort Sterling": 2220,
-          "Caerleon": 1500
+          "Martlock": 2489,
+          "Fort Sterling": 2251,
+          "Thetford": 3800,
+          "Bridgewatch": 1999,
+          "Caerleon": 1366
         },
         "full": {
-          "Lymhurst": 4956,
-          "Martlock": 3787,
-          "Caerleon": 5450
+          "Martlock": 3468,
+          "Thetford": 3815
         }
       },
       "5": {
         "empty": {
-          "Lymhurst": 3455,
-          "Martlock": 5987,
+          "Lymhurst": 3458,
+          "Martlock": 5962,
           "Fort Sterling": 4681,
-          "Bridgewatch": 3974,
-          "Caerleon": 3218
+          "Thetford": 4498,
+          "Bridgewatch": 3787,
+          "Caerleon": 3193
         },
         "full": {
-          "Lymhurst": 14997,
-          "Martlock": 8994,
-          "Bridgewatch": 9399
+          "Lymhurst": 14944,
+          "Martlock": 9243,
+          "Fort Sterling": 11652,
+          "Thetford": 9877,
+          "Bridgewatch": 8820,
+          "Caerleon": 17000,
+          "Brecilien": 9578
         }
       },
       "6": {
         "empty": {
-          "Lymhurst": 5000,
-          "Martlock": 6198,
-          "Bridgewatch": 3498,
-          "Caerleon": 4422
+          "Lymhurst": 4148,
+          "Martlock": 6689,
+          "Fort Sterling": 5670,
+          "Thetford": 6605,
+          "Bridgewatch": 4975,
+          "Brecilien": 6595
         },
         "full": {
-          "Lymhurst": 24000,
-          "Martlock": 18118,
-          "Fort Sterling": 21980,
-          "Thetford": 19162,
-          "Bridgewatch": 20470,
-          "Caerleon": 18865
+          "Martlock": 20969,
+          "Fort Sterling": 24293,
+          "Thetford": 24995,
+          "Bridgewatch": 20437,
+          "Caerleon": 25000
         }
       },
       "7": {
         "empty": {
-          "Lymhurst": 9213,
-          "Bridgewatch": 10434,
-          "Caerleon": 11438
+          "Lymhurst": 11192,
+          "Fort Sterling": 9299
         },
         "full": {
-          "Lymhurst": 60827,
-          "Martlock": 54726,
-          "Fort Sterling": 60992,
-          "Bridgewatch": 56936,
-          "Caerleon": 49999
+          "Lymhurst": 60825,
+          "Martlock": 53253,
+          "Fort Sterling": 60976
         }
       },
       "8": {
-        "empty": {},
+        "empty": {
+          "Fort Sterling": 19983,
+          "Bridgewatch": 27176,
+          "Caerleon": 18992
+        },
         "full": {
-          "Martlock": 160893
+          "Martlock": 160879,
+          "Bridgewatch": 160944,
+          "Caerleon": 153694
         }
       }
     },
     "hunter": {
       "4": {
         "empty": {
-          "Lymhurst": 3487,
-          "Martlock": 2769,
-          "Fort Sterling": 2469,
-          "Thetford": 3599,
-          "Bridgewatch": 2592
+          "Lymhurst": 3276,
+          "Fort Sterling": 2998,
+          "Thetford": 3199,
+          "Bridgewatch": 1796
         },
         "full": {
-          "Lymhurst": 4052,
-          "Martlock": 4456,
-          "Fort Sterling": 4633,
-          "Thetford": 4387
+          "Lymhurst": 44299,
+          "Martlock": 3990,
+          "Caerleon": 4299
         }
       },
       "5": {
         "empty": {
-          "Lymhurst": 5186,
-          "Fort Sterling": 5182
+          "Lymhurst": 5967,
+          "Fort Sterling": 5182,
+          "Thetford": 5919,
+          "Bridgewatch": 2998,
+          "Caerleon": 2823
         },
         "full": {
-          "Lymhurst": 12328,
-          "Caerleon": 12495
+          "Lymhurst": 12313,
+          "Martlock": 11750,
+          "Thetford": 11398,
+          "Caerleon": 12490
         }
       },
       "6": {
         "empty": {
-          "Lymhurst": 5159,
-          "Martlock": 7685,
-          "Bridgewatch": 6372
+          "Lymhurst": 5109,
+          "Fort Sterling": 5977,
+          "Bridgewatch": 6365,
+          "Brecilien": 8890
         },
         "full": {
-          "Lymhurst": 28000,
-          "Martlock": 28937
+          "Lymhurst": 28147,
+          "Martlock": 28400,
+          "Caerleon": 31437
         }
       },
       "7": {
-        "empty": {},
+        "empty": {
+          "Lymhurst": 13245,
+          "Fort Sterling": 15599,
+          "Caerleon": 12245
+        },
         "full": {
-          "Martlock": 81982
+          "Lymhurst": 80976,
+          "Martlock": 81957,
+          "Fort Sterling": 79987,
+          "Caerleon": 85990
         }
       },
       "8": {
         "empty": {
-          "Lymhurst": 21369
+          "Lymhurst": 21411,
+          "Martlock": 22479,
+          "Fort Sterling": 20466,
+          "Caerleon": 17452
         },
-        "full": {}
+        "full": {
+          "Fort Sterling": 184997
+        }
       }
     },
     "mage": {
       "4": {
         "empty": {
-          "Martlock": 2225,
-          "Fort Sterling": 2499
+          "Lymhurst": 2995,
+          "Martlock": 2097,
+          "Fort Sterling": 2462,
+          "Bridgewatch": 1997,
+          "Brecilien": 1998
         },
         "full": {
-          "Martlock": 3726,
-          "Fort Sterling": 3843
+          "Lymhurst": 3526,
+          "Martlock": 3790,
+          "Fort Sterling": 3497,
+          "Thetford": 3627,
+          "Bridgewatch": 3914,
+          "Brecilien": 3998
         }
       },
       "5": {
         "empty": {
-          "Lymhurst": 5191,
-          "Martlock": 3887,
-          "Fort Sterling": 4799,
-          "Bridgewatch": 4180
+          "Lymhurst": 4963,
+          "Martlock": 3000,
+          "Thetford": 5149,
+          "Bridgewatch": 3699,
+          "Caerleon": 3100
         },
         "full": {
-          "Lymhurst": 8983,
-          "Martlock": 9098,
-          "Fort Sterling": 9058,
-          "Bridgewatch": 9989,
-          "Caerleon": 11499
+          "Lymhurst": 9998,
+          "Martlock": 9183,
+          "Thetford": 7849
         }
       },
       "6": {
         "empty": {
-          "Lymhurst": 6698,
-          "Martlock": 4498,
-          "Fort Sterling": 6191
+          "Lymhurst": 6598,
+          "Martlock": 4499
         },
         "full": {
-          "Lymhurst": 19490,
-          "Martlock": 20470,
-          "Fort Sterling": 19483,
-          "Thetford": 19151
+          "Lymhurst": 19807,
+          "Martlock": 20471,
+          "Caerleon": 21497
         }
       },
       "7": {
         "empty": {
-          "Fort Sterling": 29968
+          "Lymhurst": 19725,
+          "Caerleon": 14000
         },
         "full": {
-          "Fort Sterling": 53465
+          "Lymhurst": 54979,
+          "Fort Sterling": 53455,
+          "Caerleon": 57985
         }
       },
       "8": {
         "empty": {
-          "Martlock": 29985,
           "Fort Sterling": 23347,
-          "Caerleon": 19998
+          "Bridgewatch": 25998,
+          "Caerleon": 19995
         },
         "full": {
-          "Martlock": 161045,
-          "Fort Sterling": 162977,
-          "Caerleon": 159755
+          "Fort Sterling": 177981,
+          "Caerleon": 154980
         }
       }
     },
     "toolmaker": {
       "4": {
         "empty": {
-          "Lymhurst": 2847,
-          "Martlock": 3497,
-          "Brecilien": 2847
+          "Lymhurst": 2698,
+          "Martlock": 3212,
+          "Fort Sterling": 2099,
+          "Thetford": 2496,
+          "Bridgewatch": 1999,
+          "Brecilien": 2850
         },
         "full": {
-          "Lymhurst": 5174,
-          "Martlock": 4636,
-          "Fort Sterling": 4999,
-          "Brecilien": 3998
+          "Lymhurst": 4999,
+          "Martlock": 4785,
+          "Brecilien": 3982
         }
       },
       "5": {
         "empty": {
-          "Lymhurst": 4897,
-          "Martlock": 4535,
-          "Fort Sterling": 3895,
-          "Brecilien": 5997
+          "Lymhurst": 4890,
+          "Martlock": 4546,
+          "Fort Sterling": 4097,
+          "Bridgewatch": 3653,
+          "Caerleon": 3399,
+          "Brecilien": 5996
         },
         "full": {
           "Lymhurst": 9978,
-          "Martlock": 12996,
-          "Fort Sterling": 8999,
-          "Brecilien": 9897
+          "Martlock": 12992,
+          "Thetford": 11151,
+          "Brecilien": 9984
         }
       },
       "6": {
         "empty": {
-          "Lymhurst": 7078,
+          "Lymhurst": 7022,
           "Martlock": 7994,
-          "Fort Sterling": 7359,
-          "Bridgewatch": 7390,
-          "Brecilien": 8889
+          "Fort Sterling": 7364,
+          "Thetford": 6896,
+          "Bridgewatch": 7377,
+          "Brecilien": 8888
         },
         "full": {
           "Lymhurst": 24999,
-          "Martlock": 25555,
-          "Fort Sterling": 24997
+          "Martlock": 149990,
+          "Fort Sterling": 24982,
+          "Bridgewatch": 24979,
+          "Brecilien": 20989
         }
       },
       "7": {
         "empty": {
-          "Lymhurst": 16438,
-          "Thetford": 15995,
-          "Brecilien": 17996
+          "Lymhurst": 16166,
+          "Fort Sterling": 16993,
+          "Thetford": 17378
         },
         "full": {
-          "Brecilien": 61791
+          "Lymhurst": 60786,
+          "Fort Sterling": 60880,
+          "Thetford": 61822
         }
       },
       "8": {
         "empty": {
-          "Caerleon": 27994
+          "Lymhurst": 34990,
+          "Martlock": 39989,
+          "Caerleon": 27989
         },
         "full": {
-          "Martlock": 178896,
-          "Caerleon": 177000
+          "Martlock": 184967,
+          "Caerleon": 177999
         }
       }
     }
