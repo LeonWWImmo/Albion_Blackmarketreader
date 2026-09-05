@@ -13,6 +13,7 @@ import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enc
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
 import "./refiningCalculator.css";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
 type ManualOverrides = {
@@ -1017,6 +1018,14 @@ export function RefiningCalculatorPage() {
           <h4>Data region</h4>
           <select className="city-select" value={region} onChange={(event) => void onRegionSave(event.target.value === "us" ? "us" : "eu")}><option value="us">America</option><option value="eu">Europe</option></select>
         </div>
+        <div className="panel-section">
+          <h4>Guides</h4>
+          <a className="panel-guides-link" href="/guides">
+            Albion Online guides
+            <span aria-hidden="true"> &rsaquo;</span>
+          </a>
+        </div>
+
         <div className="account-actions">
           {isGuest() ? (
             <button className="btn danger" onClick={() => void onLogout()}>Exit guest mode</button>
@@ -1167,6 +1176,8 @@ export function RefiningCalculatorPage() {
           </div>
         </aside>
       </main>
+
+      <ToolGuideLink slug="refining-calculator" authService={authService} />
 
       {stackModalKey && selectedRow && selectedRow.logic === "stacking" && selectedPath ? (
         <div className="rc-modal-overlay" onClick={() => setStackModalKey(null)}>

@@ -20,6 +20,14 @@ const SITE = "https://blackmarketreader.com";
 const OG_IMAGE = `${SITE}/picture/bm-crafter-table.png`;
 const distDir = path.join(process.cwd(), "dist");
 
+/**
+ * The long-form explainer shown under each tool. Same file the ToolContent React
+ * component renders, so the no-JavaScript HTML matches what a visitor sees.
+ */
+const toolContent = JSON.parse(
+  await fs.readFile(path.join(process.cwd(), "src", "shared", "content", "toolContent.json"), "utf8")
+);
+
 const TOOL_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/bm-crafter", label: "Black Market Crafter" },
@@ -108,6 +116,32 @@ const ROUTES = [
   },
 ];
 
+/** The guides index plus one route per guide, both generated from the content file. */
+const GUIDE_ROUTES = [
+  {
+    path: "guides",
+    title: "Albion Online Crafting & Market Guides | Blackmarket Reader",
+    description:
+      "Free Albion Online guides on crafting profit, refining, cooking and alchemy, Black Market crafting and flipping, with the exact formulas the calculators use.",
+    keywords: "Albion Online guides, Albion crafting guide, Albion refining guide, Albion black market guide",
+    h1: "Albion Online guides",
+    intro:
+      "The maths behind every calculator on this site, written out in full. Each guide covers how the game actually works, the formulas the tool uses, worked examples and the mistakes that quietly cost silver.",
+    guidesIndex: Object.values(toolContent).map((entry) => entry.guide),
+  },
+  ...Object.values(toolContent).map((entry) => ({
+    path: `guides/${entry.guide.slug}`,
+    title: entry.guide.title,
+    description: entry.guide.description,
+    keywords: entry.guide.keywords,
+    h1: entry.guide.h1,
+    intro: entry.guide.description,
+    guideOf: entry,
+  })),
+];
+
+ROUTES.push(...GUIDE_ROUTES);
+
 function escAttr(value) {
   return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -147,16 +181,122 @@ function injectJsonLd(html, objects) {
   return html.replace(/<\/head>/i, `${scripts}\n  </head>`);
 }
 
+/**
+ * The quiet guide link at the foot of a tool page (mirrors the ToolGuideLink component),
+ * or "" for routes without a guide.
+ */
+function guideLinkHtml(route) {
+  const content = toolContent[route.path];
+  if (!content) return "";
+  const { guide } = content;
+  return `        <p><a href="/guides/${guide.slug}"><strong>${escText(guide.h1)}</strong></a> &mdash; ${escText(guide.description)}</p>`;
+}
+
+/** The full article body a guide page shows (mirrors GuidePage), including the formula cards. */
+function guideHtml(entry) {
+  const cards = entry.summary.cards
+    .map(
+      (card) =>
+        `        <h2>${escText(card.label)}</h2>\n        <p><code>${escText(card.formula)}</code></p>\n        <p>${escText(card.text)}</p>`
+    )
+    .join("\n");
+
+  const sections = entry.sections
+    .map((section) => {
+      const paragraphs = (section.paragraphs || []).map((p) => `        <p>${escText(p)}</p>`).join("\n");
+      const list = section.list?.length
+        ? `        <ul>\n${section.list.map((li) => `          <li>${escText(li)}</li>`).join("\n")}\n        </ul>`
+        : "";
+      return [`        <h2>${escText(section.heading)}</h2>`, paragraphs, list].filter(Boolean).join("\n");
+    })
+    .join("\n");
+
+  const faq = entry.faq
+    .map((item) => `        <dt>${escText(item.q)}</dt>\n        <dd>${escText(item.a)}</dd>`)
+    .join("\n");
+
+  return `${cards}
+${sections}
+        <h2>Frequently asked questions</h2>
+        <dl>
+${faq}
+        </dl>`;
+}
+
+/** The guides index listing. */
+function guidesIndexHtml(route) {
+  const items = route.guidesIndex
+    .map(
+      (g) =>
+        `        <li><a href="/guides/${g.slug}">${escText(g.h1)}</a> &mdash; ${escText(g.description)}</li>`
+    )
+    .join("\n");
+  return `        <ul>\n${items}\n        </ul>`;
+}
+
 function noscriptContent(route) {
   const links = TOOL_LINKS.map((l) => `        <li><a href="${l.href}">${escText(l.label)}</a></li>`).join("\n");
+  const body = route.guidesIndex
+    ? guidesIndexHtml(route)
+    : route.guideOf
+      ? guideHtml(route.guideOf)
+      : guideLinkHtml(route);
   return `      <section style="max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: system-ui, sans-serif; color: #e2e8f0">
         <h1>${escText(route.h1)}</h1>
         <p>${escText(route.intro)}</p>
-        <p>More free Albion Online tools by RomulusKings:</p>
+${body ? `${body}\n` : ""}        <p>More free Albion Online tools by RomulusKings:</p>
         <ul>
 ${links}
         </ul>
+        <p><a href="/guides">Albion Online guides</a> &mdash; the maths behind every calculator, written out in full.</p>
       </section>`;
+}
+
+/** FAQPage schema — only on guide pages, which is where the visible FAQ lives. */
+function faqLd(route) {
+  if (!route.guideOf?.faq?.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: route.guideOf.faq.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
+/** CollectionPage schema for the guides index. */
+function collectionLd(route, canonical) {
+  if (!route.guidesIndex) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: route.h1,
+    description: route.description,
+    url: canonical,
+    hasPart: route.guidesIndex.map((g) => ({
+      "@type": "Article",
+      headline: g.h1,
+      description: g.description,
+      url: `${SITE}/guides/${g.slug}`,
+    })),
+  };
+}
+
+/** Article schema for guide pages. */
+function articleLd(route, canonical) {
+  if (!route.guideOf) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: route.h1,
+    description: route.description,
+    url: canonical,
+    image: OG_IMAGE,
+    author: { "@type": "Organization", name: "RomulusKings" },
+    publisher: { "@type": "Organization", name: "RomulusKings" },
+  };
 }
 
 function softwareAppLd(route, canonical) {
@@ -207,7 +347,16 @@ async function main() {
     html = setNoscript(html, noscriptContent(route));
 
     if (!route.noindex) {
-      html = injectJsonLd(html, [softwareAppLd(route, canonical), breadcrumbLd(route, canonical)]);
+      // Guides are articles, the guides index is a collection, tool pages are the app itself.
+      const primary = route.guideOf
+        ? articleLd(route, canonical)
+        : route.guidesIndex
+          ? collectionLd(route, canonical)
+          : softwareAppLd(route, canonical);
+      const schemas = [primary, breadcrumbLd(route, canonical)].filter(Boolean);
+      const faq = faqLd(route);
+      if (faq) schemas.push(faq);
+      html = injectJsonLd(html, schemas);
     }
 
     const outDir = path.join(distDir, route.path);

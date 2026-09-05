@@ -1,0 +1,137 @@
+/* Quiet guide link at the foot of a tool page. Visible, but it must never compete with
+   the tool above it. */
+
+.tool-guide-link-bar {
+  width: 100%;
+  padding: 18px 16px 32px;
+  box-sizing: border-box;
+}
+
+.tool-guide-link-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.tool-guide-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  text-decoration: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.tool-guide-link:hover {
+  border-color: rgba(92, 240, 200, 0.3);
+  background: rgba(92, 240, 200, 0.04);
+}
+
+.tool-guide-link-tag {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(92, 240, 200, 0.12);
+  border: 1px solid rgba(92, 240, 200, 0.22);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5cf0c8;
+}
+
+.tool-guide-link-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-guide-link-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #d7dde8;
+}
+
+/* Clamped rather than hidden: the text stays in the DOM and readable, but the bar can
+   never grow into a block that competes with the tool above it. */
+.tool-guide-link-sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #79828f;
+}
+
+.tool-guide-link-arrow {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: #5cf0c8;
+  transition: transform 0.18s ease;
+}
+
+.tool-guide-link:hover .tool-guide-link-arrow {
+  transform: translateX(3px);
+}
+
+.tool-guide-dismiss {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 8px 0 0 4px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-guide-dismiss input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #5cf0c8;
+  cursor: pointer;
+}
+
+.tool-guide-dismiss:hover {
+  color: #9aa3b5;
+}
+
+@media (max-width: 640px) {
+  .tool-guide-link-bar {
+    padding: 14px 12px 26px;
+  }
+
+  .tool-guide-link {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .tool-guide-link-text strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 13.5px;
+  }
+
+  .tool-guide-link-sub {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    font-size: 12px;
+  }
+
+  .tool-guide-link-arrow {
+    margin-top: 2px;
+  }
+}

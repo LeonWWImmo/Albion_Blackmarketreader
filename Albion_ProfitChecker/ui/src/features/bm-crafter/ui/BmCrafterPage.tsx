@@ -19,6 +19,7 @@ import {
 } from "../domain";
 import { useBmCrafterData, useBmCrafterState } from "../hooks";
 import "./bmCrafter.css";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 function formatNumber(value: number | null | undefined): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "--";
@@ -533,6 +534,14 @@ export function BmCrafterPage() {
           </select>
         </div>
 
+        <div className="panel-section">
+          <h4>Guides</h4>
+          <a className="panel-guides-link" href="/guides">
+            Albion Online guides
+            <span aria-hidden="true"> &rsaquo;</span>
+          </a>
+        </div>
+
         <div className="account-actions">
           {!isGuest() && (
             <button className="btn primary" onClick={onResetPassword}>
@@ -894,6 +903,8 @@ export function BmCrafterPage() {
           </div>
         </aside>
       </main>
+
+      <ToolGuideLink slug="bm-crafter" authService={authService} />
     </>
   );
 }

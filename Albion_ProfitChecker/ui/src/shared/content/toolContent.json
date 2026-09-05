@@ -1,0 +1,536 @@
+{
+  "bm-crafter": {
+    "title": "How Black Market crafting actually works",
+    "sections": [
+      {
+        "heading": "The Black Market is not a normal buyer",
+        "paragraphs": [
+          "The Black Market sits in the basement of Caerleon, and it is the only NPC in Albion Online that buys finished gear from players and feeds it back into the world as mob loot. That single detail explains most of its odd behaviour. Demand does not come from another player deciding they want your sword. It comes from how fast the game is handing out loot in dungeons, open world camps and roaming mobs.",
+          "It works entirely on buy orders. The NPC posts an order for one specific item at one specific price for a limited quantity. If what you crafted matches, you get paid the moment you sell. There is no listing, no waiting, no undercutting. The catch is that filling an order drains it, and the next order for that item can come back noticeably cheaper.",
+          "This is why an item can look incredible in the morning and mediocre by evening. You are not competing with other sellers on price, you are racing them to a limited pot of silver."
+        ]
+      },
+      {
+        "heading": "What the tool calculates for every row",
+        "paragraphs": [
+          "For each craftable item the calculator pulls your material prices, applies your return rate, adds the station fee and any artefact cost, and compares the result against the live Black Market buy order.",
+          "craftCost = materials x (1 - returnRate) + artefact + stationFee",
+          "profit = blackMarketPrice - craftCost",
+          "Return rate is where most spreadsheets go wrong. Albion does not simply hand back a flat percentage of your materials. Every bonus you stack runs through a diminishing returns curve:",
+          "returnRate = 1 - 1 / (1 + bonus / 100)",
+          "So crafting in a royal city (18 points of bonus) with focus active (59 points) gives you 77 points, which turns into a 43.5% return rate. Not 77%. Piling on more bonus always helps, but each additional point gives back less than the one before it. Anyone quoting you a flat return number is rounding away real silver."
+        ]
+      },
+      {
+        "heading": "Station fees, artefacts and the costs people forget",
+        "paragraphs": [
+          "The station fee scales with the item value, not with what you paid for materials:",
+          "stationFee = itemValue x 0.1125 x (usageFee / 100)",
+          "Item value roughly doubles with every tier, and enchantments multiply it hard, so a T8.3 craft carries a very different fee to a T4.0 craft even in the same building. The usage fee itself is set by whoever owns the station and can be changed daily, so it is worth checking the actual number before committing to a long run.",
+          "Artefacts never come back through the return rate. Whatever you pay for the artefact is a hard cost on every single craft. This is exactly why artefact weapons look fantastic in a spreadsheet and then disappoint in practice, especially in the days after a content patch when artefact prices spike."
+        ]
+      },
+      {
+        "heading": "Reading the results without losing silver",
+        "paragraphs": [
+          "A few habits separate people who make money here from people who break even."
+        ],
+        "list": [
+          "Check profit per focus, not just profit per craft. Your focus pool is the real constraint, so an item with a smaller margin but a much lower focus cost is often the better use of a day.",
+          "A large margin on an item nobody is losing is a trap. The Black Market only refills its order after players actually lose that item type, so niche gear can sit unsold for hours.",
+          "Prices are as fresh as the last market scan. On quieter servers or unusual hours, a number can be older than you would like. If a margin looks impossibly good, it usually is.",
+          "Transport is a real cost. Everything has to reach Caerleon, and one bad ride through a portal zone can wipe out the profit from an entire inventory.",
+          "Craft in bulk only after checking the order size. Filling one big order and then dumping fifty more items into a collapsed price is the classic beginner mistake."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why is my in-game profit lower than what the tool shows?",
+        "a": "Usually one of three things. The Black Market order you were aiming at got filled by someone else and came back cheaper, the station owner raised the usage fee, or your actual return rate is lower than the value set in the tool because you crafted somewhere without the bonus you assumed."
+      },
+      {
+        "q": "What return rate should I enter?",
+        "a": "It depends on where you craft and whether you use focus. A royal city gives 18 points of bonus on its own. Add 59 more if you are spending focus. Feed the total into the diminishing returns formula rather than adding percentages together, or use the presets in the tool which already do that for you."
+      },
+      {
+        "q": "Do I need focus to make Black Market crafting worth it?",
+        "a": "No, but it changes which items make sense. Without focus your effective material cost is much higher, which pushes you towards items where the Black Market premium is large relative to material cost. With focus, cheaper high-volume items usually win on silver per focus point."
+      },
+      {
+        "q": "Is crafting for the Black Market better than selling to players?",
+        "a": "Sometimes. The Black Market pays instantly and never undercuts you, which is worth a lot if you value your time. Player markets can pay more for popular meta gear, but you carry listing fees, waiting time and the risk of being undercut while your item sits there."
+      },
+      {
+        "q": "How often do the prices update?",
+        "a": "The data comes from market scans, so freshness depends on how recently the items you care about were seen. Items that get traded heavily update far more often than obscure tiers and enchantments."
+      }
+    ],
+    "guide": {
+      "slug": "albion-black-market-crafting",
+      "h1": "Black Market crafting in Albion Online: a complete guide",
+      "title": "Albion Online Black Market Crafting Guide | Blackmarket Reader",
+      "description": "How Black Market crafting works in Albion Online: buy orders, craft cost, return rate, station fees, artefacts and the mistakes that quietly cost you silver.",
+      "keywords": "Albion Online black market crafting, Albion black market guide, Albion crafting profit, Albion black market buy orders",
+      "toolLabel": "Black Market Crafter"
+    },
+    "summary": {
+      "intro": "The Black Market is an NPC in Caerleon that buys finished gear and feeds it back into the world as mob loot. It pays instantly and never undercuts you, but every order it posts is limited, so filling one can bring the next back cheaper.",
+      "cards": [
+        {
+          "label": "Craft cost",
+          "formula": "materials x (1 - returnRate) + artefact + stationFee",
+          "text": "Artefacts are never returned, so they stay a hard cost on every single craft."
+        },
+        {
+          "label": "Return rate",
+          "formula": "1 - 1 / (1 + bonus / 100)",
+          "text": "Royal city 18 plus focus 59 is 77 points of bonus, which is a 43.5% return. Not 77%."
+        },
+        {
+          "label": "Station fee",
+          "formula": "itemValue x 0.1125 x (usageFee / 100)",
+          "text": "Scales with item value rather than your material spend, and owners change the usage fee daily."
+        }
+      ],
+      "tipsHeading": "Before you commit silver",
+      "tips": [
+        "Compare silver per focus, not just profit per craft. Focus is what actually limits you.",
+        "A large margin on an item nobody loses is a trap. The Black Market only refills after players lose that gear.",
+        "Check the order size before crafting in bulk, or you will fill one order and dump the rest into a collapsed price.",
+        "Everything has to reach Caerleon. Transport risk is a real cost the numbers do not include."
+      ]
+    }
+  },
+  "crafting-calculator": {
+    "title": "How to calculate Albion crafting profit properly",
+    "sections": [
+      {
+        "heading": "Where the cost actually comes from",
+        "paragraphs": [
+          "Crafting cost in Albion looks simple until you try it. Buy materials, pay a fee, get an item. In practice there are four moving parts, and three of them change depending on where you stand when you press craft.",
+          "The calculator takes the price you actually pay for each material in each city, reduces it by your return rate, adds the station fee for that item and tier, adds any artefact cost, and then compares the total against what the item sells for. The output is not just profit, but cost per craft, return on investment, and silver per focus point, which is the number that matters if focus is what limits you."
+        ]
+      },
+      {
+        "heading": "Return rate: why 77 points of bonus is not 77% back",
+        "paragraphs": [
+          "This is the single most misunderstood number in Albion crafting. The game does not add your bonuses and give that percentage of materials back. It runs them through a curve:",
+          "returnRate = 1 - 1 / (1 + bonus / 100)",
+          "A royal city gives you 18 points. Crafting an item in the city that specialises in it gives 40 more. Focus adds 59. Stack all three and you have 117 points of bonus, which produces a return rate of roughly 53.9%. Stack royal and focus only and 77 points becomes 43.5%.",
+          "The practical takeaway is that the first bonus you add is worth far more than the last. Moving from no bonus to a bonus city is a huge jump. Squeezing out the final few points through specialisation matters much less than people assume, which is good news if you are still levelling."
+        ]
+      },
+      {
+        "heading": "Bonus cities, and why location beats almost everything",
+        "paragraphs": [
+          "Each royal city gives an extra 40 points of bonus to specific item families. Crafting in the right place is usually a bigger win than any amount of spec grinding."
+        ],
+        "list": [
+          "Lymhurst: swords, bows, arcane staves",
+          "Martlock: axes, quarterstaffs, frost staves",
+          "Thetford: maces, fire staves, nature staves",
+          "Fort Sterling: hammers, spears, holy staves",
+          "Bridgewatch: crossbows, daggers, cursed staves",
+          "Caerleon: gloves and shapeshifter items",
+          "Brecilien: bags and capes"
+        ]
+      },
+      {
+        "heading": "Station fees and focus costs",
+        "paragraphs": [
+          "The station fee is tied to the item value rather than your material spend:",
+          "stationFee = itemValue x 0.1125 x (usageFee / 100)",
+          "Item value doubles with each tier and jumps sharply with enchantment level, so the same building charges wildly different fees depending on what you put in it. Station owners set the usage fee themselves and adjust it constantly, so a route that was profitable last week can be dead this week for no reason other than a fee change.",
+          "Focus cost also climbs steeply with tier and enchantment. A T4.0 craft costs a fraction of what a T8.4 craft costs, which is why silver per focus often points you towards lower tiers than instinct suggests. Specialisation reduces the cost of the specific item you have levelled, and the calculator accounts for your spec levels once you enter them."
+        ]
+      },
+      {
+        "heading": "Getting numbers you can trust",
+        "paragraphs": [
+          "Prices are the weak point in any crafting calculation, not the maths. A few things worth doing before you commit a large budget."
+        ],
+        "list": [
+          "Enter the price you would actually pay, not the lowest sell order you saw once. If you plan to buy 500 units, the price you get is the one after you have eaten through the cheap listings.",
+          "Check the station usage fee in game rather than trusting a default. It is the number most likely to have moved since you last looked.",
+          "Remember market tax on the sell side. Your gross revenue is not your net revenue, and premium status changes the amount you keep.",
+          "If you are crafting to sell to other players, look at how many of that item actually sell per day. A high margin on a slow item ties up your silver for a long time."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Should I always craft in the bonus city?",
+        "a": "Almost always, yes. Forty points of bonus is the largest single improvement available to most crafters, and it costs nothing but travel. The exception is when material prices in that city are inflated enough to cancel out the saving, which does happen in cities that specialise in popular meta items."
+      },
+      {
+        "q": "Is focus worth spending on low tier items?",
+        "a": "Often yes, because focus cost rises much faster with tier than profit does. Look at the silver per focus figure rather than raw profit. A stack of cheap crafts can beat a single expensive one by a wide margin."
+      },
+      {
+        "q": "Why does the calculator show a loss on items that seem popular?",
+        "a": "Popular items attract a lot of crafters, which pushes sell prices down and material prices up at the same time. That squeeze is real, and the calculator is showing it rather than hiding it. The profitable niches usually sit slightly off the meta."
+      },
+      {
+        "q": "Do specialisation levels change the result much?",
+        "a": "They lower your focus cost significantly and add a small amount of return rate. The focus saving is the bigger effect. If you craft the same item family repeatedly, specialisation compounds quickly."
+      },
+      {
+        "q": "Can I use this for enchanted items?",
+        "a": "Yes. Enchantment changes material cost, item value, station fee and focus cost all at once, which is exactly why doing it by hand is painful. Select the tier and enchantment and the calculator adjusts every component."
+      }
+    ],
+    "guide": {
+      "slug": "albion-crafting-profit",
+      "h1": "How to calculate Albion Online crafting profit",
+      "title": "Albion Online Crafting Profit Guide | Blackmarket Reader",
+      "description": "Work out real Albion Online crafting profit: return rate maths, bonus cities, station fees, focus cost and how to get price inputs you can trust.",
+      "keywords": "Albion Online crafting profit, Albion crafting guide, Albion return rate, Albion bonus city, Albion focus cost",
+      "toolLabel": "Crafting Calculator"
+    },
+    "summary": {
+      "intro": "Crafting cost has four moving parts, and three of them change depending on where you stand when you press craft. The calculator takes your material prices per city, applies your return rate, adds station fees and artefacts, then reports cost, profit, ROI and silver per focus.",
+      "cards": [
+        {
+          "label": "Return rate",
+          "formula": "1 - 1 / (1 + bonus / 100)",
+          "text": "Royal 18 plus bonus city 40 plus focus 59 is 117 points, a 53.9% return. Bonuses stack on a curve, never additively."
+        },
+        {
+          "label": "Station fee",
+          "formula": "itemValue x 0.1125 x (usageFee / 100)",
+          "text": "Item value doubles each tier and jumps hard with enchantment, so one building charges wildly different fees."
+        },
+        {
+          "label": "Bonus city",
+          "formula": "+40 bonus points",
+          "text": "Crafting where your item is specialised is usually a bigger win than any amount of spec grinding."
+        }
+      ],
+      "tipsHeading": "Bonus cities (+40 points)",
+      "tips": [
+        "Lymhurst: swords, bows, arcane staves",
+        "Martlock: axes, quarterstaffs, frost staves",
+        "Thetford: maces, fire staves, nature staves",
+        "Fort Sterling: hammers, spears, holy staves",
+        "Bridgewatch: crossbows, daggers, cursed staves",
+        "Caerleon: gloves and shapeshifter items",
+        "Brecilien: bags and capes"
+      ]
+    }
+  },
+  "refining-calculator": {
+    "title": "How refining profit is calculated in Albion Online",
+    "sections": [
+      {
+        "heading": "What refining actually involves",
+        "paragraphs": [
+          "Refining turns raw resources into the materials crafters need. Ore becomes metal bars, hide becomes leather, fibre becomes cloth, wood becomes planks and rock becomes stone blocks. From tier four upwards each refine needs two inputs: the raw resource of that tier, and refined material from the tier below.",
+          "That second requirement is what makes refining profitable as a business and confusing as a calculation. Your cost depends on two separate markets moving independently, and both of them shift when a lot of players decide to gather or refine at the same time.",
+          "The calculator handles every tier and enchantment level, takes your actual buy prices per city, applies the return rate, adds the station fee, subtracts market tax on the sale, and shows you profit in silver and as a percentage of what you put in."
+        ]
+      },
+      {
+        "heading": "Return rate is where refining makes its money",
+        "paragraphs": [
+          "Refining has the strongest return rate bonuses in the game, and that is essentially the whole business model. The bonuses run through the same diminishing returns curve as crafting:",
+          "returnRate = 1 - 1 / (1 + bonus / 100)",
+          "Refining in a royal city gives 18 points. Refining in the city that matches your material adds 40. Focus adds another 59. All three together is 117 points, which produces roughly a 53.9% return rate. Slightly more than half of your raw materials come straight back to you.",
+          "Refine the wrong material in the wrong city without focus and you are working on 18 points, or a 15.3% return. That gap between 15% and 54% is usually the difference between losing silver and running a genuinely good operation."
+        ]
+      },
+      {
+        "heading": "Which city refines what",
+        "paragraphs": [
+          "The 40 point material bonus is city specific, and it only applies to the matching refining line."
+        ],
+        "list": [
+          "Thetford: ore into metal bars",
+          "Martlock: hide into leather",
+          "Lymhurst: fibre into cloth",
+          "Fort Sterling: wood into planks",
+          "Bridgewatch: rock into stone blocks"
+        ]
+      },
+      {
+        "heading": "Fees, taxes and the numbers that eat your margin",
+        "paragraphs": [
+          "The station fee is based on the item value of what you produce:",
+          "refiningFee = itemValue x 0.1125 x (usageFee / 100) x amount",
+          "Unlike materials, this fee never comes back through the return rate. It is pure cost on every run.",
+          "On the sell side, market tax comes off your revenue before you see any of it, and premium status changes how much you keep. The calculator applies the tax rate you set, so it is worth making sure that value matches your actual account status before trusting the profit column.",
+          "One more detail that catches people out: refining in a hideout removes the royal city bonus and replaces it with whatever bonus that hideout power level provides. Island stations give no return rate at all. If you refine somewhere other than a royal city, adjust the setting or your real return will be well below what you expected."
+        ]
+      },
+      {
+        "heading": "When refining is genuinely worth doing",
+        "paragraphs": [
+          "Refining margins are usually thinner per unit than crafting margins, and they make up for it in volume and reliability. A few things that tend to hold true."
+        ],
+        "list": [
+          "Higher tiers move less silver per hour than they look like they should, because the raw material market for T7 and T8 is thin and your buy price rises as you clear listings.",
+          "Enchanted refining can be very profitable when a lot of players are gathering enchanted resources and few are refining them, which happens in waves after each patch.",
+          "Focus is close to mandatory at higher tiers. Without it the fee and the reduced return often leave nothing behind.",
+          "Buying raw materials with buy orders instead of taking sell orders changes the entire calculation. If you plan to do this seriously, enter the price your orders actually fill at."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Is refining better than gathering the materials myself?",
+        "a": "They are separate decisions. Gathering earns you the raw material at the cost of your time and risk. Refining earns you the spread between raw and refined prices. Plenty of people do only one of the two, and the calculator works either way, since you can enter zero as your raw material cost if you gathered it yourself."
+      },
+      {
+        "q": "Why does my return rate look lower in game?",
+        "a": "The most common causes are refining outside a royal city, refining a material in a city that does not match it, or forgetting that focus was not active. Hideouts and islands also change the bonus structure entirely."
+      },
+      {
+        "q": "Do I need the lower tier refined material for every refine?",
+        "a": "From tier four upwards, yes. Tier two and three refines only need the raw resource. This is why the cost of a single T7 bar traces back through every tier below it."
+      },
+      {
+        "q": "How does enchantment affect refining?",
+        "a": "Enchanted resources cost far more, produce far more valuable refined material, and carry a higher item value which raises the station fee. The relationship between those three is not linear, which is why enchanted refining is worth calculating rather than guessing."
+      },
+      {
+        "q": "What market tax should I use?",
+        "a": "Use the rate that matches your account. Premium keeps more of your revenue, and over thousands of refines that difference is substantial. The default in the tool is a reasonable middle value but it is not a substitute for setting your own."
+      }
+    ],
+    "guide": {
+      "slug": "albion-refining-profit",
+      "h1": "Refining profit in Albion Online, explained",
+      "title": "Albion Online Refining Profit Guide | Blackmarket Reader",
+      "description": "How refining profit works in Albion Online: the refining chain, return rate bonuses, city specialisations, fees, market tax and when refining is actually worth it.",
+      "keywords": "Albion Online refining profit, Albion refining guide, Albion refining return rate, Albion refining bonus city",
+      "toolLabel": "Refining Calculator"
+    },
+    "summary": {
+      "intro": "Refining turns raw resources into the materials crafters need. From tier four upwards each refine needs the raw resource of that tier plus refined material from the tier below, so your cost depends on two markets moving at once.",
+      "cards": [
+        {
+          "label": "Return rate",
+          "formula": "1 - 1 / (1 + bonus / 100)",
+          "text": "Royal 18 plus matching city 40 plus focus 59 is 117 points, a 53.9% return. The strongest bonuses in the game."
+        },
+        {
+          "label": "Refining fee",
+          "formula": "itemValue x 0.1125 x (usageFee / 100) x amount",
+          "text": "Never comes back through the return rate. It is pure cost on every run."
+        },
+        {
+          "label": "Where you refine",
+          "formula": "royal 18 / island 0 / hideout varies",
+          "text": "Island stations give no return at all, and hideouts replace the royal bonus with their own power level."
+        }
+      ],
+      "tipsHeading": "Which city refines what",
+      "tips": [
+        "Thetford: ore into metal bars",
+        "Martlock: hide into leather",
+        "Lymhurst: fibre into cloth",
+        "Fort Sterling: wood into planks",
+        "Bridgewatch: rock into stone blocks"
+      ]
+    }
+  },
+  "food-potion-crafter": {
+    "title": "Cooking and alchemy profit, explained",
+    "sections": [
+      {
+        "heading": "Consumables do not work like gear",
+        "paragraphs": [
+          "If you come to cooking from weapon crafting, the first thing that will confuse you is the output. Most food recipes produce ten portions per craft, not one. Soups, salads, pies, omelettes, stews, sandwiches and roasts all come out in batches of ten. Potions come out in fives. A handful of intermediates like flour, bread, butter and fish sauce produce a single item.",
+          "This matters enormously because the ingredient list you see in game is the cost of one craft, which gives you ten items. Divide by ten and you get cost per item. Confuse the two and every profit number you calculate will be wrong by an order of magnitude.",
+          "The tool shows both. Ingredients are listed as whole numbers for one real craft, because those are the amounts you actually have to buy, and profit is shown per craft and per item so you can compare against market prices directly."
+        ]
+      },
+      {
+        "heading": "Return rate for consumables is smaller than you think",
+        "paragraphs": [
+          "Cooking and alchemy use the same diminishing returns curve as everything else, but the city bonus is much weaker. Gear crafting and refining get 40 points in the right city. Consumables get 15.",
+          "returnRate = 1 - 1 / (1 + bonus / 100)",
+          "So a royal city (18) with focus (59) gives 77 points and a 43.5% return rate. Add the consumable city bonus and 92 points gives roughly 47.9%. The bonus city for cooking is Caerleon, and for alchemy it is Brecilien. Useful, but nowhere near the swing you get when refining in the right place.",
+          "Butchering raw meat and making fish sauce do not benefit from return rate at all, which is worth remembering before you build a business around them."
+        ]
+      },
+      {
+        "heading": "A worked example",
+        "paragraphs": [
+          "Take Carrot Soup. One craft consumes 16 carrots and produces 10 bowls. Say carrots cost 250 silver each and you are crafting with focus in a royal city, giving a 43.5% return rate. The station fee for food is a flat charge per craft rather than a percentage of item value.",
+          "Gross ingredient cost is 16 x 250 = 4000 silver. After the return rate you effectively pay 4000 x 0.565 = 2260. Add the station fee for the batch and divide by the ten bowls you received, and you land at roughly 248 silver per bowl.",
+          "That is the number to compare against the market price of Carrot Soup, and it is nothing like the 400 silver per bowl you would calculate if you forgot the batch size."
+        ]
+      },
+      {
+        "heading": "Focus, specs and where the demand is",
+        "paragraphs": [
+          "Focus cost for consumables halves for every 10,000 points of focus cost efficiency, and efficiency comes from your cook or alchemist mastery plus the specialisation node that matches the item. The active specialisation is worth far more than the others, so levelling one family deeply beats spreading levels thinly across everything.",
+          "As for what to make, demand for consumables is driven by content rather than fashion. Large scale ZvZ fights burn through resistance and healing potions at a rate nothing else matches. Gathering food and hunting food sell steadily to a quieter but very consistent audience. Cheap low tier soups move constantly because new players eat them and building owners need them for nutrition.",
+          "Unlike gear, consumables get consumed. That sounds obvious, but it means the market never saturates the way weapon markets do. There is always another fight."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why do the ingredient amounts look so large?",
+        "a": "Because they are the amounts for one real craft, and one craft usually gives ten items. Showing fractional ingredients per item would look tidier but would be useless in practice, since you cannot buy 1.6 carrots or craft a tenth of a soup."
+      },
+      {
+        "q": "Is cooking or alchemy more profitable?",
+        "a": "Alchemy tends to have higher value per item and sharper demand spikes around large fights. Cooking has steadier, higher volume demand. Alchemy rewards timing, cooking rewards consistency."
+      },
+      {
+        "q": "Does the bonus city matter for consumables?",
+        "a": "It helps but far less than for refining. Fifteen points instead of forty means the difference between crafting in the bonus city and crafting in any other royal city is a few percent of return rate, not a transformation. Focus matters considerably more."
+      },
+      {
+        "q": "Why is there no return rate on my butchered meat?",
+        "a": "Butchering raw meat and producing fish sauce are exceptions in the game and do not benefit from return rate. Your input cost is your full input cost for those steps."
+      },
+      {
+        "q": "Do I need to grow my own ingredients?",
+        "a": "No, and for many recipes buying from the market is faster than farming. Farming makes sense when a specific ingredient is consistently overpriced, or when you already have island space you are not otherwise using."
+      }
+    ],
+    "guide": {
+      "slug": "albion-cooking-alchemy-profit",
+      "h1": "Cooking and alchemy profit in Albion Online",
+      "title": "Albion Online Cooking & Alchemy Profit Guide | Blackmarket Reader",
+      "description": "Why consumables do not work like gear crafting in Albion Online: batch output, the smaller consumable return rate, flat station fees, focus specs and where demand actually is.",
+      "keywords": "Albion Online cooking profit, Albion alchemy profit, Albion food crafting guide, Albion potion crafting",
+      "toolLabel": "Food & Potion Crafter"
+    },
+    "summary": {
+      "intro": "Cooking and alchemy do not behave like gear crafting. Most food recipes produce ten portions per craft and potions come out in fives, so the ingredient list you see is the cost of a whole batch rather than a single item.",
+      "cards": [
+        {
+          "label": "Output per craft",
+          "formula": "food 10 / potions 5 / intermediates 1",
+          "text": "Divide by the batch size to get cost per item. Getting this wrong makes every profit figure wrong."
+        },
+        {
+          "label": "Return rate",
+          "formula": "1 - 1 / (1 + bonus / 100)",
+          "text": "The consumable city bonus is 15 points, not 40. Royal 18 plus focus 59 plus city 15 is a 47.9% return."
+        },
+        {
+          "label": "Station fee",
+          "formula": "flat charge per craft",
+          "text": "Charged per craft rather than scaled by item value, and it is never returned to you."
+        }
+      ],
+      "tipsHeading": "What trips people up",
+      "tips": [
+        "Butchering raw meat and making fish sauce get no return rate at all.",
+        "The bonus city is Caerleon for cooking and Brecilien for alchemy.",
+        "Focus cost halves for every 10,000 points of focus cost efficiency, and the active specialisation is worth far more than the others.",
+        "Consumables get consumed, so unlike gear the market never really saturates."
+      ]
+    }
+  },
+  "dashboard": {
+    "title": "Finding profitable Black Market flips",
+    "sections": [
+      {
+        "heading": "What a flip actually is",
+        "paragraphs": [
+          "A Black Market flip is one of the simplest money makers in Albion Online. You buy an item from a royal city market at the price players are asking, carry it to Caerleon, and sell it to the Black Market NPC for more than you paid. No crafting, no gathering, no specialisation required.",
+          "It works because the two markets are barely connected. Royal city prices are set by players competing with each other to sell gear. Black Market prices are set by an NPC that needs to refill mob loot tables. When those two disagree, and they disagree constantly, there is silver sitting in the gap.",
+          "The dashboard exists to find those gaps for you, across every item and every city, instead of you clicking through market interfaces one item at a time."
+        ]
+      },
+      {
+        "heading": "Reading the numbers",
+        "paragraphs": [
+          "Every row compares what an item currently costs in a royal city against what the Black Market is paying for it, and shows the difference after tax. A few columns deserve more attention than the profit figure itself."
+        ],
+        "list": [
+          "Sold per day tells you whether an item moves at all. A large margin on something with no volume usually means the price data is stale rather than the opportunity being real.",
+          "The city column matters because you have to actually go there. Two flips with the same margin are not equal if one is a portal hop and the other is across the map.",
+          "Price age is the quiet killer. Every number comes from a market scan, and scans are only as recent as the last player who checked that item. Treat anything that looks too good as suspicious until you verify it in game.",
+          "Item power and quality change what the Black Market pays. Two identical looking rows can be different items."
+        ]
+      },
+      {
+        "heading": "The risks nobody mentions in the guides",
+        "paragraphs": [
+          "Flipping looks risk free on a spreadsheet and is not risk free in practice.",
+          "Caerleon is a red zone. Everything you carry can be taken from you, and the route in is watched by people who know exactly why you are travelling. Carrying a full inventory of expensive gear through a portal at peak hours is a real gamble, and the maths on the dashboard does not include being killed.",
+          "Buy orders also disappear. The order you planned around can be filled by someone else while you are still walking, and the replacement order can pay meaningfully less. Large single orders are the most likely to vanish.",
+          "Finally, your own purchases move the market. Buying out a cheap listing means the next unit costs more. On thin items your effective buy price after clearing the good listings can be far above the price you saw when you started."
+        ]
+      },
+      {
+        "heading": "A sensible way to start",
+        "paragraphs": [
+          "If you are new to this, small and repeatable beats large and dramatic."
+        ],
+        "list": [
+          "Start with cheap items you can afford to lose entirely. The lesson costs less that way.",
+          "Do one full round trip before scaling up, so you learn what the route actually costs in time and risk.",
+          "Filter for items that both have a healthy margin and sell in decent numbers, rather than chasing the biggest number on the page.",
+          "Verify the Black Market price in game before buying a large quantity. It takes a minute and saves entire inventories.",
+          "Consider crafting rather than flipping once you have capital. The margins are usually better, and the crafter tools on this site run the same comparison against material costs."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Do I need a lot of silver to start flipping?",
+        "a": "No. Low tier and unenchanted items have small absolute margins but the same percentage logic, and they are a much cheaper way to learn the route and the rhythm of the Black Market."
+      },
+      {
+        "q": "Why did the Black Market price drop while I was travelling?",
+        "a": "Because someone filled the order you were aiming at. The Black Market posts limited quantities, and once an order is satisfied the next one can be priced lower. This is the single most common way flips go wrong."
+      },
+      {
+        "q": "Is flipping safer than crafting?",
+        "a": "It ties up less time but carries more travel risk, since every flip ends in Caerleon. Crafting usually has better margins and lets you work from a safer city, at the cost of needing specialisation and focus to be competitive."
+      },
+      {
+        "q": "How current is the data?",
+        "a": "It comes from market scans, so items that are traded frequently are close to live and rarely traded items can lag. The dashboard shows what was last seen rather than guessing at a current price."
+      },
+      {
+        "q": "Can I flip without entering a red zone?",
+        "a": "The Black Market itself is in Caerleon, so selling to it always requires the trip. What you can control is how much you carry at once, when you travel, and which portal you use."
+      }
+    ],
+    "guide": {
+      "slug": "albion-black-market-flipping",
+      "h1": "Black Market flipping in Albion Online",
+      "title": "Albion Online Black Market Flipping Guide | Blackmarket Reader",
+      "description": "How to flip items to the Albion Online Black Market: where the price gaps come from, which columns matter, the risks nobody mentions, and a sensible way to start.",
+      "keywords": "Albion Online black market flipping, Albion flipping guide, Albion market trading, Albion black market profit",
+      "toolLabel": "Black Market Dashboard"
+    },
+    "summary": {
+      "intro": "A Black Market flip means buying gear in a royal city, carrying it to Caerleon, and selling it to the Black Market NPC for more than you paid. Royal prices are set by players, Black Market prices by an NPC refilling loot tables, and those two disagree constantly.",
+      "cards": [
+        {
+          "label": "Profit",
+          "formula": "blackMarketPrice - cityPrice - tax",
+          "text": "What the Black Market pays minus what the item costs in a royal city, after market tax."
+        },
+        {
+          "label": "Sold per day",
+          "formula": "trade volume",
+          "text": "Tells you whether an item moves at all. A big margin with no volume usually means stale price data."
+        },
+        {
+          "label": "Price age",
+          "formula": "time since last scan",
+          "text": "Every number comes from a market scan. Anything that looks too good is worth checking in game first."
+        }
+      ],
+      "tipsHeading": "Before you travel",
+      "tips": [
+        "Caerleon is a red zone. The maths here does not include being killed on the way in.",
+        "Buy orders disappear. The one you planned around can be filled while you are still walking.",
+        "Your own buying moves the market, so clearing cheap listings raises your real average price.",
+        "Start with cheap items until you know the route, then scale up."
+      ]
+    }
+  }
+}

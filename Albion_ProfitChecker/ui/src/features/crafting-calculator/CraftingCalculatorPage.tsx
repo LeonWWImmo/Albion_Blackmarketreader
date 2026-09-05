@@ -32,6 +32,7 @@ import {
   resolveSpecKey
 } from "./specs/data";
 import { useCraftingSpecs } from "./specs/useCraftingSpecs";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type MarketRegion = "eu" | "us";
 
@@ -1354,6 +1355,14 @@ export function CraftingCalculatorPage() {
           </select>
         </div>
 
+        <div className="panel-section">
+          <h4>Guides</h4>
+          <a className="panel-guides-link" href="/guides">
+            Albion Online guides
+            <span aria-hidden="true"> &rsaquo;</span>
+          </a>
+        </div>
+
         <div className="account-actions">
           {!isGuest() && (
             <button className="btn primary" onClick={onResetPassword}>{accountActionMsg === "Email sent" ? "Email sent" : "Change password"}</button>
@@ -1825,6 +1834,8 @@ export function CraftingCalculatorPage() {
 
         </aside>
       </div>
+
+      <ToolGuideLink slug="crafting-calculator" authService={authService} />
 
       <SpecsModal
         open={showSpecsModal}
