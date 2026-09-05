@@ -18,6 +18,7 @@ import { useFoodPotionSpecs } from "../specs/useFoodPotionSpecs";
 import "../../bm-crafter/ui/bmCrafter.css";
 import "../../crafting-calculator/craftingCalculator.css";
 import "./foodPotionCrafter.css";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 const KNOWN_CITIES: City[] = ["Caerleon", "Brecilien", "Bridgewatch", "Lymhurst", "Fort Sterling", "Martlock", "Thetford"];
 const PRICE_STORAGE_KEY = "food-potion-prices-v1";
@@ -615,7 +616,15 @@ export function FoodPotionCrafterPage() {
             </select>
           </div>
 
-          <div className="account-actions">
+          <div className="panel-section">
+          <h4>Guides</h4>
+          <a className="panel-guides-link" href="/guides">
+            Albion Online guides
+            <span aria-hidden="true"> &rsaquo;</span>
+          </a>
+        </div>
+
+        <div className="account-actions">
             {!isGuest() && (
               <button className="btn primary" onClick={onResetPassword}>{accountActionMsg === "Email sent" ? "Email sent" : "Change password"}</button>
             )}
@@ -996,6 +1005,8 @@ export function FoodPotionCrafterPage() {
           </section>
         )}
       </main>
+
+      <ToolGuideLink slug="food-potion-crafter" authService={authService} />
 
       <FoodPotionSpecsModal
         open={showSpecsModal}

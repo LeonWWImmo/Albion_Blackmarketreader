@@ -4,6 +4,7 @@ import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
 import "./dashboard.css";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type Region = "us" | "eu";
 type City = "ALL" | "Lymhurst" | "Martlock" | "Fort Sterling" | "Thetford" | "Bridgewatch" | "Caerleon";
@@ -1230,7 +1231,15 @@ export function DashboardPage() {
             </select>
           </div>
 
-          <div className="account-actions">
+          <div className="panel-section">
+          <h4>Guides</h4>
+          <a className="panel-guides-link" href="/guides">
+            Albion Online guides
+            <span aria-hidden="true"> &rsaquo;</span>
+          </a>
+        </div>
+
+        <div className="account-actions">
             {!isGuest() && (
               <button className="btn primary" onClick={onResetPassword}>
                 {accountActionMsg === "Email sent" ? "Email sent" : "Change password"}
@@ -1452,6 +1461,8 @@ export function DashboardPage() {
         </a>
       </main>
       </div>
+
+      <ToolGuideLink slug="dashboard" authService={authService} />
 
       {showPremiumPreview ? (
         <div className="preview-modal" onClick={() => setShowPremiumPreview(false)}>

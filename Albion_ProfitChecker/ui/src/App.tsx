@@ -6,6 +6,8 @@ const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default:
 const DashboardPage = lazy(() => import("./features/dashboard").then((m) => ({ default: m.DashboardPage })));
 const CommunityPage = lazy(() => import("./pages/CommunityPage").then((m) => ({ default: m.CommunityPage })));
 const LegalPage = lazy(() => import("./pages/LegalPage").then((m) => ({ default: m.LegalPage })));
+const GuidesIndexPage = lazy(() => import("./pages/GuidesIndexPage").then((m) => ({ default: m.GuidesIndexPage })));
+const GuidePage = lazy(() => import("./pages/GuidePage").then((m) => ({ default: m.GuidePage })));
 const CraftingCalculatorPage = lazy(() =>
   import("./features/crafting-calculator").then((m) => ({ default: m.CraftingCalculatorPage }))
 );
@@ -26,6 +28,8 @@ export function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/legal" element={<LegalPage />} />
+        <Route path="/guides" element={<GuidesIndexPage />} />
+        <Route path="/guides/:slug" element={<GuidePage />} />
         <Route path="/bm-crafter" element={<BmCrafterPage />} />
         <Route path="/crafting-calculator" element={<CraftingCalculatorPage />} />
         <Route path="/refining-calculator" element={<RefiningCalculatorPage />} />

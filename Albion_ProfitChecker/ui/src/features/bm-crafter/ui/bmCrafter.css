@@ -1552,6 +1552,28 @@ tbody td {
   text-transform: uppercase;
   color: rgba(255,255,255,0.45);
 }
+
+/* Always-available route to the guides from inside the account panel. */
+.panel-guides-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(92, 240, 200, 0.22);
+  background: rgba(92, 240, 200, 0.08);
+  color: #5cf0c8;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.panel-guides-link:hover {
+  background: rgba(92, 240, 200, 0.14);
+  border-color: rgba(92, 240, 200, 0.4);
+}
+
 .account-panel .city-select {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);

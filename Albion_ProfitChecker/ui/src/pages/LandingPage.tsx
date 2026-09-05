@@ -465,7 +465,11 @@ export function LandingPage() {
           </div>
           <div className="footer-columns">
             <div>
-              <div className="footer-title">Network</div>
+              <div className="footer-title">Guides</div>
+              <a href="/guides">All guides</a>
+              <a href="/guides/albion-crafting-profit">Crafting profit</a>
+              <a href="/guides/albion-refining-profit">Refining profit</a>
+              <a href="/guides/albion-black-market-flipping">Black Market flipping</a>
             </div>
             <div>
               <div className="footer-title">Legal</div>
