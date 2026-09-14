@@ -1588,3 +1588,19 @@ body.panel-open::before {
     max-height: none !important;
   }
 }
+
+/* Hideout inputs, revealed under the return-bonus tiles when the Hideout tile is active. */
+.station-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.station-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #79828f;
+}

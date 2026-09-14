@@ -113,18 +113,18 @@
         ]
       },
       {
-        "heading": "Return rate: why 77 points of bonus is not 77% back",
+        "heading": "Return rate: why 33 points of bonus is not 33% back",
         "paragraphs": [
           "This is the single most misunderstood number in Albion crafting. The game does not add your bonuses and give that percentage of materials back. It runs them through a curve:",
           "returnRate = 1 - 1 / (1 + bonus / 100)",
-          "A royal city gives you 18 points. Crafting an item in the city that specialises in it gives 40 more. Focus adds 59. Stack all three and you have 117 points of bonus, which produces a return rate of roughly 53.9%. Stack royal and focus only and 77 points becomes 43.5%.",
+          "A royal city gives you 18 points. Crafting an item in the city that specialises in it adds 15 more. Focus adds 59. Stack all three and you have 92 points of bonus, which produces a return rate of roughly 47.9%. Stack royal and focus only and 77 points becomes 43.5%.",
           "The practical takeaway is that the first bonus you add is worth far more than the last. Moving from no bonus to a bonus city is a huge jump. Squeezing out the final few points through specialisation matters much less than people assume, which is good news if you are still levelling."
         ]
       },
       {
         "heading": "Bonus cities, and why location beats almost everything",
         "paragraphs": [
-          "Each royal city gives an extra 40 points of bonus to specific item families. Crafting in the right place is usually a bigger win than any amount of spec grinding."
+          "Each royal city gives an extra 15 points of bonus to specific item families. It is free, it applies to every craft you make there, and it is worth planning your route around. Note that refining is the generous one: matching the city there is worth 40 points rather than 15."
         ],
         "list": [
           "Lymhurst: swords, bows, arcane staves",
@@ -161,7 +161,7 @@
     "faq": [
       {
         "q": "Should I always craft in the bonus city?",
-        "a": "Almost always, yes. Forty points of bonus is the largest single improvement available to most crafters, and it costs nothing but travel. The exception is when material prices in that city are inflated enough to cancel out the saving, which does happen in cities that specialise in popular meta items."
+        "a": "Usually yes. Fifteen points of bonus costs nothing but travel, and it applies to every single craft. The exception is when material prices in that city are inflated enough to cancel out the saving, which does happen in cities that specialise in popular meta items."
       },
       {
         "q": "Is focus worth spending on low tier items?",
@@ -194,7 +194,7 @@
         {
           "label": "Return rate",
           "formula": "1 - 1 / (1 + bonus / 100)",
-          "text": "Royal 18 plus bonus city 40 plus focus 59 is 117 points, a 53.9% return. Bonuses stack on a curve, never additively."
+          "text": "Royal 18 plus bonus city 15 plus focus 59 is 92 points, a 47.9% return. Bonuses stack on a curve, never additively."
         },
         {
           "label": "Station fee",
@@ -203,11 +203,11 @@
         },
         {
           "label": "Bonus city",
-          "formula": "+40 bonus points",
+          "formula": "+15 bonus points",
           "text": "Crafting where your item is specialised is usually a bigger win than any amount of spec grinding."
         }
       ],
-      "tipsHeading": "Bonus cities (+40 points)",
+      "tipsHeading": "Bonus cities (+15 points)",
       "tips": [
         "Lymhurst: swords, bows, arcane staves",
         "Martlock: axes, quarterstaffs, frost staves",
@@ -348,7 +348,7 @@
       {
         "heading": "Return rate for consumables is smaller than you think",
         "paragraphs": [
-          "Cooking and alchemy use the same diminishing returns curve as everything else, but the city bonus is much weaker. Gear crafting and refining get 40 points in the right city. Consumables get 15.",
+          "Cooking and alchemy use the same diminishing returns curve as everything else, and like gear crafting the city bonus is 15 points. Refining is the outlier at 40.",
           "returnRate = 1 - 1 / (1 + bonus / 100)",
           "So a royal city (18) with focus (59) gives 77 points and a 43.5% return rate. Add the consumable city bonus and 92 points gives roughly 47.9%. The bonus city for cooking is Caerleon, and for alchemy it is Brecilien. Useful, but nowhere near the swing you get when refining in the right place.",
           "Butchering raw meat and making fish sauce do not benefit from return rate at all, which is worth remembering before you build a business around them."
@@ -382,7 +382,7 @@
       },
       {
         "q": "Does the bonus city matter for consumables?",
-        "a": "It helps but far less than for refining. Fifteen points instead of forty means the difference between crafting in the bonus city and crafting in any other royal city is a few percent of return rate, not a transformation. Focus matters considerably more."
+        "a": "It helps, but it is the same modest 15 points that gear crafting gets, not the 40 points refining enjoys. The difference between crafting in the bonus city and any other royal city is a few percent of return rate, not a transformation. Focus matters considerably more."
       },
       {
         "q": "Why is there no return rate on my butchered meat?",
@@ -412,7 +412,7 @@
         {
           "label": "Return rate",
           "formula": "1 - 1 / (1 + bonus / 100)",
-          "text": "The consumable city bonus is 15 points, not 40. Royal 18 plus focus 59 plus city 15 is a 47.9% return."
+          "text": "The consumable city bonus is 15 points, the same as gear crafting. Royal 18 plus focus 59 plus city 15 is a 47.9% return."
         },
         {
           "label": "Station fee",

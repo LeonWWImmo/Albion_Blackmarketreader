@@ -8,7 +8,7 @@ import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin } from "../../shared";
+import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -19,11 +19,20 @@ import {
   KNOWN_CITIES,
   MATERIAL_BASES,
   normalizeResultPriceEntry,
-  productionBonusToReturnRate,
   resolveArtefactPriceByCity,
   resolvePriceByCity,
   resolveResultPrice
 } from "./craftingCalculator.logic";
+import {
+  DEFAULT_HIDEOUT_POWER,
+  DEFAULT_ZONE_QUALITY,
+  MAX_HIDEOUT_POWER,
+  MAX_ZONE_QUALITY,
+  MIN_HIDEOUT_POWER,
+  MIN_ZONE_QUALITY,
+  stationReturnRate,
+  type StationKind
+} from "@shared/albion/stationBonus";
 import { SpecsModal } from "./specs/SpecsModal";
 import {
   applyFocusEfficiency,
@@ -483,6 +492,9 @@ export function CraftingCalculatorPage() {
   const [usePremium, setUsePremium] = useSessionState("cc:usePremium", true);
   const [useFocus, setUseFocus] = useSessionState("cc:useFocus", false);
   const [dailyBonusPercent, setDailyBonusPercent] = useSessionState<0 | 10 | 20>("cc:dailyBonusPercent", 0);
+  const [stationKind, setStationKind] = useSessionState<StationKind>("cc:stationKind", "city");
+  const [hideoutPower, setHideoutPower] = useSessionState("cc:hideoutPower", DEFAULT_HIDEOUT_POWER);
+  const [zoneQuality, setZoneQuality] = useSessionState("cc:zoneQuality", DEFAULT_ZONE_QUALITY);
   const [sellCity, setSellCity] = useState<string>(() => {
     const stored = localStorage.getItem("sellCity");
     return stored === "Black Market" ? "Black Market" : getStoredCity(["sellCity"], "Lymhurst");
@@ -528,15 +540,22 @@ export function CraftingCalculatorPage() {
     () => computeFocusEfficiency(specsState.progress, activeSpecKey, selectedItem, allItems),
     [specsState.progress, activeSpecKey, selectedItem, allItems]
   );
-  const productionBonusWithoutFocus = useMemo(() => {
-    return BASE_PRODUCTION_BONUS
-      + (isBonusCityActive ? BONUS_CITY_PRODUCTION_BONUS : 0)
-      + dailyBonusPercent;
-  }, [isBonusCityActive, dailyBonusPercent]);
-  const totalProductionBonus = useMemo(() => {
-    return productionBonusWithoutFocus + (useFocus ? FOCUS_PRODUCTION_BONUS : 0);
-  }, [productionBonusWithoutFocus, useFocus]);
-  const returnRatePercent = useMemo(() => productionBonusToReturnRate(totalProductionBonus) * 100, [totalProductionBonus]);
+  const station = useMemo(
+    () => ({ kind: stationKind, hideoutPower, zoneQuality }),
+    [stationKind, hideoutPower, zoneQuality]
+  );
+  // The royal-city specialisation only exists in a royal city; a hideout or island has none.
+  const bonusCityApplies = isBonusCityActive && stationKind === "city";
+  // Bonuses that are not tied to the station: city specialisation, daily bonus and focus.
+  const extraProductionBonus = useMemo(() => {
+    return (bonusCityApplies ? BONUS_CITY_PRODUCTION_BONUS : 0)
+      + dailyBonusPercent
+      + (useFocus ? FOCUS_PRODUCTION_BONUS : 0);
+  }, [bonusCityApplies, dailyBonusPercent, useFocus]);
+  const returnRatePercent = useMemo(
+    () => stationReturnRate({ station, royalBonusPercent: BASE_PRODUCTION_BONUS, extraBonusPercent: extraProductionBonus }) * 100,
+    [station, extraProductionBonus]
+  );
   const returnRate = useMemo(() => returnRatePercent / 100, [returnRatePercent]);
   const isBlackMarketSell = sellCity === "Black Market";
   const effectiveSellCity = isBlackMarketSell ? "Caerleon" : sellCity;
@@ -1662,7 +1681,7 @@ export function CraftingCalculatorPage() {
                 <div className="bonus-grid">
                   <button
                     type="button"
-                    className={`bonus-tile ${isBonusCityActive ? "active" : ""}`}
+                    className={`bonus-tile ${bonusCityApplies ? "active" : ""}`}
                     onClick={() => { if (bonusCity && KNOWN_CITIES.includes(bonusCity)) setCraftCity(bonusCity); }}
                   >
                     <span>Bonus City</span>
@@ -1692,7 +1711,50 @@ export function CraftingCalculatorPage() {
                     <span>Focus</span>
                     <strong>{useFocus ? "Active" : "Off"}</strong>
                   </button>
+                  <button
+                    type="button"
+                    className={`bonus-tile ${stationKind === "hideout" ? "active" : ""}`}
+                    onClick={() => setStationKind((prev) => (prev === "hideout" ? "city" : "hideout"))}
+                  >
+                    <span>Hideout</span>
+                    <strong>{stationKind === "hideout" ? "Active" : "Off"}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className={`bonus-tile ${stationKind === "island" ? "active" : ""}`}
+                    onClick={() => setStationKind((prev) => (prev === "island" ? "city" : "island"))}
+                  >
+                    <span>Island</span>
+                    <strong>{stationKind === "island" ? "Active" : "Off"}</strong>
+                  </button>
                 </div>
+
+                {stationKind === "hideout" ? (
+                  <div className="station-row">
+                    <NumberStepper
+                      label="Hideout power"
+                      hint={`${MIN_HIDEOUT_POWER}-${MAX_HIDEOUT_POWER}`}
+                      value={hideoutPower}
+                      min={MIN_HIDEOUT_POWER}
+                      max={MAX_HIDEOUT_POWER}
+                      onChange={setHideoutPower}
+                    />
+                    <NumberStepper
+                      label="Zone quality"
+                      hint={`${MIN_ZONE_QUALITY}-${MAX_ZONE_QUALITY}`}
+                      value={zoneQuality}
+                      min={MIN_ZONE_QUALITY}
+                      max={MAX_ZONE_QUALITY}
+                      onChange={setZoneQuality}
+                    />
+                  </div>
+                ) : null}
+                {stationKind === "island" ? (
+                  <p className="station-note">Island stations give no resource return.</p>
+                ) : null}
+                {stationKind === "hideout" ? (
+                  <p className="station-note">A hideout replaces the royal city bonus with its power and zone quality.</p>
+                ) : null}
               </div>
 
               <div>
