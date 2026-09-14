@@ -23,6 +23,8 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Your filters and settings now stay put across all tools when you navigate away and come back, instead of resetting (kept for the browser session).
 - New Journal profit option in the Black Market Crafter and Crafting Calculator: counts the crafting fame each craft puts into its artisan journal (Blacksmith, Fletcher, Imbuer or Tinker) and adds the profit from selling the full journal. Turn it on to include it, and open the journal editor to see live empty/full/profit prices per tier for your craft city.
 
+- Crafting Calculator: you can now craft from a hideout or an island instead of a royal city. Hideout and Island sit as toggles next to the other return bonuses, and switching to Hideout lets you set your hideout power and zone quality, which replace the royal city bonus in the return rate. Island stations correctly give no return at all.
+
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):
        Crafting Calculator now shows fame per item
