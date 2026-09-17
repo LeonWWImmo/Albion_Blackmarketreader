@@ -8,6 +8,8 @@ Keep them short and player-friendly (not technical), and without emoji.
 
 ## Unreleased
 
+- Choose your style: pick the city you ride for and its colours light up the background in every tool. All six royal cities are in, and Caerleon finally gets its own molten obsidian look instead of plain black.
+- Your crest doubles as your account icon. Swap it in the account panel whenever you want and every tool changes with you.
 - New Crafting Calculator: work out material cost, return rate, focus and profit for any item.
 - New Refining Calculator for refining raw resources (still in development, feedback welcome.)
 - New Food & Potion Crafter in testing: profit for potions and meals, including buffs and recipes!
@@ -24,6 +26,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - New Journal profit option in the Black Market Crafter and Crafting Calculator: counts the crafting fame each craft puts into its artisan journal (Blacksmith, Fletcher, Imbuer or Tinker) and adds the profit from selling the full journal. Turn it on to include it, and open the journal editor to see live empty/full/profit prices per tier for your craft city.
 
 - Crafting Calculator: you can now craft from a hideout or an island instead of a royal city. Hideout and Island sit as toggles next to the other return bonuses, and switching to Hideout lets you set your hideout power and zone quality, which replace the royal city bonus in the return rate. Island stations correctly give no return at all.
+- New look for the landing page: Albion artwork in the header, warm forge lighting with drifting embers, gold trim and stone panels instead of the old dark blue and green.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

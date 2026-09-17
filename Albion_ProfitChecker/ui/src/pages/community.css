@@ -1,10 +1,10 @@
 :root {
-  --bg-start: #0a1219;
-  --bg-end: #05070a;
-  --emerald-accent: #10b981;
-  --cyan-accent: #06b6d4;
-  --purple-accent: #6b21a8;
-  --text-muted: #94a3b8;
+  --bg-start: #12100e;
+  --bg-end: #0b0c12;
+  --emerald-accent: #d9a441;
+  --cyan-accent: #f5cf7a;
+  --purple-accent: #4a74c9;
+  --text-muted: #9aa3b5;
   --silver-metallic: linear-gradient(180deg, #e2e8f0 0%, #94a3b8 100%);
 }
 
@@ -20,7 +20,14 @@ body {
 body.community-page {
   margin: 0;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
-  background: radial-gradient(circle at center, var(--bg-start) 0%, var(--bg-end) 100%);
+  background-color: #0b0c12;
+  background-image:
+    radial-gradient(ellipse 95% 45% at 50% 0%, rgba(74, 116, 201, 0.16) 0%, transparent 62%),
+    radial-gradient(ellipse 70% 40% at 8% 26%, rgba(255, 122, 47, 0.14) 0%, transparent 68%),
+    radial-gradient(ellipse 60% 36% at 92% 55%, rgba(217, 164, 65, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 40% at 30% 88%, rgba(255, 122, 47, 0.08) 0%, transparent 72%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: #ffffff;
   overflow-x: hidden;
   min-height: 100vh;
@@ -52,14 +59,14 @@ body.community-page {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(217, 164, 65, 0.3);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .glass-button:hover {
-  border-color: rgba(16, 185, 129, 0.8);
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+  border-color: rgba(217, 164, 65, 0.8);
+  box-shadow: 0 0 20px rgba(217, 164, 65, 0.2);
   background: rgba(255, 255, 255, 0.07);
 }
 

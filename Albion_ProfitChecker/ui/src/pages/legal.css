@@ -1,23 +1,26 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 :root {
-  --legal-bg: #020205;
-  --legal-surface: rgba(255, 255, 255, 0.04);
-  --legal-border: rgba(255, 255, 255, 0.1);
+  --legal-bg: #0a0c12;
+  --legal-surface: rgba(20, 25, 34, 0.5);
+  --legal-border: rgba(217, 164, 65, 0.12);
   --legal-text: #ffffff;
-  --legal-muted: rgba(255, 255, 255, 0.64);
-  --legal-accent: #10b981;
+  --legal-muted: rgba(226, 232, 240, 0.6);
+  --legal-accent: #d9a441;
 }
 
 body.legal-body {
   margin: 0;
   font-family: "Inter", sans-serif;
   color: var(--legal-text);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
-    linear-gradient(to bottom, transparent, #020205),
-    #020205;
+  background-color: #0a0c12;
+  background-image:
+    radial-gradient(ellipse 95% 45% at 50% 0%, rgba(74, 116, 201, 0.13) 0%, transparent 62%),
+    radial-gradient(ellipse 70% 42% at 6% 28%, rgba(163, 120, 62, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 62% 38% at 94% 56%, rgba(217, 164, 65, 0.05) 0%, transparent 72%),
+    radial-gradient(ellipse 85% 42% at 34% 90%, rgba(58, 84, 140, 0.09) 0%, transparent 74%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   min-height: 100vh;
 }
 

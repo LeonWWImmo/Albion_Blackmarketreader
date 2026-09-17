@@ -263,7 +263,6 @@ export function LoginPage() {
                 <button type="button" className="auth-guest-link" onClick={onGuest}>Continue as guest</button>
                 <span className="auth-guest-note">Test without an account · settings stay on this device only</span>
               </div>
-              <p className="auth-hint">Please confirm your email before logging in.</p>
             </>
           ) : (
             <>

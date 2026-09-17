@@ -22,3 +22,4 @@ export * from "./journals/JournalControls";
 
 export * from "./ui";
 
+export * from "./theme";

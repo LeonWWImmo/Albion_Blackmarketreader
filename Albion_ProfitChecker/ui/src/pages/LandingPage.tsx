@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSeo } from "../shared/seo/useSeo";
-import { assetUrl, assets } from "@shared/index";
+import { assetUrl, assets, CommunityTile } from "@shared/index";
 import "./landing.css";
 
 type ToolSlide = {
@@ -50,31 +50,31 @@ export function LandingPage() {
     []
   );
 
-  const heroDesktop = assetUrl("picture/planeten-1280.jpg");
-  const heroMobile = assetUrl("picture/planeten-768.jpg");
-  const heroOriginal = assetUrl("picture/planeten.png");
-  const heroSrcSet = `${heroMobile} 768w, ${heroDesktop} 1280w, ${heroOriginal} 1740w`;
+  const heroDesktop = assetUrl("picture/hero-forge-1280.jpg");
+  const heroMobile = assetUrl("picture/hero-forge-768.jpg");
+  const heroOriginal = assetUrl("picture/hero-forge.jpg");
+  const heroSrcSet = `${heroMobile} 768w, ${heroDesktop} 1280w, ${heroOriginal} 1672w`;
 
   useSeo({
     title: "Albion Online Tool | Blackmarket Reader & Blackmarket Crafter",
     description:
-      "Albion Online Tool by RomulusKings: Blackmarket Reader dashboard, city comparison, profit filters, and Blackmarket Crafter for profitable crafting routes.",
+      "Free Albion Online community tool by RomulusKings: Blackmarket Reader dashboard, city comparison, profit filters, and Blackmarket Crafter for profitable crafting routes.",
     keywords:
       "Albion Online Tool, Blackmarket Reader, Blackmarket Crafter, Albion Black Market, Albion Blackmarket",
     canonical: "https://blackmarketreader.com/",
     ogTitle: "Albion Online Tool | Blackmarket Reader Dashboard & Blackmarket Crafter",
-    ogDescription: "Live Albion Black Market scans, city filters, profit views, and Blackmarket Crafter access.",
+    ogDescription: "Free Albion Online community tool: Black Market scans, city filters, profit views, and Blackmarket Crafter access. Market data syncs once per day.",
     ogUrl: "https://blackmarketreader.com/",
     ogImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
     twitterTitle: "Albion Online Tool | Blackmarket Reader Dashboard & Blackmarket Crafter",
-    twitterDescription: "Live Albion Black Market scans, city filters, profit views, and Blackmarket Crafter access.",
+    twitterDescription: "Free Albion Online community tool: Black Market scans, city filters, profit views, and Blackmarket Crafter access. Market data syncs once per day.",
     twitterImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "Blackmarket Reader",
       url: "https://blackmarketreader.com/",
-      description: "Albion Online Tool with Blackmarket Reader dashboard and Blackmarket Crafter for live profit analysis.",
+      description: "Free Albion Online community tool with Blackmarket Reader dashboard and Blackmarket Crafter for profit analysis.",
       potentialAction: {
         "@type": "SearchAction",
         target: "https://blackmarketreader.com/#platform-overview",
@@ -165,9 +165,9 @@ export function LandingPage() {
         <div className="eclipse-glow" />
 
         <div className="hero-content">
-          <div className="hero-kicker">Blackmarket Protocol v4.0</div>
+          <div className="hero-kicker">Albion Online Community Tool</div>
           <h1>
-            ANALYZE FIRST.
+            ALBION ONLINE.
             <br />
             <span>PROFIT ALWAYS.</span>
           </h1>
@@ -189,13 +189,13 @@ export function LandingPage() {
                 Food &amp; Potion Crafter
               </a>
             </div>
-            <p>Zero latency market telemetry for high-volume stakeholders.</p>
+            <p>A free community market tool for Albion Online. Free users get one market data sync per day.</p>
           </div>
         </div>
 
         <div className="hero-footer">
           <div className="hero-line" />
-          <span>Institutional Grade Hardware Required</span>
+          <span>Built by the Albion Online community &middot; Not affiliated with Sandbox Interactive</span>
         </div>
       </section>
 
@@ -203,7 +203,7 @@ export function LandingPage() {
         <section className="section" id="platform-overview">
           <div className="container">
             <div className="section-head">
-              <span className="section-eyebrow">Core Infrastructure</span>
+              <span className="section-eyebrow">The Tools</span>
               <h2>Platform Overview</h2>
             </div>
             <div className="perspective-mockup" ref={previewRef}>
@@ -251,7 +251,7 @@ export function LandingPage() {
         <section className="section premium-plus-section" id="bm-crafter-access">
           <div className="container">
             <div className="premium-carousel-head">
-              <span className="section-eyebrow">Premium+ Institutional</span>
+              <span className="section-eyebrow">Crafter Suite</span>
               <h2>Crafter Tools</h2>
             </div>
             <div
@@ -360,8 +360,8 @@ export function LandingPage() {
                   <h3>BM Crafter</h3>
                 </div>
                 <p>
-                  Live Black Market pricing, Sold/Day velocity, and full craft cost with materials + artifacts. Only profitable items
-                  surface.
+                  Black Market pricing from the daily sync, Sold/Day velocity, and full craft cost with materials + artifacts. Only
+                  profitable items surface.
                 </p>
                 <ul>
                   <li>Tier + enchant filters</li>
@@ -423,9 +423,27 @@ export function LandingPage() {
               <details>
                 <summary>How often is data updated?</summary>
                 <p>
-                  Market data is refreshed once per day (around 08:00–09:00 UTC). Every tool shows its own
-                  &ldquo;Last updated&rdquo; time in the top-right corner, so you can always see exactly when the data
-                  it is using was last refreshed — including how long ago that was.
+                  For free users the market data runs on a once per day data sync (around 08:00–09:00 UTC).
+                  It is not a live feed, so prices can be several hours old by the time you read them. Every
+                  tool shows its own &ldquo;Last updated&rdquo; time in the top-right corner, including how long
+                  ago that was, so you always know how fresh the numbers are. For anything expensive, check
+                  the price in game before you commit.
+                </p>
+              </details>
+              <details>
+                <summary>Is this a live market feed?</summary>
+                <p>
+                  No. The numbers come from the Albion Online Data API, which is filled by players running
+                  the data client, and they are synced here once per day for free users. Heavily traded items
+                  are usually close to current, rarely traded ones can lag well behind.
+                </p>
+              </details>
+              <details>
+                <summary>What is this site?</summary>
+                <p>
+                  A free Albion Online community tool built by players, for players. It is not made or
+                  endorsed by Sandbox Interactive, and it has no connection to the game client or your
+                  account.
                 </p>
               </details>
               <details>
@@ -442,7 +460,11 @@ export function LandingPage() {
               </details>
               <details>
                 <summary>Do I need an account?</summary>
-                <p>Yes, login is required to keep region and account features saved.</p>
+                <p>
+                  No. You can open every tool as a guest straight from the login screen. An account only
+                  matters if you want your region, avatar and saved specs to follow you to another device,
+                  since guest settings stay in that one browser.
+                </p>
               </details>
             </div>
           </div>
@@ -460,7 +482,7 @@ export function LandingPage() {
             </div>
             <p>
               Albion Online Tool for Blackmarket Reader & Blackmarket Crafter <br />
-              All Rights Reserved // 2024
+              All Rights Reserved // {new Date().getFullYear()}
             </p>
           </div>
           <div className="footer-columns">
@@ -493,16 +515,7 @@ export function LandingPage() {
           </div>
         </div>
       </footer>
-      <a className="community-tile" href="/community" aria-label="Join the community">
-        <span className="tile-title">
-          <svg className="tile-icon" viewBox="0 0 256 199" aria-hidden="true" focusable="false">
-            <path d="M216.9 16.5A208.5 208.5 0 0 0 164.6 0c-2.3 4-4.9 9.2-6.7 13.4-19.2-2.9-38.1-2.9-57.1 0-1.8-4.2-4.5-9.4-6.8-13.4a209.3 209.3 0 0 0-52.4 16.5C6.6 68.4-3.1 119.4 1.8 169.8a210.1 210.1 0 0 0 63.9 32.7c5.2-7.1 9.8-14.6 13.5-22.7-7.4-2.8-14.5-6.2-21.2-10.2 1.8-1.3 3.5-2.6 5.1-4 40.9 19.1 85.1 19.1 125.5 0 1.7 1.4 3.4 2.7 5.1 4-6.7 4-13.8 7.4-21.2 10.2 3.7 8.1 8.3 15.6 13.5 22.7a210.2 210.2 0 0 0 63.9-32.7c5.8-57.9-9.7-108.4-44.8-153.3ZM85 135.3c-12.5 0-22.7-11.4-22.7-25.4S72.5 84.5 85 84.5s22.7 11.4 22.7 25.4-10.1 25.4-22.7 25.4Zm86 0c-12.5 0-22.7-11.4-22.7-25.4s10.1-25.4 22.7-25.4 22.7 11.4 22.7 25.4-10.1 25.4-22.7 25.4Z" />
-          </svg>
-          Join the Community
-        </span>
-        <span className="tile-subtitle">Discord, deals, live flips</span>
-        <span className="tile-cta">Open Community</span>
-      </a>
+      <CommunityTile />
 
       {zoomSrc ? (
         <div className="zoom-modal" aria-hidden="false" onClick={() => setZoomSrc(null)}>

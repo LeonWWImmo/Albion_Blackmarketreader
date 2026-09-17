@@ -8,7 +8,7 @@ import { isCrawler } from "@shared/auth/crawler";
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin } from "../../../shared";
+import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
 import {
   buildArtefactId,
   buildMaterialId,
@@ -67,7 +67,8 @@ const allowedAvatars = [
   "/picture/Carleon.png",
   "/picture/Martlockwappen.png",
   "/picture/Lymhurstwappen.png",
-  "/picture/Thefortwappen.png"
+  "/picture/Thefortwappen.png",
+  "/picture/Fortsterlingwappen.png"
 ];
 
 declare global {
@@ -139,6 +140,12 @@ export function BmCrafterPage() {
 
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
+  // Faction colours follow the account crest; the picker only asks once.
+  useFactionTheme(user?.avatar ?? null);
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  useEffect(() => {
+    if (user && !hasChosenFaction()) setShowStylePicker(true);
+  }, [user]);
   const [showAccount, setShowAccount] = useState(false);
   const [accountActionMsg, setAccountActionMsg] = useState("");
   const [showRegionConfirm, setShowRegionConfirm] = useState(false);
@@ -172,7 +179,7 @@ export function BmCrafterPage() {
       operatingSystem: "Web",
       url: "https://blackmarketreader.com/bm-crafter",
       description:
-        "Albion Online Black Market crafting calculator with live market inputs, material cost breakdowns, and profit analysis.",
+        "Albion Online Black Market crafting calculator with market inputs, material cost breakdowns, and profit analysis.",
       offers: {
         "@type": "Offer",
         price: "0",
@@ -443,7 +450,7 @@ export function BmCrafterPage() {
       </div>
 
       <header className="bm-header">
-        <MobileNavBurger accent="#2dd4bf" />
+        <MobileNavBurger accent="var(--fx-accent)" />
         <div className="bm-header-row">
           <div className="bm-brand">
             <div className="bm-brand-home">
@@ -558,7 +565,7 @@ export function BmCrafterPage() {
         </div>
       </div>
 
-      <ResponsiveFilters accent="#2dd4bf">
+      <ResponsiveFilters accent="var(--fx-accent)">
       <section className="bm-filters">
         <div className="filter-block">
           <p>Item Tiers</p>
@@ -904,6 +911,20 @@ export function BmCrafterPage() {
         </aside>
       </main>
 
+      {showStylePicker ? (
+        <StylePicker
+          onPick={(faction) => {
+            markFactionChosen();
+            setShowStylePicker(false);
+            void onAvatarChange(faction.crest);
+          }}
+          onSkip={() => {
+            markFactionChosen();
+            setShowStylePicker(false);
+          }}
+        />
+      ) : null}
+      <CommunityTile />
       <ToolGuideLink slug="bm-crafter" authService={authService} />
     </>
   );

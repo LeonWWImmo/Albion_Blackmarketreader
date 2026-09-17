@@ -8,7 +8,7 @@ import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin } from "../../shared";
+import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -145,7 +145,8 @@ const allowedAvatars = [
   "/picture/Carleon.png",
   "/picture/Martlockwappen.png",
   "/picture/Lymhurstwappen.png",
-  "/picture/Thefortwappen.png"
+  "/picture/Thefortwappen.png",
+  "/picture/Fortsterlingwappen.png"
 ];
 
 const TABLE_SECTIONS: TableSection[] = [
@@ -420,6 +421,12 @@ export function CraftingCalculatorPage() {
   const [craftCity, setCraftCity] = useState<string>(() => getStoredCity(["craftCity", "selectedCity", "city", "cityFilter", "currentCity"]));
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
+  // Faction colours follow the account crest; the picker only asks once.
+  useFactionTheme(user?.avatar ?? null);
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  useEffect(() => {
+    if (user && !hasChosenFaction()) setShowStylePicker(true);
+  }, [user]);
   const [showAccount, setShowAccount] = useState(false);
   const [showRegionConfirm, setShowRegionConfirm] = useState(false);
   const [pendingRegion, setPendingRegion] = useState<MarketRegion | null>(null);
@@ -905,7 +912,7 @@ export function CraftingCalculatorPage() {
     } else {
       next.push({
         key: `${selectedItem.id}-artifact-none`,
-        name: "Non Artefakt",
+        name: "Non Artefact",
         qty: 0,
         price: 0,
         isArtifact: true,
@@ -1298,7 +1305,7 @@ export function CraftingCalculatorPage() {
       </div>
 
       <header className="bm-header">
-        <MobileNavBurger accent="#5cf0c8" />
+        <MobileNavBurger accent="var(--fx-accent)" />
         <div className="bm-header-row">
           <div className="bm-brand">
             <div className="bm-brand-home">
@@ -1494,7 +1501,7 @@ export function CraftingCalculatorPage() {
                             {(artefactByTier[rowTier] ?? 0) > 0 ? formatCompact(artefactByTier[rowTier]) : "-"}
                           </td>
                         ) : (
-                          <td rowSpan={section.rows.length} className="mono-num muted">Non Artefakt</td>
+                          <td rowSpan={section.rows.length} className="mono-num muted">Non Artefact</td>
                         )) : null}
                         <td className="mono-num editable-cell" contentEditable suppressContentEditableWarning onBlur={(e) => updateRowField(row.key, "market", e.currentTarget.textContent || "0")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}>{formatCompactOrDash(values.market)}</td>
                         <td className="mono-num muted">{values.sold > 0 ? formatCompact(values.sold) : "-"}</td>
@@ -1897,6 +1904,20 @@ export function CraftingCalculatorPage() {
         </aside>
       </div>
 
+      {showStylePicker ? (
+        <StylePicker
+          onPick={(faction) => {
+            markFactionChosen();
+            setShowStylePicker(false);
+            void onAvatarChange(faction.crest);
+          }}
+          onSkip={() => {
+            markFactionChosen();
+            setShowStylePicker(false);
+          }}
+        />
+      ) : null}
+      <CommunityTile />
       <ToolGuideLink slug="crafting-calculator" authService={authService} />
 
       <SpecsModal

@@ -1,7 +1,7 @@
 :root {
   --primary: #ffffff;
-  --accent: #10b981;
-  --cosmic: #8b5cf6;
+  --accent: #d9a441;
+  --cosmic: #4a74c9;
   --deep-black: #020205;
   --surface-institutional: rgba(255, 255, 255, 0.03);
 }
@@ -12,7 +12,16 @@
 
 body {
   margin: 0;
-  background-color: var(--deep-black);
+  /* One continuous backdrop for the whole page. Fixed, so hero, sections and footer
+     all sit on the same light instead of each painting their own and seaming. */
+  background-color: #0a0c12;
+  background-image:
+    radial-gradient(ellipse 95% 45% at 50% 0%, rgba(74, 116, 201, 0.13) 0%, transparent 62%),
+    radial-gradient(ellipse 70% 42% at 6% 28%, rgba(163, 120, 62, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 62% 38% at 94% 56%, rgba(217, 164, 65, 0.05) 0%, transparent 72%),
+    radial-gradient(ellipse 85% 42% at 34% 90%, rgba(58, 84, 140, 0.09) 0%, transparent 74%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: #ffffff;
   font-family: "Inter", sans-serif;
 }
@@ -112,7 +121,7 @@ body {
   z-index: 0;
   background:
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(74, 116, 201, 0.05) 0%, transparent 50%),
     linear-gradient(to bottom, transparent, #020205);
 }
 
@@ -297,8 +306,8 @@ body {
   justify-content: center;
   padding: 18px 40px;
   border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  background: rgba(217, 164, 65, 0.18);
   color: #ffffff;
   text-decoration: none;
   font-weight: 800;
@@ -310,7 +319,7 @@ body {
 
 .premium-plus-cta:hover {
   transform: translateY(-2px);
-  border-color: rgba(16, 185, 129, 0.7);
+  border-color: rgba(217, 164, 65, 0.7);
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
 }
 
@@ -359,8 +368,8 @@ body {
   transform: translateZ(120px) scale(1);
   opacity: 1;
   filter: blur(0);
-  border-color: rgba(16, 185, 129, 0.45);
-  box-shadow: 0 0 40px rgba(16, 185, 129, 0.18), 0 40px 90px rgba(0, 0, 0, 0.65);
+  border-color: rgba(217, 164, 65, 0.45);
+  box-shadow: 0 0 40px rgba(217, 164, 65, 0.18), 0 40px 90px rgba(0, 0, 0, 0.65);
   z-index: 3;
 }
 
@@ -396,9 +405,9 @@ body {
 .tool-badge {
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  border: 1px solid rgba(217, 164, 65, 0.35);
+  background: rgba(217, 164, 65, 0.12);
+  color: #d9a441;
   font-size: 9px;
   letter-spacing: 0.2em;
 }
@@ -411,7 +420,7 @@ body {
 
 .tool-media {
   border-radius: 18px;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  border: 1px solid rgba(217, 164, 65, 0.25);
   overflow: hidden;
 }
 
@@ -441,8 +450,8 @@ body {
   justify-content: center;
   padding: 16px 34px;
   border-radius: 16px;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  background: rgba(217, 164, 65, 0.18);
   color: #ffffff;
   text-decoration: none;
   font-weight: 800;
@@ -470,8 +479,8 @@ body {
 }
 
 .carousel-nav:hover {
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #10b981;
+  border-color: rgba(217, 164, 65, 0.5);
+  color: #d9a441;
 }
 
 .carousel-nav.prev {
@@ -496,7 +505,7 @@ body {
 }
 
 .carousel-dots span.active {
-  background: rgba(16, 185, 129, 0.7);
+  background: rgba(217, 164, 65, 0.7);
 }
 
 .carousel-progress {
@@ -512,7 +521,7 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  background: rgba(16, 185, 129, 0.7);
+  background: rgba(217, 164, 65, 0.7);
   transform-origin: left;
   animation-name: progress-fill;
   animation-timing-function: linear;
@@ -573,8 +582,8 @@ body {
 }
 
 .screen-card:hover {
-  border-color: rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.25), 0 28px 70px rgba(0, 0, 0, 0.55);
+  border-color: rgba(217, 164, 65, 0.4);
+  box-shadow: 0 0 24px rgba(217, 164, 65, 0.25), 0 28px 70px rgba(0, 0, 0, 0.55);
   transform: translateY(-4px) scale(1.02);
 }
 
@@ -585,7 +594,7 @@ body {
   padding: 6px 12px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  border: 1px solid rgba(217, 164, 65, 0.4);
   font-size: 12px;
 }
 
@@ -609,14 +618,14 @@ body {
   width: 100%;
   display: block;
   border-radius: 24px;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35), 0 36px 90px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  box-shadow: 0 0 18px rgba(217, 164, 65, 0.35), 0 36px 90px rgba(0, 0, 0, 0.55);
   margin-bottom: 0;
 }
 
 .mockup-preview:hover {
-  border-color: rgba(16, 185, 129, 0.7);
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.45), 0 36px 90px rgba(0, 0, 0, 0.55);
+  border-color: rgba(217, 164, 65, 0.7);
+  box-shadow: 0 0 24px rgba(217, 164, 65, 0.45), 0 36px 90px rgba(0, 0, 0, 0.55);
 }
 
 .feature-section {
@@ -909,58 +918,6 @@ body {
   cursor: pointer;
 }
 
-.community-tile {
-  position: fixed;
-  right: 28px;
-  bottom: 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px 22px;
-  border-radius: 16px;
-  background: rgba(7, 12, 18, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45);
-  color: #ffffff;
-  text-decoration: none;
-  text-align: left;
-  max-width: 260px;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
-  z-index: 60;
-}
-
-.tile-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.tile-icon {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
-  flex: 0 0 auto;
-}
-
-.community-tile:hover {
-  border-color: rgba(125, 211, 255, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 36px rgba(0, 0, 0, 0.5);
-}
-
-.tile-subtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
-}
-
-.tile-cta {
-  font-size: 13px;
-  font-weight: 800;
-  color: #84f2d8;
-}
-
 @media (min-width: 768px) {
   .nav-links {
     display: flex;
@@ -1037,19 +994,6 @@ body {
     display: none;
   }
 
-  .community-tile {
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 96px;
-    max-width: 280px;
-    width: calc(100% - 36px);
-    text-align: center;
-    align-items: center;
-  }
-
-  .tile-title {
-    justify-content: center;
-  }
 }
 
 @media (max-width: 1100px) {
@@ -1174,21 +1118,6 @@ body {
     object-position: center 15%;
   }
 
-  .community-tile {
-    position: static;
-    margin: 28px auto 0;
-    right: auto;
-    bottom: auto;
-    transform: none;
-    width: calc(100% - 32px);
-    max-width: 320px;
-    align-items: center;
-    text-align: center;
-  }
-
-  .tile-title {
-    justify-content: center;
-  }
 }
 
 @media (max-width: 480px) {
@@ -1222,13 +1151,6 @@ body {
     justify-content: center;
   }
 
-  .tile-title {
-    font-size: 14px;
-  }
-
-  .tile-subtitle {
-    font-size: 12px;
-  }
 }
 
 /* Mobile polish layer: keep this at the end to override earlier breakpoint collisions */
@@ -1269,7 +1191,7 @@ body {
   .hero-overlay {
     background:
       radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.11) 0%, transparent 48%),
-      radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 55%),
+      radial-gradient(circle at 80% 20%, rgba(217, 164, 65, 0.06) 0%, transparent 55%),
       linear-gradient(to bottom, rgba(2, 2, 5, 0.22), #020205 78%);
   }
 
@@ -1291,7 +1213,7 @@ body {
   }
 
   .hero h1 {
-    font-size: clamp(33px, 11vw, 52px);
+    font-size: clamp(30px, 9.4vw, 52px);
     line-height: 0.95;
     margin-bottom: 14px;
   }
@@ -1389,7 +1311,7 @@ body {
     border-radius: 18px;
     padding: 14px;
     gap: 12px;
-    border-color: rgba(16, 185, 129, 0.32);
+    border-color: rgba(217, 164, 65, 0.32);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
     background: linear-gradient(180deg, rgba(11, 16, 23, 0.92), rgba(7, 10, 16, 0.9));
   }
@@ -1397,7 +1319,7 @@ body {
   .tool-card.active {
     display: flex;
     transform: none;
-    box-shadow: 0 0 16px rgba(16, 185, 129, 0.14), 0 14px 32px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 16px rgba(217, 164, 65, 0.14), 0 14px 32px rgba(0, 0, 0, 0.55);
   }
 
   .tool-card.side-left,
@@ -1566,30 +1488,6 @@ body {
     font-size: 11px;
   }
 
-  .community-tile {
-    position: static;
-    width: 100%;
-    max-width: none;
-    margin: 18px 0 0;
-    transform: none;
-    right: auto;
-    bottom: auto;
-    border-radius: 12px;
-    padding: 14px;
-    align-items: flex-start;
-  }
-
-  .tile-title {
-    font-size: 14px;
-  }
-
-  .tile-subtitle {
-    font-size: 12px;
-  }
-
-  .tile-cta {
-    font-size: 11px;
-  }
 }
 
 @media (max-width: 540px) {
@@ -1626,4 +1524,293 @@ body {
   #platform-overview {
     overflow-x: hidden;
   }
+}
+
+/* ===========================================================================
+   Albion Online theme
+   The base styling was cool teal/violet "fintech". Albion's own art direction is
+   forge light: warm gold trim, ember orange and royal blue banners over dark stone.
+   These rules sit last on purpose so they re-colour the blocks above without
+   touching any of the layout or responsive rules.
+   =========================================================================== */
+
+:root {
+  --albion-gold: #d9a441;
+  --albion-gold-bright: #f5cf7a;
+  --albion-ember: #ff7a2f;
+  --albion-blue: #4a74c9;
+  --albion-parchment: #f0e3c8;
+  --albion-stone: #141a24;
+}
+
+/* --- Hero atmosphere ----------------------------------------------------- */
+
+/* Warm forge light low-left (matching the brazier in the artwork), cool banner
+   blue up-right, then a deep fade so the headline keeps its contrast. */
+.hero-overlay {
+  background:
+    radial-gradient(ellipse 58% 52% at 12% 80%, rgba(214, 126, 62, 0.18) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 45% at 88% 16%, rgba(74, 116, 201, 0.22) 0%, transparent 65%),
+    radial-gradient(circle at 50% 46%, rgba(226, 206, 170, 0.07) 0%, transparent 44%),
+    linear-gradient(to bottom, rgba(9, 10, 16, 0.55) 0%, transparent 26%, rgba(11, 12, 18, 0.45) 58%, rgba(11, 12, 18, 0.9) 84%, #0b0c12 97%);
+}
+
+/* The old white "eclipse" becomes the glow of the forge, breathing slightly. */
+.eclipse-glow {
+  width: 900px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(236, 186, 122, 0.16) 0%, rgba(214, 126, 62, 0.05) 45%, transparent 72%);
+  animation: albion-forge-breathe 7s ease-in-out infinite;
+}
+
+@keyframes albion-forge-breathe {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.06); }
+}
+
+/* Embers drifting up out of the forge. One element, many box-shadows — no extra
+   DOM and no images. */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  bottom: -20px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--albion-ember);
+  box-shadow:
+    40px 0 0 rgba(255, 138, 61, 0.75), 140px 30px 0 -1px rgba(255, 176, 92, 0.55),
+    260px -10px 0 rgba(255, 122, 47, 0.6), 380px 40px 0 -1px rgba(255, 190, 120, 0.4),
+    520px 10px 0 rgba(255, 138, 61, 0.5), 640px -20px 0 -1px rgba(255, 176, 92, 0.45),
+    780px 30px 0 rgba(255, 122, 47, 0.5), 910px 0 0 -1px rgba(255, 200, 140, 0.35),
+    1040px 25px 0 rgba(255, 138, 61, 0.45), 1180px -15px 0 -1px rgba(255, 176, 92, 0.4),
+    1320px 20px 0 rgba(255, 122, 47, 0.4);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+  animation: albion-embers 11s linear infinite;
+}
+
+@keyframes albion-embers {
+  0%   { transform: translateY(0) translateX(0);        opacity: 0; }
+  12%  { opacity: 0.9; }
+  70%  { opacity: 0.5; }
+  100% { transform: translateY(-78vh) translateX(70px); opacity: 0; }
+}
+
+/* --- Typography accents --------------------------------------------------- */
+
+.hero-kicker {
+  color: var(--albion-gold);
+  text-shadow: 0 0 22px rgba(217, 164, 65, 0.4);
+}
+
+/* Molten gold instead of the silver fade. */
+.hero h1 span {
+  background: linear-gradient(to bottom, var(--albion-gold-bright) 0%, var(--albion-gold) 48%, rgba(180, 122, 40, 0.55) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.hero-actions p {
+  color: rgba(240, 227, 200, 0.55);
+}
+
+.hero-footer {
+  color: rgba(217, 164, 65, 0.55);
+}
+
+.hero-footer .hero-line {
+  background: linear-gradient(to right, transparent, rgba(217, 164, 65, 0.6));
+}
+
+.section-eyebrow {
+  color: var(--albion-gold);
+}
+
+/* --- Calls to action ------------------------------------------------------ */
+
+/* Stone plates with a gold rim, lighting up like heated metal on hover. */
+.hero-cta {
+  background: linear-gradient(180deg, rgba(26, 32, 44, 0.9), rgba(14, 18, 26, 0.92));
+  border: 1px solid rgba(217, 164, 65, 0.45);
+  color: var(--albion-parchment);
+  backdrop-filter: blur(3px);
+  box-shadow: inset 0 1px 0 rgba(245, 207, 122, 0.12);
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, color 200ms ease;
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  border-color: var(--albion-gold-bright);
+  color: #fff6e2;
+  box-shadow:
+    0 0 0 1px rgba(245, 207, 122, 0.25),
+    0 10px 30px rgba(255, 122, 47, 0.28),
+    inset 0 1px 0 rgba(245, 207, 122, 0.3);
+}
+
+.nav-access {
+  border-bottom-color: rgba(217, 164, 65, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eclipse-glow,
+  .hero::after {
+    animation: none;
+  }
+
+  .hero::after {
+    opacity: 0.35;
+  }
+}
+
+/* --- Stone and light for the page below the hero --------------------------- */
+
+/* Pure black read as flat and cold. Instead of another image, the page below the hero
+   is lit purely with colour: warm stone, forge orange low-left and banner blue up-top,
+   so it feels like the same hall without competing with the text. */
+.deep-black {
+  position: relative;
+  background: transparent;
+}
+
+/* A thin gold rule between sections, like the trim on Albion's UI panels. */
+.section + .section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(760px, 82%);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(217, 164, 65, 0.3), transparent);
+}
+
+/* Cards read as carved stone panels with a gold rim that warms on hover. */
+.feature-card {
+  background:
+    linear-gradient(180deg, rgba(38, 32, 24, 0.5) 0%, rgba(16, 18, 26, 0.55) 100%);
+  border-color: rgba(217, 164, 65, 0.16);
+  box-shadow: inset 0 1px 0 rgba(245, 207, 122, 0.07);
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(217, 164, 65, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(245, 207, 122, 0.16),
+    0 18px 44px rgba(0, 0, 0, 0.55),
+    0 0 26px rgba(255, 122, 47, 0.1);
+}
+
+.feature-card p,
+.feature-card ul {
+  color: rgba(240, 227, 200, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-card,
+  .feature-card:hover {
+    transform: none;
+  }
+}
+
+/* --- Everything below the fold, pulled into the same palette ---------------- */
+
+/* The footer sits outside <main>, so it did not inherit the warm gradient and cut
+   off hard. Continue the gradient into it and close the page with a gold rule. */
+.premium-footer {
+  position: relative;
+  border-top: 0;
+  background: transparent;
+}
+
+.premium-footer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(900px, 86%);
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(217, 164, 65, 0.32), transparent);
+}
+
+.footer-title {
+  color: rgba(217, 164, 65, 0.7);
+}
+
+.footer-columns a {
+  color: rgba(240, 227, 200, 0.68);
+  transition: color 160ms ease;
+}
+
+.footer-columns a:hover {
+  color: var(--albion-gold-bright);
+}
+
+.footer-disclaimer {
+  color: rgba(240, 227, 200, 0.4);
+}
+
+/* Small rules and dividers pick up the gold trim. */
+.hero-line,
+.join-divider {
+  background: linear-gradient(to right, transparent, rgba(217, 164, 65, 0.55), transparent);
+}
+
+/* Carousel progress track + the muted badge were neutral grey. */
+.carousel-progress {
+  background: rgba(217, 164, 65, 0.14);
+}
+
+.tool-badge.muted {
+  border-color: rgba(217, 164, 65, 0.28);
+  background: rgba(217, 164, 65, 0.08);
+  color: rgba(240, 227, 200, 0.55);
+}
+
+/* Discord panel: same stone plate as the hero buttons. */
+.join-cta {
+  border-color: rgba(217, 164, 65, 0.25);
+  background: linear-gradient(180deg, rgba(38, 32, 24, 0.5), rgba(16, 18, 26, 0.55));
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.join-cta:hover {
+  border-color: rgba(217, 164, 65, 0.5);
+  box-shadow: 0 0 26px rgba(255, 122, 47, 0.12);
+}
+
+.zoom-close {
+  border-color: rgba(217, 164, 65, 0.35);
+  background: rgba(20, 16, 12, 0.85);
+  color: var(--albion-gold-bright);
+}
+
+.zoom-close:hover {
+  border-color: var(--albion-gold-bright);
+  background: rgba(40, 30, 18, 0.9);
+}
+
+/* The artwork used to stop dead at the bottom of the hero. Fading the image itself
+   lets the page background show through, so there is no edge to see. */
+.hero-media,
+.hero-media img,
+.hero-overlay,
+.eclipse-glow {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgba(0, 0, 0, 0.55) 78%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgba(0, 0, 0, 0.55) 78%, transparent 97%);
+}
+
+/* With the image faded out there is nothing left to cover, so the overlay ends clear. */
+.hero-overlay {
+  background:
+    radial-gradient(ellipse 58% 52% at 12% 80%, rgba(214, 126, 62, 0.18) 0%, transparent 62%),
+    radial-gradient(ellipse 55% 45% at 88% 16%, rgba(74, 116, 201, 0.22) 0%, transparent 65%),
+    radial-gradient(circle at 50% 46%, rgba(226, 206, 170, 0.07) 0%, transparent 44%),
+    linear-gradient(to bottom, rgba(9, 10, 16, 0.55) 0%, transparent 26%, rgba(11, 12, 18, 0.35) 62%, transparent 100%);
 }
