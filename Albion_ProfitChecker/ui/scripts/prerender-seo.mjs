@@ -42,11 +42,11 @@ const ROUTES = [
     path: "dashboard",
     title: "Albion Online Black Market Dashboard | Blackmarket Reader",
     description:
-      "Albion Online Black Market dashboard with live deal discovery, city price comparison, and profit filters to find the most profitable Black Market flips.",
+      "Free Albion Online community tool: Black Market dashboard with daily-synced deal discovery, city price comparison, and profit filters to find the most profitable Black Market flips.",
     keywords: "Albion Online Black Market, Albion Black Market dashboard, Albion market flipper, Albion price comparison",
     h1: "Albion Online Black Market Dashboard",
     intro:
-      "Discover the most profitable Albion Online Black Market deals. Compare royal city sell prices against Black Market buy orders, filter by profit and sold-per-day, and spot flips at a glance with live market data.",
+      "Discover the most profitable Albion Online Black Market deals. Compare royal city sell prices against Black Market buy orders, filter by profit and sold-per-day, and spot flips at a glance. Market data is synced once per day for free users.",
   },
   {
     path: "bm-crafter",

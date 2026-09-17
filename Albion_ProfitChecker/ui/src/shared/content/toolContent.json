@@ -13,7 +13,7 @@
       {
         "heading": "What the tool calculates for every row",
         "paragraphs": [
-          "For each craftable item the calculator pulls your material prices, applies your return rate, adds the station fee and any artefact cost, and compares the result against the live Black Market buy order.",
+          "For each craftable item the calculator pulls your material prices, applies your return rate, adds the station fee and any artefact cost, and compares the result against the latest synced Black Market buy order.",
           "craftCost = materials x (1 - returnRate) + artefact + stationFee",
           "profit = blackMarketPrice - craftCost",
           "Return rate is where most spreadsheets go wrong. Albion does not simply hand back a flat percentage of your materials. Every bonus you stack runs through a diminishing returns curve:",

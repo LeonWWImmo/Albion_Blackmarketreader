@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, exitGuest, isCrawler, GuestSignInLink, exitGuestToLogin } from "@shared/index";
+import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, exitGuest, isCrawler, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "@shared/index";
 import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
@@ -46,7 +46,8 @@ const allowedAvatars = [
   "/picture/Carleon.png",
   "/picture/Martlockwappen.png",
   "/picture/Lymhurstwappen.png",
-  "/picture/Thefortwappen.png"
+  "/picture/Thefortwappen.png",
+  "/picture/Fortsterlingwappen.png"
 ];
 
 const crestMap: Record<City, string> = {
@@ -57,16 +58,6 @@ const crestMap: Record<City, string> = {
   Thetford: "/picture/Thefortwappen.png",
   Bridgewatch: "/picture/Bridgewatch.png",
   Caerleon: "/picture/Carleon.png"
-};
-
-const cityBackgroundMap: Record<City, string> = {
-  ALL: "radial-gradient(circle at 20% 30%, rgba(92,240,200,0.14), transparent 40%), radial-gradient(circle at 80% 20%, rgba(125,211,255,0.12), transparent 35%), radial-gradient(circle at 60% 80%, rgba(92,240,200,0.10), transparent 40%), linear-gradient(180deg, #0a0d14, #080b12)",
-  Lymhurst: "radial-gradient(circle at 20% 30%, rgba(92,240,200,0.18), transparent 40%), radial-gradient(circle at 80% 20%, rgba(92,240,200,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
-  Martlock: "radial-gradient(circle at 20% 30%, rgba(94,199,255,0.18), transparent 40%), radial-gradient(circle at 80% 20%, rgba(118,187,255,0.12), transparent 35%), linear-gradient(180deg, #0b0f15, #0a0d14)",
-  "Fort Sterling": "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.16), transparent 42%), radial-gradient(circle at 75% 20%, rgba(180,180,180,0.08), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
-  Thetford: "radial-gradient(circle at 20% 30%, rgba(158,117,255,0.16), transparent 42%), radial-gradient(circle at 75% 20%, rgba(118,87,255,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
-  Bridgewatch: "radial-gradient(circle at 20% 30%, rgba(255,170,92,0.18), transparent 42%), radial-gradient(circle at 75% 20%, rgba(255,140,60,0.10), transparent 35%), linear-gradient(180deg, #0b0f15, #090c12)",
-  Caerleon: "radial-gradient(circle at 20% 30%, rgba(30,30,30,0.22), transparent 42%), radial-gradient(circle at 75% 20%, rgba(0,0,0,0.14), transparent 35%), linear-gradient(180deg, #0b0f15, #080b12)"
 };
 
 const nameMap: Record<string, string> = {
@@ -581,6 +572,12 @@ export function DashboardPage() {
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [regionService, setRegionService] = useState<RegionService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
+  // Faction colours follow the account crest; the picker only asks once.
+  useFactionTheme(user?.avatar ?? null);
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  useEffect(() => {
+    if (user && !hasChosenFaction()) setShowStylePicker(true);
+  }, [user]);
 
   const [region, setRegion] = useState<Region>("us");
   const [city, setCity] = useSessionState<City>("dash:city", "ALL");
@@ -617,18 +614,18 @@ export function DashboardPage() {
   useSeo({
     title: "Blackmarket Reader Dashboard | Albion Online Tool",
     description:
-      "Blackmarket Reader Dashboard for Albion Online: live Black Market profit scans, city filters, tiers, and fast deal discovery.",
+      "Blackmarket Reader Dashboard, a free Albion Online community tool: Black Market profit scans, city filters, tiers, and fast deal discovery, synced once per day.",
     keywords:
       "Blackmarket Reader, Albion Online Tool, Albion Black Market Dashboard, Albion Blackmarket, Market Reader",
     canonical: "https://blackmarketreader.com/dashboard",
     ogTitle: "Blackmarket Reader Dashboard | Albion Online Tool",
     ogDescription:
-      "Live Albion Black Market data with city comparison, tier filters, and profit tracking in the Blackmarket Reader dashboard.",
+      "Albion Black Market data with city comparison, tier filters, and profit tracking in the Blackmarket Reader dashboard. Synced once per day.",
     ogUrl: "https://blackmarketreader.com/dashboard",
     ogImage: "https://blackmarketreader.com/picture/Profit-Dashboard.png",
     twitterTitle: "Blackmarket Reader Dashboard | Albion Online Tool",
     twitterDescription:
-      "Live Albion Black Market data with city comparison, tier filters, and profit tracking in the Blackmarket Reader dashboard.",
+      "Albion Black Market data with city comparison, tier filters, and profit tracking in the Blackmarket Reader dashboard. Synced once per day.",
     twitterImage: "https://blackmarketreader.com/picture/Profit-Dashboard.png",
     structuredData: {
       "@context": "https://schema.org",
@@ -638,7 +635,7 @@ export function DashboardPage() {
       operatingSystem: "Web",
       url: "https://blackmarketreader.com/dashboard",
       description:
-        "Albion Online Black Market dashboard with live city comparison, deal filtering, and profit tracking.",
+        "Albion Online Black Market dashboard with city comparison, deal filtering, and profit tracking.",
       offers: {
         "@type": "Offer",
         price: "0",
@@ -988,7 +985,6 @@ export function DashboardPage() {
   const chart = useMemo(() => buildChartGeometry(chartSeries.values), [chartSeries.values]);
   const chartStats = useMemo(() => calcStats(chartSeries.values), [chartSeries.values]);
   const stamp = useMemo(() => formatUpdated(dataUpdatedIso), [dataUpdatedIso]);
-  const cityBackground = useMemo(() => cityBackgroundMap[city] || cityBackgroundMap.ALL, [city]);
 
   useEffect(() => {
     setChartHover(null);
@@ -1051,7 +1047,7 @@ export function DashboardPage() {
   if (!user) {
     return (
       <div className="dashboard dash-page">
-        <div className="static-bg" style={{ background: cityBackground }} />
+        <div className="static-bg" />
         <div className="loading-overlay" style={{ display: "flex" }}>
           <div className="loading-spinner" />
           <div className="loading-text">Checking session...</div>
@@ -1062,21 +1058,52 @@ export function DashboardPage() {
 
   return (
     <div className="dashboard dash-page">
-      <div className="static-bg" style={{ background: cityBackground }} />
+      <div className="static-bg" />
       {toastText ? <div id="toast" className={`toast ${toastVisible ? "visible" : ""}`}>{toastText}</div> : null}
       <div className="loading-overlay" style={{ display: loading ? "flex" : "none" }}>
         <div className="loading-spinner" />
         <div className="loading-text">Loading data...</div>
       </div>
       {showRegionModal ? (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Select your data region</h3>
-            <p>Please choose which server data you want to load.</p>
-            <div className="region-actions">
-              <button onClick={() => onRegionConfirm("us")}>America</button>
-              <button onClick={() => onRegionConfirm("eu")}>Europe</button>
+        <div className="modal-overlay region-overlay">
+          <div className="region-card">
+            <span className="region-eyebrow">Albion Online</span>
+            <h3>Choose your server region</h3>
+            <p className="region-lead">
+              Prices differ per server. Pick the one you play on &mdash; you can switch it any time
+              from your account panel.
+            </p>
+            <div className="region-grid">
+              <button type="button" className="region-option" onClick={() => onRegionConfirm("eu")}>
+                <span className="region-globe" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <ellipse cx="12" cy="12" rx="4.2" ry="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M3.2 9h17.6M3.2 15h17.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                </span>
+                <span className="region-name">Europe</span>
+                <span className="region-sub">EU server data</span>
+                <span className="region-go" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
+              </button>
+              <button type="button" className="region-option" onClick={() => onRegionConfirm("us")}>
+                <span className="region-globe" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <ellipse cx="12" cy="12" rx="4.2" ry="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M3.2 9h17.6M3.2 15h17.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                </span>
+                <span className="region-name">America</span>
+                <span className="region-sub">US server data</span>
+                <span className="region-go" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </span>
+              </button>
             </div>
+            <p className="region-foot">Market data is synced once per day for free users.</p>
           </div>
         </div>
       ) : null}
@@ -1144,7 +1171,7 @@ export function DashboardPage() {
       </aside>
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
-        <MobileNavBurger accent="#5cf0c8" />
+        <MobileNavBurger accent="var(--fx-accent)" />
         <a className="topbar-brand" href="/">
           <img src={assetUrl("picture/testo ohne background.png")} alt="Logo" className="topbar-logo" />
           <span className="topbar-title">RomulusKings Market Reader</span>
@@ -1269,13 +1296,13 @@ export function DashboardPage() {
           </h1>
           <div className="hero-subline">
             <span className="hero-line" />
-            <p>&gt;= 30 % PROFIT  -  14-DAY RANGE  -  LIVE BLACK MARKET DATA</p>
+            <p>&gt;= 30 % PROFIT  -  14-DAY RANGE  -  DAILY BLACK MARKET SYNC</p>
             <span className="hero-line" />
           </div>
         </section>
 
         <section className="kpi-row">
-          <article className="kpi-card"><span className="kpi-label">Live Signals</span><strong className="kpi-value">{kpis.deals}</strong></article>
+          <article className="kpi-card"><span className="kpi-label">Signals</span><strong className="kpi-value">{kpis.deals}</strong></article>
           <article className="kpi-card"><span className="kpi-label">Top Spread</span><strong className="kpi-value">{kpis.best}</strong></article>
           <article className="kpi-card"><span className="kpi-label">Median ROI</span><strong className="kpi-value">{kpis.avg}</strong></article>
           <article className="kpi-card"><span className="kpi-label">Max Liquidity</span><strong className="kpi-value">{kpis.silver}</strong></article>
@@ -1319,8 +1346,8 @@ export function DashboardPage() {
             >
               <defs>
                 <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgba(92,240,200,0.35)" />
-                  <stop offset="100%" stopColor="rgba(92,240,200,0.02)" />
+                  <stop offset="0%" style={{ stopColor: "rgba(var(--fx-accent-rgb), 0.35)" }} />
+                  <stop offset="100%" style={{ stopColor: "rgba(var(--fx-accent-rgb), 0.02)" }} />
                 </linearGradient>
               </defs>
               <path d={chart.area} className="chart-area" />
@@ -1393,7 +1420,7 @@ export function DashboardPage() {
         <div className="chart-divider" />
 
         <section className="cards-section">
-          <ResponsiveFilters accent="#5cf0c8">
+          <ResponsiveFilters accent="var(--fx-accent)">
           <div className="filters-wrap">
             <div className="filters-intro">
               <span className="filters-kicker">Signal Filters</span>
@@ -1441,9 +1468,9 @@ export function DashboardPage() {
               <div className="row"><span>ID</span><span className="val">{item.id}</span></div>
               <div className="row"><span>{item.city}</span><span className="val">{Number(item.lym || 0).toLocaleString("de-DE")}</span></div>
               <div className="row"><span>Black Market</span><span className="val">{Number(item.bm || 0).toLocaleString("de-DE")}</span></div>
-              <div className="row"><span>Sold/Tag</span><span className="val">{item.sold ?? 0}</span></div>
+              <div className="row"><span>Sold/Day</span><span className="val">{item.sold ?? 0}</span></div>
               <div className={`profit ${sortBySilver ? (item.bm - item.lym < 0 ? "negative" : "") : (item.profit < 0 ? "negative" : "")}`.trim()}>
-                {sortBySilver ? `Profit: ${(item.bm - item.lym).toLocaleString("de-DE")} Silber` : `Profit: ${item.profit.toFixed(1)}%`}
+                {sortBySilver ? `Profit: ${(item.bm - item.lym).toLocaleString("de-DE")} Silver` : `Profit: ${item.profit.toFixed(1)}%`}
                 <span className="span-tag">{item.span || "14d"}</span>
               </div>
             </article>
@@ -1451,14 +1478,20 @@ export function DashboardPage() {
         </section>
         <div ref={cardsSentinelRef} className="cards-sentinel" aria-hidden="true" />
 
-        <a className="community-tile compact" href="/community" aria-label="Join Discord">
-          <span className="tile-icon-wrap">
-            <svg className="tile-icon" viewBox="0 0 256 199" aria-hidden="true" focusable="false">
-              <path d="M216.9 16.5A208.5 208.5 0 0 0 164.6 0c-2.3 4-4.9 9.2-6.7 13.4-19.2-2.9-38.1-2.9-57.1 0-1.8-4.2-4.5-9.4-6.8-13.4a209.3 209.3 0 0 0-52.4 16.5C6.6 68.4-3.1 119.4 1.8 169.8a210.1 210.1 0 0 0 63.9 32.7c5.2-7.1 9.8-14.6 13.5-22.7-7.4-2.8-14.5-6.2-21.2-10.2 1.8-1.3 3.5-2.6 5.1-4 40.9 19.1 85.1 19.1 125.5 0 1.7 1.4 3.4 2.7 5.1 4-6.7 4-13.8 7.4-21.2 10.2 3.7 8.1 8.3 15.6 13.5 22.7a210.2 210.2 0 0 0 63.9-32.7c5.8-57.9-9.7-108.4-44.8-153.3ZM85 135.3c-12.5 0-22.7-11.4-22.7-25.4S72.5 84.5 85 84.5s22.7 11.4 22.7 25.4-10.1 25.4-22.7 25.4Zm86 0c-12.5 0-22.7-11.4-22.7-25.4s10.1-25.4 22.7-25.4 22.7 11.4 22.7 25.4-10.1 25.4-22.7 25.4Z" />
-            </svg>
-          </span>
-          <span className="tile-copy"><span className="tile-title">Discord</span></span>
-        </a>
+        {showStylePicker && !showRegionModal ? (
+          <StylePicker
+            onPick={(faction) => {
+              markFactionChosen();
+              setShowStylePicker(false);
+              void onAvatarChange(faction.crest);
+            }}
+            onSkip={() => {
+              markFactionChosen();
+              setShowStylePicker(false);
+            }}
+          />
+        ) : null}
+        <CommunityTile />
       </main>
       </div>
 

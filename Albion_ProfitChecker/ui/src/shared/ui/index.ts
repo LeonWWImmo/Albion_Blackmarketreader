@@ -5,6 +5,7 @@ export * from "./Modal";
 export * from "./ResponsiveFilters";
 export * from "./MobileNavBurger";
 export * from "./NumberStepper";
+export * from "./CommunityTile";
 export * from "./GuestSignInLink";
 export * from "./cn";
 

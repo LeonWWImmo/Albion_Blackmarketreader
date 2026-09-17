@@ -169,7 +169,7 @@ body.food-potion-crafter-body {
   border-radius: 16px;
   background: rgba(10, 15, 18, 0.92);
   padding: 16px 18px;
-  box-shadow: 0 0 16px rgba(45, 212, 191, 0.06);
+  box-shadow: 0 0 16px rgba(var(--fx-accent-rgb), 0.06);
 }
 
 .fp-workbench-inline .detail-grid-12 {
@@ -199,7 +199,7 @@ body.food-potion-crafter-body {
 .material-total {
   font-size: 11px;
   font-weight: 700;
-  color: var(--primary, #2dd4bf);
+  color: var(--primary, var(--fx-accent));
   font-family: "JetBrains Mono", monospace;
 }
 
@@ -209,7 +209,7 @@ body.food-potion-crafter-body {
   flex-direction: column;
   gap: 12px;
   background: linear-gradient(180deg, rgba(13, 24, 26, 0.96), rgba(8, 16, 18, 0.98));
-  border: 1px solid rgba(45, 212, 191, 0.22);
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.22);
 }
 
 .fp-summary-card-head {
@@ -350,14 +350,14 @@ body.food-potion-crafter-body {
   color: var(--text-secondary, #9db2c8);
   letter-spacing: 0.04em;
   padding: 6px 12px;
-  border: 1px solid rgba(45, 212, 191, 0.3);
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.3);
   border-radius: 999px;
-  background: rgba(45, 212, 191, 0.08);
+  background: rgba(var(--fx-accent-rgb), 0.08);
   white-space: nowrap;
 }
 
 .fp-batch-badge strong {
-  color: var(--primary, #2dd4bf);
+  color: var(--primary, var(--fx-accent));
   font-family: "JetBrains Mono", monospace;
 }
 
@@ -367,7 +367,7 @@ body.food-potion-crafter-body {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(10, 15, 18, 0.92);
-  box-shadow: 0 0 16px rgba(45, 212, 191, 0.06);
+  box-shadow: 0 0 16px rgba(var(--fx-accent-rgb), 0.06);
   overflow: hidden;
 }
 
@@ -417,7 +417,7 @@ body.food-potion-crafter-body {
 
 .fp-control:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
+  box-shadow: 0 0 0 2px rgba(var(--fx-accent-rgb), 0.2);
 }
 
 select.fp-control {
@@ -531,11 +531,11 @@ select.fp-control option {
 /* Return rate — emphasized (bold + teal) so it stands out in scanner & crafter. */
 .fp-return-cell {
   font-weight: 800;
-  color: #2dd4bf;
+  color: var(--fx-accent);
 }
 strong.fp-return-rate {
   font-weight: 800;
-  color: #2dd4bf;
+  color: var(--fx-accent);
 }
 
 /* Active enchant filter chips carry the enchant color (3 classes beat .chip.active). */
@@ -547,12 +547,12 @@ strong.fp-return-rate {
 .fp-unpriced-row:hover td { opacity: 0.8; }
 
 .fp-clickable-row { cursor: pointer; }
-.fp-clickable-row:hover td { background: rgba(45, 212, 191, 0.06); }
+.fp-clickable-row:hover td { background: rgba(var(--fx-accent-rgb), 0.06); }
 
 /* Selected row: full teal frame so it's clear which item's data is shown below. */
 .fp-tier-wrap tr.selected-row td,
 .fp-clickable-row.selected-row td {
-  background: rgba(45, 212, 191, 0.12);
+  background: rgba(var(--fx-accent-rgb), 0.12);
   border-top: 2px solid var(--primary);
   border-bottom: 2px solid var(--primary);
 }
@@ -613,7 +613,7 @@ strong.fp-return-rate {
 
 .fp-workbench-title .material-symbols-outlined {
   font-size: 22px;
-  color: var(--primary, #2dd4bf);
+  color: var(--primary, var(--fx-accent));
 }
 
 .fp-workbench-title h3 {
@@ -643,7 +643,7 @@ strong.fp-return-rate {
 
 .fp-output-price input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.2);
+  box-shadow: 0 0 0 2px rgba(var(--fx-accent-rgb), 0.2);
 }
 
 /* --- Ingredient breakdown (side card) --- */
@@ -702,7 +702,7 @@ strong.fp-return-rate {
   font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   font-weight: 700;
-  color: var(--primary, #2dd4bf);
+  color: var(--primary, var(--fx-accent));
   min-width: 36px;
 }
 

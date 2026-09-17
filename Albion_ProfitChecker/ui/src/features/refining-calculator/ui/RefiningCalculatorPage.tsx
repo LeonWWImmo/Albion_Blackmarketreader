@@ -8,7 +8,7 @@ import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
 import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enchant, type MarketRegion, type MaterialKey, type RefineTierInput, type RefineVariant, type ReturnRatePreset, type StackedRefining, type Tier } from "../core";
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
@@ -57,7 +57,8 @@ const allowedAvatars = [
   "/picture/Carleon.png",
   "/picture/Martlockwappen.png",
   "/picture/Lymhurstwappen.png",
-  "/picture/Thefortwappen.png"
+  "/picture/Thefortwappen.png",
+  "/picture/Fortsterlingwappen.png"
 ];
 
 function materialDisplayName(materialKey: MaterialKey): string {
@@ -312,6 +313,12 @@ export function RefiningCalculatorPage() {
   const [region, setRegion] = useRegion();
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
+  // Faction colours follow the account crest; the picker only asks once.
+  useFactionTheme(user?.avatar ?? null);
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  useEffect(() => {
+    if (user && !hasChosenFaction()) setShowStylePicker(true);
+  }, [user]);
   const [showAccount, setShowAccount] = useState(false);
   const [showRegionConfirm, setShowRegionConfirm] = useState(false);
   const [pendingRegion, setPendingRegion] = useState<MarketRegion | null>(null);
@@ -851,6 +858,18 @@ export function RefiningCalculatorPage() {
     </div>
   ), [amount, bonusCityOverrides, clearManualOverrides, customMarketTaxRate, customReturnRatePercent, displayedPriceByItemId, editorMaterial, focusSpecs, returnRatePreset, rows, selectedBuyCity, selectedEditorRow, selectedRefineCity, selectedSellCity, taxMode, updateBonusCityOverride, updateManualPrice, usageFeePer100]);
 
+  async function onAvatarChange(next: string) {
+    const avatar = sanitizeAvatarUrl(next);
+    localStorage.setItem("avatar", avatar);
+    if ("BroadcastChannel" in window) {
+      const channel = new BroadcastChannel("rk-profile-sync");
+      channel.postMessage({ type: "avatar", value: avatar });
+      channel.close();
+    }
+    setUser((prev) => (prev ? { ...prev, avatar } : prev));
+    if (authService) await authService.updateUserMetadata({ avatar }).catch(() => undefined);
+  }
+
   async function onRegionSave(next: MarketRegion) {
     setRegion(next);
     setUser((prev) => (prev ? { ...prev, region: next } : prev));
@@ -974,7 +993,7 @@ export function RefiningCalculatorPage() {
       {focusSpecsStatus ? <div className="rc-toast">{focusSpecsStatus}</div> : null}
 
       <header className="bm-header">
-        <MobileNavBurger accent="#2dd4bf" />
+        <MobileNavBurger accent="var(--fx-accent)" />
         <div className="bm-header-row">
           <div className="bm-brand">
             <div className="bm-brand-home">
@@ -1012,7 +1031,7 @@ export function RefiningCalculatorPage() {
         </div>
         <div className="panel-section">
           <h4>Select profile avatar</h4>
-          <div className="avatar-grid">{allowedAvatars.filter((src) => !src.includes("accountsymbol")).map((src) => (<img key={src} src={assetUrl(src.replace(/^\//, ""))} alt="" onClick={() => setUser((prev) => (prev ? { ...prev, avatar: src } : prev))} />))}</div>
+          <div className="avatar-grid">{allowedAvatars.filter((src) => !src.includes("accountsymbol")).map((src) => (<img key={src} src={assetUrl(src.replace(/^\//, ""))} alt="" onClick={() => void onAvatarChange(src)} />))}</div>
         </div>
         <div className="panel-section">
           <h4>Data region</h4>
@@ -1056,7 +1075,7 @@ export function RefiningCalculatorPage() {
             <span className="rc-arrow-glyph">v</span>
           </button>
         </div>
-        <ResponsiveFilters accent="#2dd4bf">
+        <ResponsiveFilters accent="var(--fx-accent)">
           {isTopSectionExpanded ? priceControls : null}
         </ResponsiveFilters>
       </section>
@@ -1142,7 +1161,7 @@ export function RefiningCalculatorPage() {
           </div>
           <div className="table-footer">
             <p>Showing {Math.min(visibleRowCount, filteredRows.length)} / {filteredRows.length} variants</p>
-            <p>Region {region.toUpperCase()} | Missing raw live prices: {missingRawCount}</p>
+            <p>Region {region.toUpperCase()} | Missing raw market prices: {missingRawCount}</p>
           </div>
         </section>
 
@@ -1177,6 +1196,20 @@ export function RefiningCalculatorPage() {
         </aside>
       </main>
 
+      {showStylePicker ? (
+        <StylePicker
+          onPick={(faction) => {
+            markFactionChosen();
+            setShowStylePicker(false);
+            void onAvatarChange(faction.crest);
+          }}
+          onSkip={() => {
+            markFactionChosen();
+            setShowStylePicker(false);
+          }}
+        />
+      ) : null}
+      <CommunityTile />
       <ToolGuideLink slug="refining-calculator" authService={authService} />
 
       {stackModalKey && selectedRow && selectedRow.logic === "stacking" && selectedPath ? (

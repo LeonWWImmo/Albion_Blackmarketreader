@@ -50,7 +50,7 @@ export function CommunityPage() {
       </main>
 
       <footer className="community-footer">
-        <p className="metallic-text">RomulusKings Marketreader ? 2026</p>
+        <p className="metallic-text">RomulusKings Marketreader &copy; {new Date().getFullYear()}</p>
       </footer>
     </>
   );

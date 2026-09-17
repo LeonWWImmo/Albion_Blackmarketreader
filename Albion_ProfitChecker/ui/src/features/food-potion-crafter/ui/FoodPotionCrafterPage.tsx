@@ -8,7 +8,7 @@ import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
 import type { City, ConsumableCategory, ConsumableRecipe, MarketRegion, RecipeIngredient } from "../core";
 import { buildConsumablePriceSnapshot, ingredientPricesPath, loadIngredients, loadRecipes, outputPricesPath } from "../data";
 import { deriveFoodPotionRows, useFoodPotionState } from "../hooks";
@@ -207,6 +207,7 @@ const ACCOUNT_AVATARS = [
   "/picture/Martlockwappen.png",
   "/picture/Lymhurstwappen.png",
   "/picture/Thefortwappen.png",
+  "/picture/Fortsterlingwappen.png",
 ];
 
 export function FoodPotionCrafterPage() {
@@ -228,6 +229,12 @@ export function FoodPotionCrafterPage() {
   // --- account ---
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<AccountUser | null>(null);
+  // Faction colours follow the account crest; the picker only asks once.
+  useFactionTheme(user?.avatar ?? null);
+  const [showStylePicker, setShowStylePicker] = useState(false);
+  useEffect(() => {
+    if (user && !hasChosenFaction()) setShowStylePicker(true);
+  }, [user]);
   const [showAccount, setShowAccount] = useState(false);
   const [accountActionMsg, setAccountActionMsg] = useState("");
   const accountPanelRef = useRef<HTMLDivElement | null>(null);
@@ -545,7 +552,7 @@ export function FoodPotionCrafterPage() {
         Calculate cooking and alchemy profit in Albion Online. Scan profitable food and potion recipes or enter your own ingredient prices — with return rate, station fees, focus, and all tiers shown per product.
       </SeoHeading>
       <header className="bm-header">
-        <MobileNavBurger accent="#4ade80" />
+        <MobileNavBurger accent="var(--fx-accent)" />
         <div className="bm-header-row">
           <div className="bm-brand">
             <div className="bm-brand-home">
@@ -1006,6 +1013,20 @@ export function FoodPotionCrafterPage() {
         )}
       </main>
 
+      {showStylePicker ? (
+        <StylePicker
+          onPick={(faction) => {
+            markFactionChosen();
+            setShowStylePicker(false);
+            void onAvatarChange(faction.crest);
+          }}
+          onSkip={() => {
+            markFactionChosen();
+            setShowStylePicker(false);
+          }}
+        />
+      ) : null}
+      <CommunityTile />
       <ToolGuideLink slug="food-potion-crafter" authService={authService} />
 
       <FoodPotionSpecsModal
