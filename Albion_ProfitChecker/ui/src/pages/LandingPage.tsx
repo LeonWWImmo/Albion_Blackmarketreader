@@ -55,6 +55,7 @@ export function LandingPage() {
   const heroOriginal = assetUrl("picture/hero-forge.jpg");
   const heroSrcSet = `${heroMobile} 768w, ${heroDesktop} 1280w, ${heroOriginal} 1672w`;
 
+
   useSeo({
     title: "Albion Online Tool | Blackmarket Reader & Blackmarket Crafter",
     description:
@@ -150,6 +151,9 @@ export function LandingPage() {
           <a href="#dashboard-views">Screens</a>
           <a href="#faq">FAQ</a>
         </div>
+        <a className="nav-signin" href="/login">
+          Sign in
+        </a>
         <a className="nav-access" href="/dashboard">
           Open Dashboard
         </a>
@@ -206,6 +210,12 @@ export function LandingPage() {
               <span className="section-eyebrow">The Tools</span>
               <h2>Platform Overview</h2>
             </div>
+            <p className="section-intro">
+              The Black Market Crafter compares what an item costs you to make against what the Black
+              Market in Caerleon pays for it. Return rate, station fees and focus cost are already in
+              the number, so the profit column is what you keep. Every row also shows how many sell
+              per day, because a big margin on an item nobody buys is worth nothing.
+            </p>
             <div className="perspective-mockup" ref={previewRef}>
               <button
                 className="mockup-zoom"
@@ -225,6 +235,12 @@ export function LandingPage() {
               <h2>Dashboard views</h2>
               <p>Two views for percent and silver profit.</p>
             </div>
+            <p className="section-intro">
+              The dashboard is the quick scan: Black Market deals worth at least 30 percent over a
+              fourteen day range, filtered by city and tier. The percent view ranks by margin, the
+              silver view by profit per flip. Prices that look stale or manipulated are greyed out,
+              so a fake deal does not send you across the map for nothing.
+            </p>
             <div className="screens-grid">
               <figure className="screen-card">
                 <img
@@ -420,7 +436,8 @@ export function LandingPage() {
               <p>The most important questions, answered briefly.</p>
             </div>
             <div className="faq-list">
-              <details>
+              {/* First answer open on arrival: a column of closed rows reads as an empty page. */}
+              <details open>
                 <summary>How often is data updated?</summary>
                 <p>
                   For free users the market data runs on a once per day data sync (around 08:00–09:00 UTC).

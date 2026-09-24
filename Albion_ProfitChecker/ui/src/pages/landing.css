@@ -77,6 +77,25 @@ body {
   opacity: 0.6;
 }
 
+/* Quieter sibling of .nav-access: a guest can use everything without an account, so
+   this is an offer rather than a call to action. */
+.nav-signin {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding-bottom: 6px;
+  border-bottom: 1px solid transparent;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.nav-signin:hover {
+  color: #ffffff;
+  border-bottom-color: rgba(217, 164, 65, 0.45);
+}
+
 .nav-access {
   background: none;
   border: none;
@@ -1813,4 +1832,23 @@ body {
     radial-gradient(ellipse 55% 45% at 88% 16%, rgba(74, 116, 201, 0.22) 0%, transparent 65%),
     radial-gradient(circle at 50% 46%, rgba(226, 206, 170, 0.07) 0%, transparent 44%),
     linear-gradient(to bottom, rgba(9, 10, 16, 0.55) 0%, transparent 26%, rgba(11, 12, 18, 0.35) 62%, transparent 100%);
+}
+
+/* Explanatory copy under a section heading, for anyone who has not used the tools. */
+
+.section-intro {
+  max-width: 74ch;
+  margin: 0 auto 34px;
+  font-size: 15px;
+  line-height: 1.68;
+  color: rgba(226, 232, 240, 0.74);
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .section-intro {
+    margin-bottom: 26px;
+    font-size: 14px;
+    line-height: 1.62;
+  }
 }

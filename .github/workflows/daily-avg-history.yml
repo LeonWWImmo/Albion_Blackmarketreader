@@ -96,12 +96,26 @@ jobs:
         run: |
           branch=$(git rev-parse --abbrev-ref HEAD)
           git pull --rebase origin "$branch" || true
-          if [ -n "$(git log origin/$(git rev-parse --abbrev-ref HEAD)..HEAD)" ]; then
-            git push
-          else
+          if [ -z "$(git log "origin/${branch}..HEAD")" ]; then
             echo "Nothing to push"
+            exit 0
           fi
-
+          # GitHub occasionally answers a push with a 500 (Internal Server Error). That is
+          # not a failure of this job, so retry instead of going red, rebasing again each
+          # time in case another scheduled job landed a commit in between.
+          for attempt in 1 2 3 4 5; do
+            if git push origin "HEAD:${branch}"; then
+              echo "Pushed on attempt ${attempt}"
+              exit 0
+            fi
+            if [ "${attempt}" -eq 5 ]; then break; fi
+            wait=$((attempt * 15))
+            echo "Push attempt ${attempt} failed, retrying in ${wait}s"
+            sleep "${wait}"
+            git pull --rebase origin "$branch" || true
+          done
+          echo "Push still failing after 5 attempts"
+          exit 1
       - name: Trigger Vercel Deploy Hook
         if: env.VERCEL_DEPLOY_HOOK_URL != ''
         env:
