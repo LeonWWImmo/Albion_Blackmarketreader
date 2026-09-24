@@ -8,6 +8,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 
 ## Unreleased
 
+- Every tool now opens straight away without an account. No more login screen in the way - sign in only if you want your settings carried to another device.
 - Choose your style: pick the city you ride for and its colours light up the background in every tool. All six royal cities are in, and Caerleon finally gets its own molten obsidian look instead of plain black.
 - Your crest doubles as your account icon. Swap it in the account panel whenever you want and every tool changes with you.
 - New Crafting Calculator: work out material cost, return rate, focus and profit for any item.

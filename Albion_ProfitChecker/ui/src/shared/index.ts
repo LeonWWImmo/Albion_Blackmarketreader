@@ -5,7 +5,6 @@ export * from "./api/apiClient";
 export * from "./auth/authService";
 export * from "./auth/AuthGuard";
 export * from "./auth/guestMode";
-export * from "./auth/crawler";
 
 export * from "./region/regionService";
 

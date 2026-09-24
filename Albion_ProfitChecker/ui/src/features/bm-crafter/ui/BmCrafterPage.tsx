@@ -3,8 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
-import { isGuest, buildGuestProfile, exitGuest } from "@shared/auth/guestMode";
-import { isCrawler } from "@shared/auth/crawler";
+import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
@@ -210,22 +209,18 @@ export function BmCrafterPage() {
       const session = await authService.getSession().catch(() => null);
       if (cancelled) return;
       if (!session) {
-        if (isGuest() || isCrawler()) {
-          // Crawlers get the public read-only (guest) view instead of a /login
-          // redirect, so search engines can index the tool page content.
-          const guest = buildGuestProfile();
-          const guestRegion: MarketRegion = readStoredRegion() || guest.region || "eu";
-          setUser({
-            id: guest.id,
-            email: guest.email,
-            avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
-            region: guestRegion
-          });
-          setRegion(guestRegion);
-          return;
-        }
-        const next = encodeURIComponent(window.location.pathname || "/bm-crafter");
-        window.location.href = `/login?next=${next}`;
+        // No session: open the tool as a guest instead of redirecting to /login, so a
+        // first-time visitor sees the same working page a crawler does.
+        enterGuest();
+        const guest = buildGuestProfile();
+        const guestRegion: MarketRegion = readStoredRegion() || guest.region || "eu";
+        setUser({
+          id: guest.id,
+          email: guest.email,
+          avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
+          region: guestRegion
+        });
+        setRegion(guestRegion);
         return;
       }
       exitGuest(); // real session supersedes any stale guest flag (prevents guest UI while logged in)

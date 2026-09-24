@@ -7,6 +7,12 @@ function goToLogin() {
   window.location.href = `/login?next=${next}`;
 }
 
+/** Same, but lands on the register tab for someone who has no account yet. */
+function goToRegister() {
+  const next = encodeURIComponent(window.location.pathname || "/dashboard");
+  window.location.href = `/login?mode=register&next=${next}`;
+}
+
 /** Signed-out-style note shown in the account panel while in guest mode. Hyperlink, not a button. */
 export function GuestSignInLink() {
   return (
@@ -21,6 +27,17 @@ export function GuestSignInLink() {
         }}
       >
         Sign in
+      </a>{" "}
+      or{" "}
+      <a
+        href="/login?mode=register"
+        className="guest-signin-anchor"
+        onClick={(e) => {
+          e.preventDefault();
+          goToRegister();
+        }}
+      >
+        create an account
       </a>{" "}
       to save your settings
     </span>

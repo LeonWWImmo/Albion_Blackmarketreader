@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, exitGuest, isCrawler, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "@shared/index";
+import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "@shared/index";
 import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
@@ -722,26 +722,22 @@ export function DashboardPage() {
     (async () => {
       const session = await authService.getSession().catch(() => null);
       if (!session) {
-        if (isGuest() || isCrawler()) {
-          // Crawlers get the public read-only (guest) view instead of a /login
-          // redirect, so search engines can index the tool page content.
-          const guest = buildGuestProfile();
-          const storedRegion = readStoredRegion();
-          const guestRegion = (storedRegion || guest.region || "us") as Region;
-          setUser({
-            id: guest.id,
-            email: guest.email,
-            avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
-            region: guestRegion
-          });
-          if (!guest.region && !storedRegion) {
-            setShowRegionModal(true);
-          }
-          regionService?.setRegion(guestRegion, { broadcast: false });
-          return;
+        // No session: open the tool as a guest instead of redirecting to /login, so a
+        // first-time visitor sees the same working page a crawler does.
+        enterGuest();
+        const guest = buildGuestProfile();
+        const storedRegion = readStoredRegion();
+        const guestRegion = (storedRegion || guest.region || "us") as Region;
+        setUser({
+          id: guest.id,
+          email: guest.email,
+          avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
+          region: guestRegion
+        });
+        if (!guest.region && !storedRegion) {
+          setShowRegionModal(true);
         }
-        const next = encodeURIComponent(window.location.pathname || "/dashboard");
-        window.location.href = `/login?next=${next}`;
+        regionService?.setRegion(guestRegion, { broadcast: false });
         return;
       }
       exitGuest(); // real session supersedes any stale guest flag (prevents guest UI while logged in)

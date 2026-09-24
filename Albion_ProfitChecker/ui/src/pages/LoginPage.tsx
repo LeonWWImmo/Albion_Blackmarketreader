@@ -48,7 +48,10 @@ function sleep(ms: number) {
 
 export function LoginPage() {
   const [authService, setAuthService] = useState<AuthService | null>(null);
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  // ?mode=register lets a "Create account" link elsewhere land on the right tab.
+  const [authMode, setAuthMode] = useState<AuthMode>(() =>
+    new URLSearchParams(window.location.search).get("mode") === "register" ? "register" : "login"
+  );
   const [authError, setAuthError] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
