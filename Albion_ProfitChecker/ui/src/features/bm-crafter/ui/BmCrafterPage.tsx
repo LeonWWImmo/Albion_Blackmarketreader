@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 
 import { Link, useNavigate } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { formatUpdated } from "@shared/time/lastUpdated";
+import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
+import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import {
   buildArtefactId,
   buildMaterialId,
@@ -17,18 +18,10 @@ import {
   type MarketRegion
 } from "../domain";
 import { useBmCrafterData, useBmCrafterState } from "../hooks";
+import { CrafterInsight } from "./CrafterInsight";
+import { formatNumber, formatPct, isSuspectPrice, tierLabel } from "./format";
 import "./bmCrafter.css";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
-
-function formatNumber(value: number | null | undefined): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return Math.round(value).toLocaleString("de-DE");
-}
-
-function formatPct(value: number | null | undefined): string {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return `${value.toFixed(1)}%`;
-}
 
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   const [service] = useState(() => new RegionService("eu"));
@@ -44,13 +37,6 @@ function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
 
   const setNext = useCallback((next: MarketRegion) => service.setRegion(next), [service]);
   return [region, setNext];
-}
-
-function tierLabel(itemId: string): string {
-  const tier = parseTier(itemId);
-  const enchant = parseEnchant(itemId);
-  if (!tier) return "--";
-  return `T${tier}.${enchant}`;
 }
 
 type UserState = {
@@ -150,6 +136,12 @@ export function BmCrafterPage() {
   const [showRegionConfirm, setShowRegionConfirm] = useState(false);
   const [pendingRegion, setPendingRegion] = useState<MarketRegion | null>(null);
   const [visibleRows, setVisibleRows] = useState(INITIAL_ROWS);
+  // On a phone a tapped row opens its breakdown in a bottom sheet instead of jumping to the
+  // Crafting Calculator: the side panel sits below the whole table there, and touch has no
+  // right-click to reach it the way desktop does.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const accountPanelRef = useRef<HTMLDivElement | null>(null);
   const accountBtnRef = useRef<HTMLButtonElement | null>(null);
   const profileChannelRef = useRef<BroadcastChannel | null>(null);
@@ -410,6 +402,28 @@ export function BmCrafterPage() {
     setShowRegionConfirm(true);
   }
 
+  useEffect(() => {
+    if (!isPhone || !rows.length) setDetailOpen(false);
+  }, [isPhone, rows.length]);
+
+  // The phone layout drops the table's own scroll box so the page scrolls as one, which means
+  // onTableScroll never fires there. Load the next batch when the end of the list comes near.
+  useEffect(() => {
+    if (!isPhone) return;
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleRows((current) => Math.min(rows.length, current + ROWS_STEP));
+        }
+      },
+      { rootMargin: "600px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isPhone, rows.length]);
+
   function onTableScroll(event: UIEvent<HTMLDivElement>) {
     const el = event.currentTarget;
     const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 120;
@@ -468,10 +482,7 @@ export function BmCrafterPage() {
               <span className="material-symbols-outlined">language</span>
               Region: <span>{region.toUpperCase()}</span>
             </button>
-            <div className="bm-status" title={lastUpdated.title}>
-              <span className="pulse"></span>
-              Last updated: <span>{lastUpdated.time}</span>{lastUpdated.relative ? <span className="bm-status-ago"> ({lastUpdated.relative})</span> : null}
-            </div>
+            <LastUpdatedBadge stamp={lastUpdated} />
             <div className="account-wrap">
               <button ref={accountBtnRef} className="account-btn" type="button" onClick={() => setShowAccount(true)} aria-label="Account">
                 <img src={user?.avatar || assetUrl("picture/accountsymbol.png")} alt="avatar" />
@@ -744,13 +755,13 @@ export function BmCrafterPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Item Specification</th>
-                  <th className="num">BM Price</th>
-                  <th className="num">Craft Cost</th>
-                  <th className="num">Net Profit / U</th>
-                  <th className="center">Sold/Day</th>
-                  <th className="num">Daily Potential</th>
-                  <th className="num">Profit %</th>
+                  <th className="bm-cell-item">Item Specification</th>
+                  <th className="num bm-cell-bm">BM Price</th>
+                  <th className="num bm-cell-cost">Craft Cost</th>
+                  <th className="num bm-cell-profit">Net Profit / U</th>
+                  <th className="center bm-cell-sold">Sold/Day</th>
+                  <th className="num bm-cell-daily">Daily Potential</th>
+                  <th className="num bm-cell-pct">Profit %</th>
                 </tr>
               </thead>
               <tbody>
@@ -763,16 +774,20 @@ export function BmCrafterPage() {
                   const tier = parseTier(row.item.id);
                   const enchant = parseEnchant(row.item.id);
                   const baseId = normalizeItemId(row.item.id);
-                  const suspect = typeof row.item.bm === "number" && row.economics.craftCost > 0 && row.item.bm >= 10 * row.economics.craftCost;
+                  const suspect = isSuspectPrice(row.item.bm, row.economics.craftCost);
                   return (
                     <tr
                       key={row.rowKey}
                       className={`high-density-row bm-clickable-row ${idx % 2 === 1 ? "alt" : ""} ${suspect ? "bm-suspect-row" : ""}`}
-                      title="Click: open in Crafting Calculator · Right-click: show craft details here"
-                      onClick={() => { setSelectedRowKey(row.rowKey); openInCraftingCalculator(row.item.id); }}
+                      title={isPhone ? undefined : "Click: open in Crafting Calculator · Right-click: show craft details here"}
+                      onClick={() => {
+                        setSelectedRowKey(row.rowKey);
+                        if (isPhone) setDetailOpen(true);
+                        else openInCraftingCalculator(row.item.id);
+                      }}
                       onContextMenu={(e) => { e.preventDefault(); setSelectedRowKey(row.rowKey); }}
                     >
-                      <td>
+                      <td className="bm-cell-item">
                         <div className="item">
                           <div className="item-info">
                             <div className="item-icon">
@@ -787,6 +802,7 @@ export function BmCrafterPage() {
                             <div>
                               <div className="item-name">{row.displayName}<span className="bm-open-calc-icon" aria-hidden="true">↗</span></div>
                               {suspect ? <div className="bm-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}
+                              {suspect ? <span className="bm-suspect-chip">Check price</span> : null}
                               <div className="item-meta">{baseId}</div>
                             </div>
                           </div>
@@ -795,16 +811,16 @@ export function BmCrafterPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="num">{formatNumber(row.item.bm)}</td>
-                      <td className="num muted">{formatNumber(row.economics.craftCost)}</td>
-                      <td className={`num ${row.economics.profit >= 0 ? "profit" : "loss"}`}>
+                      <td className="num bm-cell-bm">{formatNumber(row.item.bm)}</td>
+                      <td className="num muted bm-cell-cost">{formatNumber(row.economics.craftCost)}</td>
+                      <td className={`num bm-cell-profit ${row.economics.profit >= 0 ? "profit" : "loss"}`}>
                         {formatNumber(row.economics.profit)}
                       </td>
-                      <td className="center">{formatNumber(row.item.sold)}</td>
-                      <td className={`num ${(row.economics.dailyPotential ?? 0) >= 0 ? "profit" : "loss"}`}>
+                      <td className="center bm-cell-sold">{formatNumber(row.item.sold)}</td>
+                      <td className={`num bm-cell-daily ${(row.economics.dailyPotential ?? 0) >= 0 ? "profit" : "loss"}`}>
                         {formatNumber(row.economics.dailyPotential)}
                       </td>
-                      <td className={`num ${(row.economics.profitPct ?? 0) >= 0 ? "profit" : "loss"}`}>
+                      <td className={`num bm-cell-pct ${(row.economics.profitPct ?? 0) >= 0 ? "profit" : "loss"}`}>
                         {formatPct(row.economics.profitPct)}
                       </td>
                     </tr>
@@ -812,6 +828,7 @@ export function BmCrafterPage() {
                 })}
               </tbody>
             </table>
+            {isPhone ? <div ref={loadMoreRef} className="bm-load-more" aria-hidden="true" /> : null}
           </div>
           <div className="table-footer">
             <p>Showing {Math.min(visibleRows, rows.length)} of {rows.length} items</p>
@@ -819,92 +836,60 @@ export function BmCrafterPage() {
           </div>
         </section>
 
-        <aside className="bm-side">
-          <div className="side-card teal-glow custom-scrollbar">
-            <div className="side-header">
-              <h3>Crafter Insight</h3>
-              <span className="material-symbols-outlined">info</span>
-            </div>
-            <div className="side-hero teal-gradient-bg" data-tier={selectedRow?.tier ?? undefined}>
-              <div className="side-icon" data-enchant={selectedRow?.enchant ? selectedRow.enchant : undefined}>
-                <div className="side-icon-inner">
-                  <img
-                    src={selectedRow ? `/itemicons/T4_${normalizeItemId(selectedRow.item.id)}.png` : ""}
-                    alt=""
-                    onError={onItemIconError}
-                  />
+        {isPhone ? null : (
+          <aside className="bm-side">
+            <div className="side-card teal-glow custom-scrollbar">
+              <div className="side-header">
+                <h3>Crafter Insight</h3>
+                <span className="material-symbols-outlined">info</span>
+              </div>
+              <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} />
+              <div className="side-chart">
+                <div className="side-chart-head">
+                  <span className="material-symbols-outlined">trending_up</span>
+                  <span>Monthly Avg Profit</span>
                 </div>
-              </div>
-              <h2>{selectedRow?.displayName || "Select an item"}</h2>
-              <div className="side-tags">
-                <span className="tag" id="insightTier">{selectedRow ? tierLabel(selectedRow.item.id) : "Tier --"}</span>
-              </div>
-            </div>
-            <div className="side-metrics">
-              <div><span>BM Price</span><strong className="profit">{selectedRow ? formatNumber(selectedRow.item.bm) : "--"}</strong></div>
-              <div><span>Sold / Day</span><strong className="primary">{selectedRow ? formatNumber(selectedRow.item.sold) : "--"}</strong></div>
-              <div><span>Craft Cost</span><strong>{selectedRow ? formatNumber(selectedRow.economics.craftCost) : "--"}</strong></div>
-              <div><span>Station Fee</span><strong>{selectedRow ? formatNumber(selectedRow.economics.stationFee) : "--"}</strong></div>
-              {selectedRow && (selectedRow.journalProfit ?? 0) > 0 ? (
-                <div><span>Journal Profit</span><strong className="profit">+{formatNumber(selectedRow.journalProfit)}</strong></div>
-              ) : null}
-              <div><span>Net Profit / U</span><strong className={selectedRow && selectedRow.economics.profit < 0 ? "loss" : "profit"}>{selectedRow ? formatNumber(selectedRow.economics.profit) : "--"}</strong></div>
-              <div><span>Profit %</span><strong className={selectedRow && (selectedRow.economics.profitPct ?? 0) < 0 ? "loss" : "profit"}>{selectedRow ? formatPct(selectedRow.economics.profitPct) : "--"}</strong></div>
-              <div><span>Daily Potential</span><strong className={selectedRow && (selectedRow.economics.dailyPotential ?? 0) < 0 ? "loss" : "profit"}>{selectedRow ? formatNumber(selectedRow.economics.dailyPotential) : "--"}</strong></div>
-              <div><span>Profit / Focus</span><strong className={selectedRow && (selectedRow.economics.profitPerFocus ?? 0) < 0 ? "loss" : "profit"}>{selectedRow ? formatNumber(selectedRow.economics.profitPerFocus) : "--"}</strong></div>
-              <div><span>Item ID</span><strong>{selectedRow?.item.id || "--"}</strong></div>
-            </div>
-            <div className="material-box">
-              <div className="material-head">
-                <span>Material Prices Used</span>
-                <span className="material-total">Total: {selectedRow ? formatNumber(selectedRow.economics.craftCost) : "--"}</span>
-              </div>
-              <div className="material-list">
-                {materialBreakdown.map((mat) => (
-                  <div key={`${mat.itemId}-total`} className="material-row">
-                    <div className="material-name">{mat.itemId}</div>
-                    <div className="material-meta">
-                      <span className="material-qty">x{mat.qty}</span>
-                      <span className="material-price">{formatNumber(mat.total)}</span>
-                    </div>
-                  </div>
-                ))}
-                {materialBreakdown.map((mat) => (
-                  <div key={`${mat.itemId}-unit`} className="material-row material-unit-row">
-                    <div className="material-name">{mat.itemId} · Unit</div>
-                    <div className="material-meta">
-                      <span className="material-qty">x1</span>
-                      <span className="material-price">{formatNumber(mat.unit)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="material-row artefact-row" aria-hidden={selectedRow?.recipe.artifactId ? "false" : "true"}>
-                <div className="material-name">{selectedRow?.recipe.artifactId || "Artefact"}</div>
-                <div className="material-meta">
-                  <span className="material-qty">x1</span>
-                  <span className="material-price">{formatNumber(artefactCost)}</span>
+                <div className="chart-bars">
+                  <span style={{ height: "40%" }}></span>
+                  <span style={{ height: "60%" }}></span>
+                  <span style={{ height: "55%" }}></span>
+                  <span style={{ height: "75%" }}></span>
+                  <span style={{ height: "90%" }}></span>
+                  <span style={{ height: "85%" }}></span>
+                  <span className="strong" style={{ height: "100%" }}></span>
                 </div>
               </div>
             </div>
-            <div className="side-chart">
-              <div className="side-chart-head">
-                <span className="material-symbols-outlined">trending_up</span>
-                <span>Monthly Avg Profit</span>
-              </div>
-              <div className="chart-bars">
-                <span style={{ height: "40%" }}></span>
-                <span style={{ height: "60%" }}></span>
-                <span style={{ height: "55%" }}></span>
-                <span style={{ height: "75%" }}></span>
-                <span style={{ height: "90%" }}></span>
-                <span style={{ height: "85%" }}></span>
-                <span className="strong" style={{ height: "100%" }}></span>
-              </div>
-            </div>
-          </div>
-        </aside>
+          </aside>
+        )}
       </main>
+
+      {isPhone ? (
+        <BottomSheet
+          open={detailOpen && Boolean(selectedRow)}
+          onClose={() => setDetailOpen(false)}
+          label={selectedRow ? `${selectedRow.displayName} breakdown` : "Item breakdown"}
+          accent="var(--fx-accent)"
+          footer={
+            selectedRow ? (
+              <button type="button" className="bm-sheet-cta" onClick={() => openInCraftingCalculator(selectedRow.item.id)}>
+                Open in Crafting Calculator
+                <span aria-hidden="true">→</span>
+              </button>
+            ) : null
+          }
+        >
+          <div className="bm-sheet">
+            {selectedRow && isSuspectPrice(selectedRow.item.bm, selectedRow.economics.craftCost) ? (
+              <p className="bm-sheet-warning">
+                This profit looks unrealistic. The Black Market price is probably a stale or troll order, so check it in game
+                before crafting.
+              </p>
+            ) : null}
+            <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} />
+          </div>
+        </BottomSheet>
+      ) : null}
 
       {showStylePicker ? (
         <StylePicker

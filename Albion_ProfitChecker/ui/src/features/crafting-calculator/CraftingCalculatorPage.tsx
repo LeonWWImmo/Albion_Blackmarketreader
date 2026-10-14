@@ -5,9 +5,10 @@ import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
+import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../shared";
+import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -33,6 +34,8 @@ import {
   type StationKind
 } from "@shared/albion/stationBonus";
 import { SpecsModal } from "./specs/SpecsModal";
+import { CraftRowDetail, type PriceLine, type Tone } from "./CraftRowDetail";
+import { ItemPicker, type PickerCategory } from "./ItemPicker";
 import {
   applyFocusEfficiency,
   computeCraftBaseFocus,
@@ -468,6 +471,8 @@ export function CraftingCalculatorPage() {
   });
 
   const [allItems, setAllItems] = useState<CraftingItem[]>([]);
+  const [itemCategories, setItemCategories] = useState<PickerCategory[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedRowKey, setSelectedRowKey] = useSessionState("cc:selectedRowKey", "t8-4");
   const [selectedItem, setSelectedItem] = useState<CraftingItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -539,6 +544,13 @@ export function CraftingCalculatorPage() {
   const bonusCity = useMemo(() => getBonusCityForItem(selectedItem), [selectedItem]);
   const isBonusCityActive = Boolean(bonusCity && bonusCity === craftCity);
   const [showSpecsModal, setShowSpecsModal] = useState(false);
+  // On a phone the price cells are far too small to edit and the result columns sit off-screen,
+  // so a tapped tier opens its breakdown in a bottom sheet with real inputs instead.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [detailOpen, setDetailOpen] = useState(false);
+  useEffect(() => {
+    if (!isPhone) setDetailOpen(false);
+  }, [isPhone]);
   const specsState = useCraftingSpecs({ authService, enabled: Boolean(user) });
   const activeSpecKey = useMemo(() => resolveSpecKey(selectedItem), [selectedItem]);
   const activeSpecLevel = activeSpecKey ? (specsState.progress.specs[activeSpecKey] ?? 0) : 0;
@@ -731,6 +743,11 @@ export function CraftingCalculatorPage() {
           (Array.isArray(category.items) ? category.items : []).map((item) => ({ ...item, categoryKey: category.key || "" }))
         );
         setAllItems(items);
+        setItemCategories(
+          categories
+            .filter((category: { key?: string; items?: CraftingItem[] }) => category.key && Array.isArray(category.items) && category.items.length)
+            .map((category: { key: string; label?: string }) => ({ key: category.key, label: category.label || category.key }))
+        );
         const deepItemId = searchParams.get("item");
         const deepItem = deepItemId ? items.find((item: CraftingItem) => item.id === deepItemId) : null;
         const defaultItem = deepItem || items.find((item: CraftingItem) => item.id === "2H_BOW") || items[0] || null;
@@ -1256,6 +1273,76 @@ export function CraftingCalculatorPage() {
     await onRegionSave(next);
   }
 
+  // Everything one table row shows, worked out in one place so the desktop cells and the phone
+  // detail sheet can never disagree about a number.
+  function computeRowView(row: TableRow) {
+    const { tier: rowTier, enchant: rowEnchant } = parseTierEnchant(row.uid);
+    const requiredMaterials = Array.isArray(selectedItem?.materials) ? selectedItem.materials : [];
+    const qty1 = Number(requiredMaterials[0]?.qty) || 0;
+    const qty2 = Number(requiredMaterials[1]?.qty) || 0;
+    const requiresMat1 = qty1 > 0;
+    const requiresMat2 = qty2 > 0;
+    const values = rowEdits[row.key] || {
+      mat1: parseCompactNumber(row.mat1),
+      mat2: parseCompactNumber(row.mat2),
+      artefact: artefactByTier[rowTier] ?? parseCompactNumber(row.artefact),
+      tax: parseCompactNumber(row.tax),
+      market: parseCompactNumber(row.market),
+      sold: 0
+    };
+    const mat1Unit = qty1 > 0 ? values.mat1 / qty1 : values.mat1;
+    const mat2Unit = qty2 > 0 ? values.mat2 / qty2 : values.mat2;
+    const itemNeedsArtifact = Boolean(selectedItem?.artifactId || selectedItem?.artifact);
+    const rowEconomics = calculateEconomics({
+      mat1: values.mat1,
+      mat2: values.mat2,
+      artefact: values.artefact,
+      market: values.market,
+      requiresMat1,
+      requiresMat2,
+      requiresArtefact: itemNeedsArtifact,
+      returnRate,
+      itemValue,
+      stationFee,
+      setupFeePercent: effectiveSetupFeePercent,
+      transactionTaxPercent
+    });
+    const rowJournalProfit = getJournalProfit(rowTier);
+    const profit = typeof rowEconomics.profit === "number" ? rowEconomics.profit + rowJournalProfit : rowEconomics.profit;
+    const gain = typeof rowEconomics.totalCost === "number" && rowEconomics.totalCost > 0 && typeof profit === "number"
+      ? (profit / rowEconomics.totalCost) * 100
+      : rowEconomics.roi;
+    const rowMatTotal = values.mat1 + values.mat2 + values.artefact;
+    const suspect = rowMatTotal > 0 && values.market >= 10 * rowMatTotal;
+
+    const rowBaseFocus = computeCraftBaseFocus(selectedItemMaterials, rowTier, rowEnchant);
+    let focusTitle: string | undefined;
+    let silverPerFocus = "-";
+    if (rowBaseFocus > 0) {
+      const effective = applyFocusEfficiency(rowBaseFocus, focusEfficiency);
+      focusTitle = `Profit ${typeof profit === "number" ? formatNumber(Math.round(profit)) : "?"} · Focus ${formatNumber(Math.round(effective))} (base ${formatNumber(Math.round(rowBaseFocus))})`;
+      if (effective > 0 && typeof profit === "number") {
+        // Positive profit: grows with specs (more silver per focus).
+        // Negative profit: shrinks magnitude with specs to keep "better specs
+        // = better metric" UX direction. Formula: (profit / base) * (effective / base)
+        // = profit * effective / base² (linear scaling, NOT squared).
+        const ratio = effective / rowBaseFocus;
+        const spf = profit >= 0
+          ? profit / effective
+          : (profit / rowBaseFocus) * ratio;
+        if (Number.isFinite(spf)) {
+          const abs = Math.abs(spf);
+          const sign = spf < 0 ? "-" : "";
+          if (abs >= 1000) silverPerFocus = `${sign}${formatCompact(abs)}`;
+          else if (abs >= 10) silverPerFocus = `${sign}${Math.round(abs)}`;
+          else silverPerFocus = `${sign}${abs.toFixed(1)}`;
+        }
+      }
+    }
+
+    return { tier: rowTier, qty1, qty2, values, mat1Unit, mat2Unit, itemNeedsArtifact, profit, gain, suspect, focusTitle, silverPerFocus };
+  }
+
   function updateRowField(rowKey: string, field: keyof RowEdit, rawValue: string) {
     const parsed = Math.max(0, parseCompactNumber(rawValue));
     if (field === "artefact") {
@@ -1282,6 +1369,41 @@ export function CraftingCalculatorPage() {
       }
     }));
   }
+
+  // Props for the phone breakdown sheet, from the same row view the table cells use.
+  function buildPhoneDetail() {
+    const view = computeRowView(selectedRow);
+    const materials = Array.isArray(selectedItem?.materials) ? selectedItem.materials : [];
+    const nameOf = (index: number) => materials[index]?.name || materials[index]?.itemId || materials[index]?.id || `Material ${index + 1}`;
+    const tone = (value: unknown): Tone => (typeof value === "number" ? (value >= 0 ? "gain" : "loss") : "none");
+    const prices: PriceLine[] = [];
+    if (view.qty1 > 0) {
+      prices.push({ key: "mat1", label: nameOf(0), hint: `× ${view.qty1} per craft, price each`, value: view.mat1Unit, onCommit: (unit) => updateRowField(selectedRow.key, "mat1", String(unit * view.qty1)) });
+    }
+    if (view.qty2 > 0) {
+      prices.push({ key: "mat2", label: nameOf(1), hint: `× ${view.qty2} per craft, price each`, value: view.mat2Unit, onCommit: (unit) => updateRowField(selectedRow.key, "mat2", String(unit * view.qty2)) });
+    }
+    if (view.itemNeedsArtifact) {
+      // updateRowField applies an artefact price to every enchant of the row's tier.
+      prices.push({ key: "art", label: "Artefact", hint: `shared by every T${view.tier} enchant`, value: artefactByTier[view.tier] ?? 0, onCommit: (value) => updateRowField(selectedRow.key, "artefact", String(value)) });
+    }
+    prices.push({ key: "market", label: isBlackMarketSell ? "Black Market value" : "Market value", value: view.values.market, onCommit: (value) => updateRowField(selectedRow.key, "market", String(value)) });
+    return {
+      label: `${selectedItem?.name || "Item"} ${selectedRow.uid} breakdown`,
+      props: {
+        itemName: selectedItem?.name || "Item",
+        iconSrc: selectedItem ? `/itemicons/T4_${selectedItem.id}.png` : assetUrl("picture/accountsymbol.png"),
+        tierLabel: selectedRow.uid,
+        profit: { text: typeof view.profit === "number" ? formatNumber(view.profit) : "-", tone: tone(view.profit) },
+        gain: { text: typeof view.gain === "number" ? `${view.gain.toFixed(1)}%` : "-", tone: tone(view.gain) },
+        silverPerFocus: view.silverPerFocus,
+        sold: view.values.sold > 0 ? formatNumber(view.values.sold) : "-",
+        suspect: view.suspect,
+        prices
+      }
+    };
+  }
+  const phoneDetail = isPhone ? buildPhoneDetail() : null;
 
   return (
     <div className="cc-page">
@@ -1323,10 +1445,7 @@ export function CraftingCalculatorPage() {
               <span className="material-symbols-outlined">language</span>
               Region: <span>{region.toUpperCase()}</span>
             </button>
-            <div className="bm-status" title={craftingUpdated.title}>
-              <span className="pulse"></span>
-              Last updated: <span>{craftingUpdated.time}</span>{craftingUpdated.relative ? <span className="bm-status-ago"> ({craftingUpdated.relative})</span> : null}
-            </div>
+            <LastUpdatedBadge stamp={craftingUpdated} />
             <div className="account-wrap">
               <button ref={accountBtnRef} className="account-btn" type="button" onClick={() => setShowAccount(true)} aria-label="Account">
                 <img src={user?.avatar || assetUrl("picture/accountsymbol.png")} alt="avatar" />
@@ -1401,10 +1520,24 @@ export function CraftingCalculatorPage() {
 
       <div className="workbench-container">
         <main className="matrix-side">
+          {isPhone ? (
+            <button type="button" className="cc-phone-item" onClick={() => setPickerOpen(true)} aria-label={`Change item (current: ${selectedItem?.name || "none"})`}>
+              <img
+                src={selectedItem ? `/itemicons/T4_${selectedItem.id}.png` : assetUrl("picture/accountsymbol.png")}
+                onError={onItemIconError}
+                alt=""
+              />
+              <span className="cc-phone-item-text">
+                <strong>{selectedItem?.name || "Pick an item"}</strong>
+                <span>{craftCity} → {sellCity} · return {returnRatePercent.toFixed(1)}%</span>
+              </span>
+              <span className="cc-phone-item-change" aria-hidden="true">Change</span>
+            </button>
+          ) : null}
           <table className="spreadsheet-table">
             <thead>
               <tr>
-                <th>UID</th><th>Material 1</th><th>Material 2</th><th>Artefact</th><th>Market Value</th><th>Sold/Day</th><th>Profit</th><th>Gain %</th><th>Silver / Focus</th>
+                <th className="cc-cell-uid">UID</th><th className="cc-cell-mat1">Material 1</th><th className="cc-cell-mat2">Material 2</th><th className="cc-cell-art">Artefact</th><th className="cc-cell-market">Market Value</th><th className="cc-cell-sold">Sold/Day</th><th className="cc-cell-profit">Profit</th><th className="cc-cell-gain">Gain %</th><th className="cc-cell-spf">Silver / Focus</th>
               </tr>
             </thead>
             <tbody>
@@ -1413,49 +1546,15 @@ export function CraftingCalculatorPage() {
                   <tr className="tier-header-row" key={`${section.key}-head`}><td colSpan={9}><label><span className={`neon-strip ${section.stripClass}`}></span>{section.label}</label></td></tr>
                   {section.rows.map((row, rowIndex) => {
                     const selected = row.key === selectedRowKey;
-                    const { tier: rowTier } = parseTierEnchant(row.uid);
-                    const requiredMaterials = Array.isArray(selectedItem?.materials) ? selectedItem.materials : [];
-                    const qty1 = Number(requiredMaterials[0]?.qty) || 0;
-                    const qty2 = Number(requiredMaterials[1]?.qty) || 0;
-                    const requiresMat1 = qty1 > 0;
-                    const requiresMat2 = qty2 > 0;
-                    const values = rowEdits[row.key] || {
-                      mat1: parseCompactNumber(row.mat1),
-                      mat2: parseCompactNumber(row.mat2),
-                      artefact: artefactByTier[rowTier] ?? parseCompactNumber(row.artefact),
-                      tax: parseCompactNumber(row.tax),
-                      market: parseCompactNumber(row.market),
-                      sold: 0
-                    };
-                    const mat1Unit = qty1 > 0 ? values.mat1 / qty1 : values.mat1;
-                    const mat2Unit = qty2 > 0 ? values.mat2 / qty2 : values.mat2;
-                    const itemNeedsArtifact = Boolean(selectedItem?.artifactId || selectedItem?.artifact);
-                    const rowEconomics = calculateEconomics({
-                      mat1: values.mat1,
-                      mat2: values.mat2,
-                      artefact: values.artefact,
-                      market: values.market,
-                      requiresMat1,
-                      requiresMat2,
-                      requiresArtefact: itemNeedsArtifact,
-                      returnRate,
-                      itemValue,
-                      stationFee,
-                      setupFeePercent: effectiveSetupFeePercent,
-                      transactionTaxPercent
-                    });
-                    const rowJournalProfit = getJournalProfit(rowTier);
-                    const rowProfit = typeof rowEconomics.profit === "number" ? rowEconomics.profit + rowJournalProfit : rowEconomics.profit;
-                    const rowGain = typeof rowEconomics.totalCost === "number" && rowEconomics.totalCost > 0 && typeof rowProfit === "number"
-                      ? (rowProfit / rowEconomics.totalCost) * 100
-                      : rowEconomics.roi;
-                    const rowMatTotal = values.mat1 + values.mat2 + values.artefact;
-                    const rowSuspect = rowMatTotal > 0 && values.market >= 10 * rowMatTotal;
+                    const { tier: rowTier, qty1, qty2, values, mat1Unit, mat2Unit, itemNeedsArtifact, profit: rowProfit, gain: rowGain, suspect: rowSuspect, focusTitle, silverPerFocus } = computeRowView(row);
                     return (
-                      <tr key={row.key} className={`sub-row ${section.fogClass} ${selected ? "selected" : ""} ${rowSuspect ? "cc-suspect-row" : ""}`} onClick={() => setSelectedRowKey(row.key)}>
-                        <td>{row.uid}{rowSuspect ? <span className="cc-suspect-overlay">This profit looks unrealistic — market price probably not real</span> : null}</td>
+                      <tr key={row.key} className={`sub-row ${section.fogClass} ${selected ? "selected" : ""} ${rowSuspect ? "cc-suspect-row" : ""}`} onClick={() => {
+                        setSelectedRowKey(row.key);
+                        if (isPhone) setDetailOpen(true);
+                      }}>
+                        <td className="cc-cell-uid">{row.uid}{rowSuspect ? <span className="cc-suspect-overlay">This profit looks unrealistic — market price probably not real</span> : null}{rowSuspect ? <span className="cc-suspect-chip">Check price</span> : null}</td>
                         <td
-                          className="mono-num editable-cell"
+                          className="mono-num editable-cell cc-cell-mat1"
                           contentEditable
                           suppressContentEditableWarning
                           title={qty1 > 0 ? `Unit price × ${qty1}` : undefined}
@@ -1469,7 +1568,7 @@ export function CraftingCalculatorPage() {
                           {formatCompactOrDash(mat1Unit)}
                         </td>
                         <td
-                          className="mono-num editable-cell"
+                          className="mono-num editable-cell cc-cell-mat2"
                           contentEditable
                           suppressContentEditableWarning
                           title={qty2 > 0 ? `Unit price × ${qty2}` : undefined}
@@ -1485,7 +1584,7 @@ export function CraftingCalculatorPage() {
                         {rowIndex === 0 ? (itemNeedsArtifact ? (
                           <td
                             rowSpan={section.rows.length}
-                            className="mono-num editable-cell"
+                            className="mono-num editable-cell cc-cell-art"
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => updateRowField(section.rows[0].key, "artefact", e.currentTarget.textContent || "0")}
@@ -1496,47 +1595,22 @@ export function CraftingCalculatorPage() {
                             {(artefactByTier[rowTier] ?? 0) > 0 ? formatCompact(artefactByTier[rowTier]) : "-"}
                           </td>
                         ) : (
-                          <td rowSpan={section.rows.length} className="mono-num muted">Non Artefact</td>
+                          <td rowSpan={section.rows.length} className="mono-num muted cc-cell-art">Non Artefact</td>
                         )) : null}
-                        <td className="mono-num editable-cell" contentEditable suppressContentEditableWarning onBlur={(e) => updateRowField(row.key, "market", e.currentTarget.textContent || "0")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}>{formatCompactOrDash(values.market)}</td>
-                        <td className="mono-num muted">{values.sold > 0 ? formatCompact(values.sold) : "-"}</td>
-                        <td className={`mono-num ${typeof rowProfit === "number" ? (rowProfit >= 0 ? "value-positive" : "value-negative") : ""}`}>
+                        <td className="mono-num editable-cell cc-cell-market" contentEditable suppressContentEditableWarning onBlur={(e) => updateRowField(row.key, "market", e.currentTarget.textContent || "0")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}>{formatCompactOrDash(values.market)}</td>
+                        <td className="mono-num muted cc-cell-sold" data-empty={values.sold > 0 ? undefined : ""}>{values.sold > 0 ? formatCompact(values.sold) : "-"}</td>
+                        <td className={`mono-num cc-cell-profit ${typeof rowProfit === "number" ? (rowProfit >= 0 ? "value-positive" : "value-negative") : ""}`}>
                           {typeof rowProfit === "number" ? formatCompact(rowProfit) : "-"}
                         </td>
-                        <td className={`mono-num ${typeof rowGain === "number" ? (rowGain >= 0 ? "value-positive" : "value-negative") : ""}`}>
+                        <td className={`mono-num cc-cell-gain ${typeof rowGain === "number" ? (rowGain >= 0 ? "value-positive" : "value-negative") : ""}`}>
                           {typeof rowGain === "number" ? `${rowGain.toFixed(1)}%` : "-"}
                         </td>
                         <td
-                          className={`mono-num ${typeof rowProfit === "number" ? (rowProfit >= 0 ? "value-positive" : "value-negative") : ""}`}
-                          title={(() => {
-                            const { enchant: rowEnchant } = parseTierEnchant(row.uid);
-                            const rowBaseFocus = computeCraftBaseFocus(selectedItemMaterials, rowTier, rowEnchant);
-                            if (rowBaseFocus <= 0) return undefined;
-                            const eff = applyFocusEfficiency(rowBaseFocus, focusEfficiency);
-                            return `Profit ${typeof rowProfit === "number" ? formatNumber(Math.round(rowProfit)) : "?"} · Focus ${formatNumber(Math.round(eff))} (base ${formatNumber(Math.round(rowBaseFocus))})`;
-                          })()}
+                          className={`mono-num cc-cell-spf ${typeof rowProfit === "number" ? (rowProfit >= 0 ? "value-positive" : "value-negative") : ""}`}
+                          title={focusTitle}
+                          data-empty={silverPerFocus === "-" ? "" : undefined}
                         >
-                          {(() => {
-                            const { enchant: rowEnchant } = parseTierEnchant(row.uid);
-                            const rowBaseFocus = computeCraftBaseFocus(selectedItemMaterials, rowTier, rowEnchant);
-                            if (rowBaseFocus <= 0) return "-";
-                            const effective = applyFocusEfficiency(rowBaseFocus, focusEfficiency);
-                            if (effective <= 0 || typeof rowProfit !== "number") return "-";
-                            // Positive profit: grows with specs (more silver per focus).
-                            // Negative profit: shrinks magnitude with specs to keep "better specs
-                            // = better metric" UX direction. Formula: (profit / base) * (effective / base)
-                            // = profit * effective / base² (linear scaling, NOT squared).
-                            const ratio = effective / rowBaseFocus;
-                            const spf = rowProfit >= 0
-                              ? rowProfit / effective
-                              : (rowProfit / rowBaseFocus) * ratio;
-                            if (!Number.isFinite(spf)) return "-";
-                            const abs = Math.abs(spf);
-                            const sign = spf < 0 ? "-" : "";
-                            if (abs >= 1000) return `${sign}${formatCompact(abs)}`;
-                            if (abs >= 10) return `${sign}${Math.round(abs)}`;
-                            return `${sign}${abs.toFixed(1)}`;
-                          })()}
+                          {silverPerFocus}
                         </td>
                       </tr>
                     );
@@ -1547,6 +1621,7 @@ export function CraftingCalculatorPage() {
           </table>
         </main>
 
+        <ResponsiveFilters title="Item & settings" accent="var(--fx-accent)">
         <aside className="detail-side">
           <div className="detail-grid-12">
             <div className="bento-card span-8">
@@ -1576,12 +1651,20 @@ export function CraftingCalculatorPage() {
               </div>
             </div>
             <div className="bento-card span-4 item-preview-card">
-              <img
-                className="cc-item-image"
-                src={selectedItem ? `/itemicons/T4_${selectedItem.id}.png` : assetUrl("picture/accountsymbol.png")}
-                onError={onItemIconError}
-                alt="item"
-              />
+              <button type="button" className="cc-item-pick" onClick={() => setPickerOpen(true)} title="Change item" aria-label={`Change item (current: ${selectedItem?.name || "none"})`}>
+                <img
+                  className="cc-item-image"
+                  src={selectedItem ? `/itemicons/T4_${selectedItem.id}.png` : assetUrl("picture/accountsymbol.png")}
+                  onError={onItemIconError}
+                  alt="item"
+                />
+                <span className="cc-item-pick-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
+                  </svg>
+                  Change
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1897,6 +1980,7 @@ export function CraftingCalculatorPage() {
           </div>
 
         </aside>
+        </ResponsiveFilters>
       </div>
 
       {showStylePicker ? (
@@ -1914,6 +1998,23 @@ export function CraftingCalculatorPage() {
       ) : null}
       <CommunityTile />
       <ToolGuideLink slug="crafting-calculator" authService={authService} />
+
+      {phoneDetail ? (
+        <BottomSheet open={detailOpen} onClose={() => setDetailOpen(false)} label={phoneDetail.label} accent="var(--fx-accent)">
+          <CraftRowDetail {...phoneDetail.props} />
+        </BottomSheet>
+      ) : null}
+
+      <ItemPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        items={allItems}
+        categories={itemCategories}
+        selectedId={selectedItem?.id ?? null}
+        onPick={onSelectSearchItem}
+        score={scoreSearchItem}
+        isPhone={isPhone}
+      />
 
       <SpecsModal
         open={showSpecsModal}

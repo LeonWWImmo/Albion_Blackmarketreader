@@ -322,10 +322,6 @@ body.food-potion-crafter-body {
   .resp-filters-sheet-body .fp-field-wide {
     grid-column: auto;
   }
-  /* Scanner list: let the table scroll inside its own box, never the page. */
-  .fp-page .fp-main {
-    overflow: hidden;
-  }
 }
 
 .fp-recipe-picker {
@@ -797,4 +793,345 @@ tr.fp-avalonian-row td {
    collapses the stage to content height and clips the bottom under overflow:hidden.) */
 .fp-page .fp-main-crafter .fp-crafter-stage {
   height: 100%;
+}
+
+/* ===========================================================================
+   Food & Potion on a phone
+
+   Nine and eleven columns scrolled sideways inside a short box, with profit off-screen and
+   each suspect row taken over by its warning. Every row becomes a two-line entry: the recipe
+   on the left, profit per item and profit % on the right. The page scrolls as one, and a tap
+   opens the recipe's calculator in a bottom sheet. Desktop and tablet are untouched.
+   =========================================================================== */
+
+/* Only ever shown by the phone layout below. */
+.fp-suspect-chip,
+.fp-phone-hint {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* one page scroll instead of a short box inside it; bottom room clears the filter button */
+  body.food-potion-crafter-body .fp-page .fp-main {
+    overflow: visible;
+    padding: 12px 12px 92px;
+  }
+
+  body.food-potion-crafter-body .fp-page .fp-main-scanner .bm-table,
+  body.food-potion-crafter-body .fp-page .fp-main-crafter .fp-crafter-stage {
+    height: auto;
+    overflow: visible;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  /* Category is already in the mode tabs; the other three fit one line. */
+  body.food-potion-crafter-body .fp-summary-bar {
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 10px 14px;
+  }
+
+  body.food-potion-crafter-body .fp-summary-bar > :nth-child(4),
+  body.food-potion-crafter-body .fp-summary-bar > :nth-child(5) {
+    display: none;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-wrap table,
+  body.food-potion-crafter-body .fp-main .table-wrap tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-wrap thead {
+    display: none;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-wrap td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-wrap tr:not(.high-density-row) td {
+    padding: 16px 14px;
+    text-align: center;
+  }
+
+  body.food-potion-crafter-body .fp-main tr.high-density-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "recipe profit profit"
+      "recipe pct    sold";
+    align-items: center;
+    row-gap: 3px;
+    height: auto;
+    min-height: 62px;
+    padding: 10px 14px;
+    border-left: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* the crafter's tier list: the tier badge in front, silver per focus instead of sales */
+  body.food-potion-crafter-body .fp-tier-wrap tr.high-density-row {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "tier recipe profit profit"
+      "tier recipe pct    spf";
+  }
+
+  /* hover sticks after a tap on touch screens, and zebra plus dividers is busy */
+  body.food-potion-crafter-body .fp-main tr.high-density-row,
+  body.food-potion-crafter-body .fp-main tr.high-density-row.alt,
+  body.food-potion-crafter-body .fp-main tr.high-density-row:hover {
+    background: transparent;
+  }
+
+  body.food-potion-crafter-body .fp-main tr.high-density-row:active {
+    background: rgba(var(--fx-accent-rgb), 0.08);
+  }
+
+  body.food-potion-crafter-body .fp-main .fp-clickable-row:hover td {
+    background: transparent;
+  }
+
+  /* Desktop marks Avalonian recipes with a strip on every cell; one strip on the row here. */
+  body.food-potion-crafter-body .fp-main tr.fp-avalonian-row td {
+    box-shadow: none;
+  }
+
+  body.food-potion-crafter-body .fp-main tr.high-density-row.fp-avalonian-row {
+    box-shadow: inset 2px 0 0 var(--fp-food);
+  }
+
+  /* The selection frame is drawn on each cell; on separate grid cells it turns into boxes. */
+  body.food-potion-crafter-body .fp-main tr.high-density-row.selected-row td {
+    border: 0;
+    background: transparent;
+  }
+
+  body.food-potion-crafter-body .fp-tier-wrap tr.high-density-row.selected-row {
+    background: rgba(var(--fx-accent-rgb), 0.1);
+    box-shadow: inset 2px 0 0 var(--primary);
+  }
+
+  /* everything else is in the calculator sheet */
+  body.food-potion-crafter-body .fp-main tr.high-density-row > td:not(.fp-cell-tier):not(.fp-cell-recipe):not(.fp-cell-profit):not(.fp-cell-pct):not(.fp-cell-sold):not(.fp-cell-spf),
+  body.food-potion-crafter-body .fp-tier-wrap tr.high-density-row > .fp-cell-sold,
+  body.food-potion-crafter-body .fp-main tr.high-density-row > td[data-empty],
+  body.food-potion-crafter-body .fp-main .fp-suspect-note {
+    display: none;
+  }
+
+  body.food-potion-crafter-body .fp-cell-tier {
+    grid-area: tier;
+    margin-right: 10px;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe {
+    grid-area: recipe;
+    min-width: 0;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe .item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe .item-info > div:last-child {
+    min-width: 0;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe .fp-item-icon {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe .item-name {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  body.food-potion-crafter-body .fp-cell-recipe .item-meta {
+    margin-top: 3px;
+    font-size: 10.5px;
+  }
+
+  body.food-potion-crafter-body .fp-main .fp-suspect-chip {
+    display: inline-block;
+    margin-left: 6px;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    white-space: nowrap;
+  }
+
+  body.food-potion-crafter-body .fp-cell-profit {
+    grid-area: profit;
+    padding-left: 12px;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body.food-potion-crafter-body .fp-cell-pct,
+  body.food-potion-crafter-body .fp-cell-sold,
+  body.food-potion-crafter-body .fp-cell-spf {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body.food-potion-crafter-body .fp-cell-pct {
+    grid-area: pct;
+  }
+
+  body.food-potion-crafter-body .fp-cell-sold {
+    grid-area: sold;
+    color: var(--text-secondary);
+  }
+
+  body.food-potion-crafter-body .fp-cell-spf {
+    grid-area: spf;
+  }
+
+  body.food-potion-crafter-body .fp-cell-sold::before,
+  body.food-potion-crafter-body .fp-cell-spf::before {
+    content: "\00B7";
+    margin: 0 6px;
+    color: var(--text-muted);
+  }
+
+  /* no profit % to separate from: drop the dot */
+  body.food-potion-crafter-body .fp-cell-pct[data-empty] ~ .fp-cell-sold::before,
+  body.food-potion-crafter-body .fp-cell-pct[data-empty] ~ .fp-cell-spf::before {
+    content: none;
+  }
+
+  body.food-potion-crafter-body .fp-cell-sold::after {
+    content: " sold/day";
+    color: var(--text-muted);
+  }
+
+  body.food-potion-crafter-body .fp-cell-spf::after {
+    content: "/focus";
+    margin-left: 1px;
+    color: var(--text-muted);
+  }
+
+  /* a suspect row keeps its warning legible and dims the numbers it is about */
+  body.food-potion-crafter-body .fp-main .fp-suspect-row td {
+    opacity: 1;
+  }
+
+  body.food-potion-crafter-body .fp-suspect-row .fp-cell-profit,
+  body.food-potion-crafter-body .fp-suspect-row .fp-cell-pct,
+  body.food-potion-crafter-body .fp-suspect-row .fp-cell-sold,
+  body.food-potion-crafter-body .fp-suspect-row .fp-cell-spf {
+    opacity: 0.45;
+  }
+
+  body.food-potion-crafter-body .fp-main .table-footer {
+    padding: 12px 14px;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  body.food-potion-crafter-body .fp-crafter-toolbar .fp-recipe-picker {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  body.food-potion-crafter-body .fp-phone-hint {
+    display: block;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* The Discord tile and the filter button both want the bottom-right corner.
+     Discord is in the burger menu instead. */
+  body.food-potion-crafter-body .rk-community-tile {
+    display: none;
+  }
+}
+
+/* ---- calculator sheet (phone only; portalled to <body>, outside .fp-page) ---- */
+
+.fp-sheet {
+  --fp-food-soft: rgba(245, 158, 11, 0.16);
+  --fp-potion-soft: rgba(168, 85, 247, 0.16);
+}
+
+/* the sheet is the frame; the workbench's own panel would be a second one inside it */
+.fp-sheet .fp-workbench-inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.fp-sheet .fp-workbench-title h3 {
+  font-size: 16px;
+}
+
+/* 16px keeps iOS from zooming the page in when a price field is focused */
+.fp-sheet .fp-output-price input,
+.fp-sheet .fp-ingredient-price {
+  height: 42px;
+  font-size: 16px;
+}
+
+/* full ingredient names on the first line, the price field and total under them */
+.fp-sheet .fp-ingredient-row {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  padding: 10px;
+}
+
+.fp-sheet .fp-ingredient-main,
+.fp-sheet .fp-ingredient-meta {
+  flex: 1 1 100%;
+}
+
+.fp-sheet .fp-ingredient-name {
+  font-size: 13px;
+  white-space: normal;
+}
+
+.fp-sheet .fp-ingredient-qty {
+  font-size: 12px;
+}
+
+.fp-sheet .fp-ingredient-price {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.fp-sheet .fp-ingredient-total {
+  font-size: 13px;
+  min-width: 84px;
+}
+
+.fp-sheet .fp-summary-grid span {
+  font-size: 12px;
+}
+
+.fp-sheet .fp-summary-grid strong {
+  font-size: 13px;
 }

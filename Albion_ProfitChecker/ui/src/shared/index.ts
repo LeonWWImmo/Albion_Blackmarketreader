@@ -14,6 +14,7 @@ export * from "./icons/icons";
 export * from "./icons/Icon";
 
 export * from "./hooks/useSessionState";
+export * from "./hooks/useMediaQuery";
 
 export * from "./journals/journals";
 export * from "./journals/useJournals";

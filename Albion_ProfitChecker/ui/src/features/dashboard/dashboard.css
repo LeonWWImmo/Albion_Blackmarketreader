@@ -3236,3 +3236,559 @@ body.dashboard-body.panel-open::before {
     transition: none;
   }
 }
+
+/* ===========================================================================
+   Dashboard on a phone (DashboardPhone.tsx)
+
+   The desktop page is a marketing hero, four KPI tiles, a chart, a city dropdown and big
+   deal cards, which on a phone came down to one KPI and about four deals per screen. The phone
+   gets its own top instead: the deal count with the profit trend drawn behind it, the key
+   figures and the city crests as swipeable rows, a sort switch, and the deals as a dense
+   list whose rows open a detail sheet. Those parts only render on a phone; the rules below
+   hide the desktop parts they replace. Desktop and tablet are untouched.
+   =========================================================================== */
+
+@media (max-width: 640px) {
+  /* replaced by the phone overview; the KPI row carries !important rules from older fixes */
+  body.dashboard-body .kpi-row,
+  body.dashboard-body .chart-layout,
+  body.dashboard-body .chart-divider,
+  body.dashboard-body .dash-main > .loading[style] {
+    display: none !important;
+  }
+
+  /* .page already clears the fixed topbar; the older 68px on top of it left an empty band */
+  body.dashboard-body .dash-main {
+    padding-top: 4px;
+    padding-bottom: 92px;
+  }
+
+  /* The Discord tile and the filter button both want the bottom-right corner.
+     Discord is in the burger menu instead. */
+  body.dashboard-body .rk-community-tile {
+    display: none;
+  }
+}
+
+.dbm-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ---- hero: count + trend ---- */
+
+.dbm-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 16px 0;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.28);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(var(--fx-accent-rgb), 0.2), transparent 60%),
+    linear-gradient(180deg, rgba(16, 22, 30, 0.96), rgba(8, 12, 17, 0.98));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.dbm-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(var(--fx-accent-rgb), 0.95);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.dbm-updated {
+  color: #8b94a7;
+  letter-spacing: 0.08em;
+}
+
+.dbm-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(var(--fx-accent-rgb));
+  box-shadow: 0 0 0 0 rgba(var(--fx-accent-rgb), 0.6);
+  animation: dbm-pulse 2.4s ease-out infinite;
+}
+
+.dbm-hero-count {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.dbm-hero-count strong {
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbm-hero-count span {
+  color: #cbd5e1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dbm-hero-sub {
+  margin: 6px 0 14px;
+  color: #8b94a7;
+  font-size: 12px;
+}
+
+/* full-bleed under the text, so the trend reads as the card's floor */
+.dbm-spark {
+  display: block;
+  width: calc(100% + 32px);
+  height: 64px;
+  margin: 0 -16px;
+}
+
+.dbm-spark-line {
+  stroke: rgb(var(--fx-accent-rgb));
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(var(--fx-accent-rgb), 0.55));
+}
+
+.dbm-spark-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 -16px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.18);
+  color: #8b94a7;
+  font-size: 11.5px;
+}
+
+.dbm-spark-foot strong {
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbm-ranges {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dbm-ranges button,
+.dbm-sort button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: #8b94a7;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dbm-ranges button.is-active,
+.dbm-sort button.is-active {
+  background: rgba(var(--fx-accent-rgb), 0.2);
+  color: #ffffff;
+}
+
+/* ---- swipeable rows: key figures, city crests ---- */
+
+.dbm-kpis,
+.dbm-cities {
+  display: flex;
+  gap: 8px;
+  /* run to the screen edge so it reads as swipeable; .page has a 10px gutter */
+  margin: 0 -10px;
+  padding: 0 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 10px;
+  scrollbar-width: none;
+}
+
+.dbm-kpis::-webkit-scrollbar,
+.dbm-cities::-webkit-scrollbar {
+  display: none;
+}
+
+.dbm-kpi {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 132px;
+  padding: 11px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  scroll-snap-align: start;
+}
+
+.dbm-kpi span {
+  color: #8b94a7;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dbm-kpi strong {
+  color: #f1f5f9;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbm-city {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a3acbb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.dbm-city img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: grayscale(0.6) brightness(0.85);
+  transition: filter 140ms ease;
+}
+
+.dbm-city.is-active {
+  border-color: rgba(var(--fx-accent-rgb), 0.65);
+  background: rgba(var(--fx-accent-rgb), 0.14);
+  color: #ffffff;
+}
+
+.dbm-city.is-active img {
+  filter: none;
+}
+
+.dbm-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+  color: #8b94a7;
+  font-size: 12.5px;
+}
+
+.dbm-list-head strong {
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbm-sort {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dbm-sort button {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+/* ---- deal list ---- */
+
+.dbm-deals {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background: rgba(10, 14, 20, 0.88);
+}
+
+.dbm-empty {
+  margin: 0;
+  padding: 28px 16px;
+  color: #8b94a7;
+  font-size: 13px;
+  text-align: center;
+}
+
+.dbm-deal {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dbm-deal:last-child {
+  border-bottom: 0;
+}
+
+.dbm-deal:active {
+  background: rgba(var(--fx-accent-rgb), 0.08);
+}
+
+/* enchant level as a strip down the left edge, in Albion's enchant colours */
+.dbm-ench-1 { box-shadow: inset 3px 0 0 #4ade80; }
+.dbm-ench-2 { box-shadow: inset 3px 0 0 #38bdf8; }
+.dbm-ench-3 { box-shadow: inset 3px 0 0 #c084fc; }
+.dbm-ench-4 { box-shadow: inset 3px 0 0 #fbbf24; }
+
+.dbm-deal-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dbm-deal-icon img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.dbm-deal-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* the name gives way, never the tier chip or the price warning beside it */
+.dbm-deal-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #f1f5f9;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.dbm-deal-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dbm-tier,
+.dbm-check {
+  flex: none;
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+
+.dbm-tier {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+}
+
+.dbm-check {
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.dbm-deal-route {
+  overflow: hidden;
+  color: #8b94a7;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* crests the size of the text, so the route reads at a glance: city -> Black Market */
+.dbm-crest {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  object-fit: contain;
+  vertical-align: -4px;
+}
+
+.dbm-arrow {
+  margin: 0 5px;
+  color: #64748b;
+}
+
+/* Below ~420px the name and both prices do not fit beside the profit column; the crest says
+   which city it is (the city chips above pair each crest with its name, the sheet names it). */
+@media (max-width: 419px) {
+  .dbm-city-name {
+    display: none;
+  }
+}
+
+.dbm-deal-nums {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+}
+
+.dbm-deal-nums strong {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.dbm-deal-nums strong.is-gain {
+  color: #34d399;
+}
+
+.dbm-deal-nums strong.is-loss {
+  color: #f87171;
+}
+
+.dbm-deal-nums span {
+  color: #8b94a7;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the warning is about these numbers, so they step back */
+.dbm-deal.is-suspect .dbm-deal-nums {
+  opacity: 0.45;
+}
+
+/* ---- deal sheet ---- */
+
+.dbm-sheet {
+  --bsheet-gain: #34d399;
+}
+
+.dbm-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: dbm-step;
+}
+
+.dbm-steps li {
+  position: relative;
+  padding: 10px 12px 10px 44px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.45;
+  counter-increment: dbm-step;
+}
+
+.dbm-steps li::before {
+  content: counter(dbm-step);
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(var(--fx-accent-rgb), 0.18);
+  color: rgb(var(--fx-accent-rgb));
+  font-size: 11.5px;
+  font-weight: 800;
+  transform: translateY(-50%);
+}
+
+.dbm-steps strong {
+  color: #ffffff;
+}
+
+.dbm-id {
+  margin: 14px 2px 0;
+  color: #64748b;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.dbm-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.45);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(var(--fx-accent-rgb), 0.22), rgba(var(--fx-accent-rgb), 0.1));
+  color: rgb(var(--fx-accent-rgb));
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dbm-cta:active {
+  transform: translateY(1px);
+}
+
+@keyframes dbm-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(var(--fx-accent-rgb), 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(var(--fx-accent-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--fx-accent-rgb), 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dbm-live-dot {
+    animation: none;
+  }
+}

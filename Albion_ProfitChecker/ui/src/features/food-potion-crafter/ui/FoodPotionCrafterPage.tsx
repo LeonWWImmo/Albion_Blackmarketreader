@@ -5,9 +5,10 @@ import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
+import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import type { City, ConsumableCategory, ConsumableRecipe, MarketRegion, RecipeIngredient } from "../core";
 import { buildConsumablePriceSnapshot, ingredientPricesPath, loadIngredients, loadRecipes, outputPricesPath } from "../data";
 import { deriveFoodPotionRows, useFoodPotionState } from "../hooks";
@@ -224,6 +225,13 @@ export function FoodPotionCrafterPage() {
   // Scanner enchant filter: "all" or a specific level (0 = base, 1/2/3 = enchanted).
   const [scannerEnchant, setScannerEnchant] = useSessionState<"all" | 0 | 1 | 2 | 3>("fp:scannerEnchant", "all");
   const [showSpecsModal, setShowSpecsModal] = useState(false);
+  // On a phone the tier table has no room for the calculator beside or below it, so a tapped
+  // recipe opens its calculator in a bottom sheet instead.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [detailOpen, setDetailOpen] = useState(false);
+  useEffect(() => {
+    if (!isPhone) setDetailOpen(false);
+  }, [isPhone]);
 
   // --- account ---
   const [authService, setAuthService] = useState<AuthService | null>(null);
@@ -567,7 +575,7 @@ export function FoodPotionCrafterPage() {
             <button className="bm-pill" type="button" onClick={() => setRegion(region === "eu" ? "us" : "eu")}>
               <span className="material-symbols-outlined">language</span>Region: <span>{region.toUpperCase()}</span>
             </button>
-            <div className="bm-status" title={liveUpdated.title}><span className="pulse"></span>{liveUpdated.relative ? <>Last updated: <span>{liveUpdated.time}</span><span className="bm-status-ago"> ({liveUpdated.relative})</span></> : "Manual pricing"}</div>
+            <LastUpdatedBadge stamp={liveUpdated} emptyLabel="Manual pricing" />
             <div className="account-wrap">
               <button ref={accountBtnRef} className="account-btn" type="button" onClick={() => setShowAccount((p) => !p)} aria-label="Account">
                 <img src={user?.avatar || assetUrl("picture/accountsymbol.png")} alt="avatar" />
@@ -802,9 +810,17 @@ export function FoodPotionCrafterPage() {
                       key={row.rowKey}
                       className={`high-density-row fp-clickable-row ${index % 2 === 1 ? "alt" : ""} ${selectedRowKey === row.rowKey ? "selected-row" : ""} ${row.recipe.isAvalonian ? "fp-avalonian-row" : ""} ${priced ? "" : "fp-unpriced-row"} ${suspect ? "fp-suspect-row" : ""}`}
                       title={suspect ? "Sell price is 10x+ the craft cost - likely bad market data" : "Open in crafter"}
-                      onClick={() => { setSelectedFamily(familyBase(row.recipe.itemId)); setSelectedRowKey(row.rowKey); setMode("crafter"); }}
+                      onClick={() => {
+                        setSelectedFamily(familyBase(row.recipe.itemId));
+                        setSelectedRowKey(row.rowKey);
+                        setMode("crafter");
+                        if (isPhone) {
+                          window.scrollTo(0, 0);
+                          setDetailOpen(true);
+                        }
+                      }}
                     >
-                      <td>
+                      <td className="fp-cell-recipe">
                         <div className="item">
                           <div className="item-info">
                             <div className="fp-item-icon"><img src={iconUrl(row.recipe.itemId)} alt="" loading="lazy" onError={onItemIconError} /></div>
@@ -814,6 +830,7 @@ export function FoodPotionCrafterPage() {
                                 <EnchantBadge itemId={row.recipe.itemId} />
                                 {priced ? null : <span className="fp-chip fp-missing-chip" style={{ marginLeft: 6 }}>No price</span>}
                                 {row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}
+                                {suspect ? <span className="fp-chip fp-suspect-chip">Check price</span> : null}
                               </div>
                               {suspect ? <div className="fp-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}
                               <div className="item-meta">T{row.recipe.tier} · {row.recipe.ingredients.length} ingredients</div>
@@ -825,10 +842,10 @@ export function FoodPotionCrafterPage() {
                       <td className="num fp-return-cell">{formatPct(row.result.returnRate * 100)}</td>
                       <td className="num">{priced ? formatNumber(row.result.totalCost / row.result.outputAmount) : "--"}</td>
                       <td className="num">{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
-                      <td className={`num ${priced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{priced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
-                      <td className={`num ${priced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`}>{priced ? formatPct(row.result.profitPercent) : "--"}</td>
+                      <td className={`num fp-cell-profit ${priced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{priced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
+                      <td className={`num fp-cell-pct ${priced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`} data-empty={priced ? undefined : ""}>{priced ? formatPct(row.result.profitPercent) : "--"}</td>
                       <td className={`num ${priced && (row.result.silverPerFocus ?? 0) >= 0 ? "profit" : priced ? "loss" : ""}`}>{priced && row.result.silverPerFocus !== null ? formatNumber(row.result.silverPerFocus) : "--"}</td>
-                      <td className="num">{(() => { const s = soldByItemId[row.recipe.itemId] ?? 0; return s > 0 ? formatNumber(s) : "--"; })()}</td>
+                      <td className="num fp-cell-sold" data-empty={(soldByItemId[row.recipe.itemId] ?? 0) > 0 ? undefined : ""}>{(() => { const s = soldByItemId[row.recipe.itemId] ?? 0; return s > 0 ? formatNumber(s) : "--"; })()}</td>
                     </tr>
                     );
                   })}
@@ -873,14 +890,17 @@ export function FoodPotionCrafterPage() {
                       key={row.rowKey}
                       className={`high-density-row ${crafterSelected?.rowKey === row.rowKey ? "selected-row" : ""} ${row.recipe.isAvalonian ? "fp-avalonian-row" : ""} ${isSuspectPrice(row.result) ? "fp-suspect-row" : ""}`}
                       title={isSuspectPrice(row.result) ? "Sell price 10x+ craft cost - likely bad market data" : undefined}
-                      onClick={() => setSelectedRowKey(row.rowKey)}
+                      onClick={() => {
+                        setSelectedRowKey(row.rowKey);
+                        if (isPhone) setDetailOpen(true);
+                      }}
                     >
-                      <td><span className="badge-chip">T{row.recipe.tier}</span></td>
-                      <td>
+                      <td className="fp-cell-tier"><span className="badge-chip">T{row.recipe.tier}</span></td>
+                      <td className="fp-cell-recipe">
                         <div className="item"><div className="item-info">
                           <div className="fp-item-icon"><img src={iconUrl(row.recipe.itemId)} alt="" loading="lazy" onError={onItemIconError} /></div>
                           <div>
-                            <div className="item-name">{row.recipe.name}<EnchantBadge itemId={row.recipe.itemId} />{row.result.missingIngredientCost ? " *" : ""}{row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}</div>
+                            <div className="item-name">{row.recipe.name}<EnchantBadge itemId={row.recipe.itemId} />{row.result.missingIngredientCost ? " *" : ""}{row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}{isSuspectPrice(row.result) ? <span className="fp-chip fp-suspect-chip">Check price</span> : null}</div>
                             {isSuspectPrice(row.result) ? <div className="fp-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}
                           </div>
                         </div></div>
@@ -890,15 +910,17 @@ export function FoodPotionCrafterPage() {
                       <td className="num">{rowPriced ? formatNumber(row.result.grossIngredientCost / row.result.outputAmount) : "--"}</td>
                       <td className="num muted">{formatNumber(row.result.stationFee / row.result.outputAmount)}</td>
                       <td className="num">{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
-                      <td className={`num ${rowPriced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{rowPriced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
-                      <td className={`num ${rowPriced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`}>{rowPriced ? formatPct(row.result.profitPercent) : "--"}</td>
-                      <td className={`num ${rowPriced && (row.result.silverPerFocus ?? 0) >= 0 ? "profit" : rowPriced ? "loss" : ""}`}>{rowPriced && row.result.silverPerFocus !== null ? formatNumber(row.result.silverPerFocus) : "--"}</td>
+                      <td className={`num fp-cell-profit ${rowPriced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{rowPriced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
+                      <td className={`num fp-cell-pct ${rowPriced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`} data-empty={rowPriced ? undefined : ""}>{rowPriced ? formatPct(row.result.profitPercent) : "--"}</td>
+                      <td className={`num fp-cell-spf ${rowPriced && (row.result.silverPerFocus ?? 0) >= 0 ? "profit" : rowPriced ? "loss" : ""}`} data-empty={rowPriced && row.result.silverPerFocus !== null ? undefined : ""}>{rowPriced && row.result.silverPerFocus !== null ? formatNumber(row.result.silverPerFocus) : "--"}</td>
                       <td className="num">{(() => { const s = soldByItemId[row.recipe.itemId] ?? 0; return s > 0 ? formatNumber(s) : "--"; })()}</td>
                     </tr>
                   ); })}
                 </tbody>
               </table>
             </div>
+
+            {isPhone && familyRows.length ? <p className="fp-phone-hint">Tap a tier to open its calculator.</p> : null}
 
             {crafterSelected ? (() => {
               // The calculator shows ONE real craft: the actual whole ingredient amounts you must buy
@@ -911,7 +933,7 @@ export function FoodPotionCrafterPage() {
               const perCraft = (v: number) => v / crafts; // normalise result totals to one craft
               const perItem = (v: number) => v / items; // normalise to one finished item
               const cPriced = isPriced(crafterSelected);
-              return (
+              const workbench = (
               <div className="fp-workbench-inline">
                 <div className="fp-workbench-title">
                   <span className="material-symbols-outlined">calculate</span>
@@ -1003,6 +1025,20 @@ export function FoodPotionCrafterPage() {
                 </div>
               </div>
               );
+              return isPhone ? (
+                <BottomSheet open={detailOpen} onClose={() => setDetailOpen(false)} label={`${crafterSelected.recipe.name} calculator`} accent="var(--fx-accent)">
+                  <div className="fp-sheet">
+                    {/* the row's note is hidden on a phone, so the sheet has to say why it is flagged */}
+                    {isSuspectPrice(crafterSelected.result) ? (
+                      <p className="bsheet-warning">
+                        This profit looks unrealistic. The sell price is probably a stale or troll order, so check it in game
+                        before crafting.
+                      </p>
+                    ) : null}
+                    {workbench}
+                  </div>
+                </BottomSheet>
+              ) : workbench;
             })() : null}
           </section>
         )}

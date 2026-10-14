@@ -12,7 +12,7 @@ interface ResponsiveFiltersProps {
 
 /**
  * Renders filter controls inline on desktop (unchanged), and on phones (≤640px) hides them and
- * shows a floating pencil button bottom-right that opens the same controls in a bottom-sheet.
+ * shows a floating filter button bottom-right that opens the same controls in a bottom-sheet.
  *
  * Desktop safety: the FAB is CSS-hidden ≥641px so it can never open there — the sheet is only ever
  * rendered on mobile. The inline copy is the only thing desktop sees. The sheet is portalled to
@@ -35,8 +35,8 @@ export function ResponsiveFilters({ children, title = "Filters", accent }: Respo
         onClick={() => setOpen(true)}
       >
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+          {/* funnel: reads as "filter" where the old pencil read as "edit" */}
+          <path d="M3 4.5h18l-7 8.25V19l-4 2v-8.25L3 4.5Z" />
         </svg>
       </button>
 

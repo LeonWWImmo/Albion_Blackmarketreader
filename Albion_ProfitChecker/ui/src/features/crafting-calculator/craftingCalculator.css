@@ -1604,3 +1604,657 @@ body.panel-open::before {
   line-height: 1.5;
   color: #79828f;
 }
+
+/* ===========================================================================
+   Crafting Calculator on a phone
+
+   The nine-column sheet scrolled sideways, with the profit off-screen and price cells far
+   too small to type into. Each tier becomes a two-line row: the tier on the left, profit on
+   the right, gain and silver per focus underneath. A tap opens the tier in a bottom sheet with
+   real price inputs (CraftRowDetail); the settings panel moves behind the filter button.
+
+   Everything sits inside the phone query and under body.crafting-calculator-body.
+   Desktop and tablet are untouched.
+   =========================================================================== */
+
+/* Only ever shown by the phone rows below; the desktop row has the full overlay instead. */
+.cc-suspect-chip {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* bottom room so the last tier can scroll clear of the filter button */
+  body.crafting-calculator-body .matrix-side {
+    overflow: visible !important;
+    border-bottom: 0;
+    padding-bottom: 84px;
+  }
+
+  body.crafting-calculator-body .spreadsheet-table,
+  body.crafting-calculator-body .spreadsheet-table thead,
+  body.crafting-calculator-body .spreadsheet-table tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* the tier headers already say what each group is; profit reads as profit */
+  body.crafting-calculator-body .spreadsheet-table thead {
+    display: none;
+  }
+
+  /* the desktop sheet fixes every cell at 34px, which would make each line of the row that tall */
+  body.crafting-calculator-body .spreadsheet-table td {
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  body.crafting-calculator-body .tier-header-row {
+    display: block;
+  }
+
+  body.crafting-calculator-body .tier-header-row td {
+    position: static;
+    height: auto;
+    padding: 12px 14px 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+  }
+
+  body.crafting-calculator-body .spreadsheet-table tr.sub-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "uid  profit profit"
+      "sold gain   spf";
+    align-items: center;
+    row-gap: 2px;
+    min-height: 56px;
+    padding: 9px 14px 9px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body.crafting-calculator-body .spreadsheet-table tr.sub-row:active {
+    background: rgba(var(--fx-accent-rgb), 0.08);
+  }
+
+  /* The tier colour strip is a ::before on the first cell; letting that cell drop its
+     positioning hangs the strip off the row instead, so it runs the full two lines. */
+  body.crafting-calculator-body .spreadsheet-table .sub-row .cc-cell-uid {
+    position: static;
+    grid-area: uid;
+    background: transparent;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+
+  body.crafting-calculator-body .cc-cell-sold { grid-area: sold; text-align: left; }
+  body.crafting-calculator-body .cc-cell-profit { grid-area: profit; text-align: right; }
+  body.crafting-calculator-body .cc-cell-gain { grid-area: gain; text-align: right; }
+  body.crafting-calculator-body .cc-cell-spf { grid-area: spf; text-align: right; }
+
+  /* in the detail sheet instead (td-qualified to outrank the display: block above) */
+  body.crafting-calculator-body .spreadsheet-table td.cc-cell-mat1,
+  body.crafting-calculator-body .spreadsheet-table td.cc-cell-mat2,
+  body.crafting-calculator-body .spreadsheet-table td.cc-cell-art,
+  body.crafting-calculator-body .spreadsheet-table td.cc-cell-market,
+  body.crafting-calculator-body .cc-suspect-overlay {
+    display: none;
+  }
+
+  /* the value tint behind each number reads as boxes once the cells shrink to fit */
+  body.crafting-calculator-body .sub-row td.value-positive,
+  body.crafting-calculator-body .sub-row td.value-negative {
+    background: transparent;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-profit {
+    padding-left: 12px;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-sold,
+  body.crafting-calculator-body .sub-row .cc-cell-gain,
+  body.crafting-calculator-body .sub-row .cc-cell-spf {
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-sold {
+    color: #8b94a7;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-sold::after {
+    content: " sold/day";
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-spf::before {
+    content: "\00B7";
+    margin: 0 6px;
+    color: #64748b;
+  }
+
+  body.crafting-calculator-body .sub-row .cc-cell-spf::after {
+    content: "/focus";
+    margin-left: 1px;
+    color: #64748b;
+  }
+
+  /* no sale figure or no focus cost for this tier: say nothing rather than "- sold/day" */
+  body.crafting-calculator-body .sub-row [data-empty] {
+    visibility: hidden;
+  }
+
+  body.crafting-calculator-body .cc-suspect-chip {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: 2px;
+  }
+
+  /* a suspect tier keeps its warning legible and dims the numbers it is about */
+  body.crafting-calculator-body .cc-suspect-row td {
+    opacity: 1;
+  }
+
+  body.crafting-calculator-body .cc-suspect-row .cc-cell-profit,
+  body.crafting-calculator-body .cc-suspect-row .cc-cell-gain,
+  body.crafting-calculator-body .cc-suspect-row .cc-cell-spf {
+    opacity: 0.45;
+  }
+
+  /* which item the tiers belong to, above the list */
+  /* a button: tapping it opens the item picker */
+  .cc-phone-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .cc-phone-item:active {
+    background: rgba(var(--fx-accent-rgb), 0.08);
+  }
+
+  .cc-phone-item-change {
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding: 5px 11px;
+    border: 1px solid rgba(var(--fx-accent-rgb), 0.45);
+    border-radius: 999px;
+    color: rgb(var(--fx-accent-rgb));
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .cc-phone-item img {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+    object-fit: contain;
+    border: 1px solid rgba(var(--fx-accent-rgb), 0.3);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .cc-phone-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .cc-phone-item-text strong {
+    color: #f1f5f9;
+    font-size: 15px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cc-phone-item-text span {
+    color: #8b94a7;
+    font-size: 11.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The settings panel lives in the filter sheet on a phone; its desktop panel chrome would
+     only add a second frame and a second scroll box inside the sheet. */
+  .resp-filters-sheet-body .detail-side {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    backdrop-filter: none;
+    overflow: visible;
+  }
+
+  /* "Manage Specs" is opened from inside that sheet, so its modal has to sit above it.
+     Scoped to the page so it outranks specs.css whatever order the two load in. */
+  body.crafting-calculator-body .specs-overlay {
+    z-index: 2050;
+  }
+
+  /* The Discord tile and the filter button both want the bottom-right corner.
+     Discord is in the burger menu instead. */
+  body.crafting-calculator-body .rk-community-tile {
+    display: none;
+  }
+}
+
+/* ---- tier detail sheet (phone only; portalled to <body>) ---- */
+
+.cc-sheet {
+  --bsheet-gain: #34d399;
+}
+
+.cc-sheet-prices {
+  display: grid;
+  gap: 12px;
+}
+
+.cc-price-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Material names arrive in capitals from the data, the other labels do not; setting them all
+   in the same small caps as the tile labels keeps the list even. */
+.cc-price-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cc-price-hint {
+  color: #8b94a7;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cc-price-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cc-price-input-wrap:focus-within {
+  border-color: rgba(var(--fx-accent-rgb), 0.55);
+  box-shadow: 0 0 0 3px rgba(var(--fx-accent-rgb), 0.12);
+}
+
+/* 16px keeps iOS from zooming the page in when the field is focused */
+.cc-price-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cc-price-input::placeholder {
+  color: #4b5563;
+}
+
+.cc-price-unit {
+  color: #8b94a7;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cc-sheet-note {
+  margin: 12px 2px 0;
+  color: #79828f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ---- item picker: opened from the item icon (desktop card, phone item row) ---- */
+
+.cc-item-pick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+}
+
+.cc-item-pick .cc-item-image {
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.cc-item-pick:hover .cc-item-image,
+.cc-item-pick:focus-visible .cc-item-image {
+  border-color: rgba(var(--fx-accent-rgb), 0.7);
+  transform: translateY(-1px);
+}
+
+.cc-item-pick:focus-visible {
+  outline: 2px solid rgba(var(--fx-accent-rgb), 0.7);
+  outline-offset: 3px;
+}
+
+/* says the icon does something without hovering it first */
+.cc-item-pick-badge {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.55);
+  border-radius: 999px;
+  background: #12151b;
+  color: rgb(var(--fx-accent-rgb));
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.cc-picker-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.cc-picker-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.62);
+  animation: cc-picker-fade 160ms ease-out;
+}
+
+.cc-picker-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(780px, 100%);
+  /* A viewport length, not 100%: a percentage has nothing fixed to resolve against inside the
+     grid, so a long result list grew the track and pushed the dialog off-screen. */
+  height: min(660px, calc(100vh - 48px));
+  height: min(660px, calc(100dvh - 48px));
+  padding: 20px 20px 0;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.35);
+  border-radius: 18px;
+  background: #14161b;
+  color: #e8e6e0;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  animation: cc-picker-pop 160ms ease-out;
+}
+
+.cc-picker-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(232, 230, 224, 0.75);
+  cursor: pointer;
+}
+
+.cc-picker-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cc-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.cc-picker-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cc-picker-title {
+  margin: 0;
+  color: #f1f5f9;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 16px keeps iOS from zooming in on focus */
+.cc-picker-search {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.cc-picker-search:focus {
+  border-color: rgba(var(--fx-accent-rgb), 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--fx-accent-rgb), 0.12);
+}
+
+.cc-picker-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cc-picker-cat {
+  padding: 5px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a3acbb;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .cc-picker-cat:hover {
+    color: #e2e8f0;
+  }
+
+  .cc-picker-item:hover {
+    border-color: rgba(var(--fx-accent-rgb), 0.45);
+    color: #ffffff;
+  }
+}
+
+.cc-picker-cat.is-active {
+  border-color: rgba(var(--fx-accent-rgb), 0.6);
+  background: rgba(var(--fx-accent-rgb), 0.14);
+  color: #ffffff;
+}
+
+.cc-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  align-content: start;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 14px 0 20px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.cc-picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  cursor: pointer;
+}
+
+.cc-picker-item:focus-visible {
+  border-color: rgba(var(--fx-accent-rgb), 0.45);
+  color: #ffffff;
+}
+
+.cc-picker-item.is-current {
+  border-color: rgba(var(--fx-accent-rgb), 0.7);
+  background: rgba(var(--fx-accent-rgb), 0.12);
+  color: #ffffff;
+}
+
+.cc-picker-item img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.cc-picker-empty {
+  margin: 0;
+  padding: 28px 0;
+  color: #8b94a7;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Phone: a full-height sheet so it does not jump in size between categories. The sheet body
+   scrolls, so the search and categories stay pinned to its top instead. */
+.cc-picker-sheet {
+  height: 86vh;
+  height: 86dvh;
+}
+
+.cc-picker-sheet .cc-picker-head {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  margin-top: -4px;
+  padding-top: 4px;
+  background: #14161b;
+}
+
+.cc-picker-sheet .cc-picker-title {
+  display: none;
+}
+
+/* one swipeable row of categories instead of five wrapped ones */
+.cc-picker-sheet .cc-picker-cats {
+  flex-wrap: nowrap;
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cc-picker-sheet .cc-picker-cats::-webkit-scrollbar {
+  display: none;
+}
+
+.cc-picker-sheet .cc-picker-cat {
+  padding: 7px 13px;
+  font-size: 13px;
+}
+
+.cc-picker-sheet .cc-picker-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: visible;
+  padding-bottom: 4px;
+}
+
+@keyframes cc-picker-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cc-picker-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-picker-backdrop,
+  .cc-picker-dialog {
+    animation: none;
+  }
+}

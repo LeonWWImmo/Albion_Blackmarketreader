@@ -5,13 +5,15 @@ import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
+import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enchant, type MarketRegion, type MaterialKey, type RefineTierInput, type RefineVariant, type ReturnRatePreset, type StackedRefining, type Tier } from "../core";
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
 import "./refiningCalculator.css";
+import { RefiningRowDetail } from "./RefiningRowDetail";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
@@ -348,6 +350,13 @@ export function RefiningCalculatorPage() {
   const [hasLiveData, setHasLiveData] = useState(false);
   const [lastUpdatedIso, setLastUpdatedIso] = useState<string | null>(null);
   const [visibleRowCount, setVisibleRowCount] = useState(ROW_BATCH_SIZE);
+  // On a phone the twelve columns do not fit, so a row shows the result only and a tap opens the
+  // full breakdown in a bottom sheet instead of the insight panel beside the table.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [detailOpen, setDetailOpen] = useState(false);
+  useEffect(() => {
+    if (!isPhone) setDetailOpen(false);
+  }, [isPhone]);
 
   useSeo({
     title: "Albion Online Refining Calculator | Blackmarket Reader",
@@ -1008,7 +1017,7 @@ export function RefiningCalculatorPage() {
             <button className="bm-pill" type="button" onClick={() => { setPendingRegion(region === "eu" ? "us" : "eu"); setShowRegionConfirm(true); }}>
               <span className="material-symbols-outlined">language</span>Region: <span>{region.toUpperCase()}</span>
             </button>
-            <div className="bm-status" title={refiningUpdated.title}><span className="pulse"></span>Last updated: <span>{refiningUpdated.time}</span>{refiningUpdated.relative ? <span className="bm-status-ago"> ({refiningUpdated.relative})</span> : null}</div>
+            <LastUpdatedBadge stamp={refiningUpdated} />
             <div className="account-wrap">
               <button ref={accountBtnRef} className="account-btn" type="button" onClick={() => setShowAccount(true)} aria-label="Account">
                 <img src={user?.avatar || assetUrl("picture/accountsymbol.png")} alt="avatar" />
@@ -1130,8 +1139,8 @@ export function RefiningCalculatorPage() {
                 {visibleRows.map((row, index) => {
                   const suspect = row.grossMaterialCost > 0 && row.netRevenue >= 10 * row.grossMaterialCost;
                   return (
-                  <tr key={row.rowKey} className={`high-density-row ${index % 2 === 1 ? "alt" : ""} ${selectedRowKey === row.rowKey ? "selected-row" : ""} ${suspect ? "rc-suspect-row" : ""} ${row.logic === "stacking" ? "rc-stack-row" : ""}`} onClick={() => { setSelectedRowKey(row.rowKey); if (row.logic === "stacking") setStackModalKey(row.rowKey); }}>
-                    <td><div className="item"><div className="item-info"><div className="item-icon"><img src={row.variant.icon} alt={formatVariantName(row.variant)} onError={onRefiningIconError} /></div><div><div className="item-name">{formatVariantName(row.variant)}{row.missingInputCost ? " *" : ""}<span className={`rc-logic-chip rc-logic-${row.logic}`}>{row.logic === "stacking" ? "Stacking" : "Standard"}</span></div>{suspect ? <div className="rc-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}{row.logic === "stacking" && row.stack && row.stack.selfRefinedTiers.length > 0 ? (<div className="rc-stack-flow">{stackFlowNodes(row.variant, row.stack.selfRefinedTiers).map((n, i) => (<span key={i} className={`rc-flow-node rc-flow-${n.kind}`}>{n.kind === "buy" ? "Buy " : ""}{tierEnchLabel(n.tier, n.enchant)}</span>))}</div>) : null}<div className="item-meta">{row.variant.ingredients.map((ingredient) => `${ingredient.quantity}x ${formatIngredientName({ ...ingredient, variant: row.variant })}`).join(" + ")}</div></div></div></div></td>
+                  <tr key={row.rowKey} className={`high-density-row ${index % 2 === 1 ? "alt" : ""} ${selectedRowKey === row.rowKey ? "selected-row" : ""} ${suspect ? "rc-suspect-row" : ""} ${row.logic === "stacking" ? "rc-stack-row" : ""}`} onClick={() => { setSelectedRowKey(row.rowKey); if (isPhone) { setDetailOpen(true); return; } if (row.logic === "stacking") setStackModalKey(row.rowKey); }}>
+                    <td className="rc-cell-variant"><div className="item"><div className="item-info"><div className="item-icon"><img src={row.variant.icon} alt={formatVariantName(row.variant)} onError={onRefiningIconError} /></div><div><div className="item-name">{formatVariantName(row.variant)}{row.missingInputCost ? " *" : ""}<span className={`rc-logic-chip rc-logic-${row.logic}`}>{row.logic === "stacking" ? "Stacking" : "Standard"}</span>{suspect ? <span className="rc-suspect-chip">Check price</span> : null}</div>{suspect ? <div className="rc-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}{row.logic === "stacking" && row.stack && row.stack.selfRefinedTiers.length > 0 ? (<div className="rc-stack-flow">{stackFlowNodes(row.variant, row.stack.selfRefinedTiers).map((n, i) => (<span key={i} className={`rc-flow-node rc-flow-${n.kind}`}>{n.kind === "buy" ? "Buy " : ""}{tierEnchLabel(n.tier, n.enchant)}</span>))}</div>) : null}<div className="item-meta">{row.variant.ingredients.map((ingredient) => `${ingredient.quantity}x ${formatIngredientName({ ...ingredient, variant: row.variant })}`).join(" + ")}</div></div></div></div></td>
                     <td className="num">{formatPct(row.returnRate * 100)}</td>
                     <td className="num">{formatNumber(row.grossMaterialCost)}</td>
                     <td className="num profit">-{formatNumber(row.returnedMaterialCost)}</td>
@@ -1140,9 +1149,9 @@ export function RefiningCalculatorPage() {
                     <td className="num">{formatNumber(row.totalCost)}</td>
                     <td className="num">{formatNumber(row.netRevenue)}</td>
                     <td className="num">{formatNumber(row.focusCost)}</td>
-                    <td className={`num ${row.profitPerFocus >= 0 ? "profit" : "loss"}`}>{row.focusCost > 0 ? formatNumber(row.profitPerFocus) : "--"}</td>
-                    <td className={`num ${row.positive ? "profit" : "loss"}`}>{row.positive ? "+" : ""}{formatNumber(row.profit)}</td>
-                    <td className={`num ${row.positive ? "profit" : "loss"}`}>{formatPct(row.profitPercent)}</td>
+                    <td className={`num rc-cell-pf ${row.profitPerFocus >= 0 ? "profit" : "loss"}`} data-empty={row.focusCost > 0 ? undefined : ""}>{row.focusCost > 0 ? formatNumber(row.profitPerFocus) : "--"}</td>
+                    <td className={`num rc-cell-profit ${row.positive ? "profit" : "loss"}`}>{row.positive ? "+" : ""}{formatNumber(row.profit)}</td>
+                    <td className={`num rc-cell-pct ${row.positive ? "profit" : "loss"}`}>{formatPct(row.profitPercent)}</td>
                   </tr>
                   );
                 })}
@@ -1206,6 +1215,40 @@ export function RefiningCalculatorPage() {
       ) : null}
       <CommunityTile />
       <ToolGuideLink slug="refining-calculator" authService={authService} />
+
+      {isPhone && selectedRow ? (
+        <BottomSheet open={detailOpen} onClose={() => setDetailOpen(false)} label={formatVariantName(selectedRow.variant)} accent="var(--fx-accent)">
+          <RefiningRowDetail
+            name={formatVariantName(selectedRow.variant)}
+            iconSrc={selectedRow.variant.icon}
+            onIconError={onRefiningIconError}
+            logic={selectedRow.logic}
+            suspect={selectedRow.grossMaterialCost > 0 && selectedRow.netRevenue >= 10 * selectedRow.grossMaterialCost}
+            missingInput={Boolean(selectedRow.missingInputCost)}
+            key1={{ label: "Profit", value: `${selectedRow.positive ? "+" : ""}${formatNumber(selectedRow.profit)}`, tone: selectedRow.positive ? "gain" : "loss" }}
+            key2={{ label: "Profit %", value: formatPct(selectedRow.profitPercent), tone: selectedRow.positive ? "gain" : "loss" }}
+            figures={[
+              { label: "Profit / Focus", value: selectedRow.focusCost > 0 ? formatNumber(selectedRow.profitPerFocus) : "--", tone: selectedRow.focusCost > 0 ? (selectedRow.profitPerFocus >= 0 ? "gain" : "loss") : "none" },
+              { label: "Return Rate", value: formatPct(selectedRow.returnRate * 100) },
+              { label: "Net Revenue", value: formatNumber(selectedRow.netRevenue) },
+              { label: "Net Cost", value: formatNumber(selectedRow.totalCost) }
+            ]}
+            breakdown={[
+              { label: "Gross material cost", value: formatNumber(selectedRow.grossMaterialCost) },
+              { label: "Return savings", value: `-${formatNumber(selectedRow.returnedMaterialCost)}`, tone: "gain" },
+              { label: "Refining fee", value: formatNumber(selectedRow.refiningFee) },
+              { label: "Market tax", value: formatNumber(selectedRow.marketTax) },
+              { label: "Output amount", value: formatNumber(selectedRow.outputAmount) },
+              { label: "Focus cost", value: formatNumber(selectedRow.focusCost) },
+              { label: "Runs by focus", value: selectedRow.focusCost ? formatNumber(selectedRow.maxRunsByFocus) : "--" },
+              { label: "Bonus city", value: bonusCityOverrides[selectedRow.variant.materialKey] || MATERIAL_BY_KEY[selectedRow.variant.materialKey].bonusCity }
+            ]}
+            ingredients={selectedRow.variant.ingredients.map((ingredient) => `${ingredient.quantity}x ${formatIngredientName({ ...ingredient, variant: selectedRow.variant })}`)}
+            flow={selectedRow.logic === "stacking" && selectedRow.stack && selectedRow.stack.selfRefinedTiers.length > 0 ? stackFlowNodes(selectedRow.variant, selectedRow.stack.selfRefinedTiers).map((node) => ({ label: tierEnchLabel(node.tier, node.enchant), kind: node.kind })) : []}
+            onShowPath={selectedRow.logic === "stacking" && selectedPath ? () => setStackModalKey(selectedRow.rowKey) : undefined}
+          />
+        </BottomSheet>
+      ) : null}
 
       {stackModalKey && selectedRow && selectedRow.logic === "stacking" && selectedPath ? (
         <div className="rc-modal-overlay" onClick={() => setStackModalKey(null)}>

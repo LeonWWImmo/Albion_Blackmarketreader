@@ -7,7 +7,7 @@
   display: none;
 }
 
-/* Phones: hide the inline filters, show the floating pencil that opens the bottom-sheet. */
+/* Phones: hide the inline filters, show the floating filter button that opens the bottom-sheet. */
 @media (max-width: 640px) {
   .resp-filters-inline {
     display: none;

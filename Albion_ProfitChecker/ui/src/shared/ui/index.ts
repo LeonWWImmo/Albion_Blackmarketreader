@@ -8,4 +8,5 @@ export * from "./NumberStepper";
 export * from "./CommunityTile";
 export * from "./GuestSignInLink";
 export * from "./cn";
+export * from "./BottomSheet";
 

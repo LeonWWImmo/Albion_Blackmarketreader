@@ -50,6 +50,16 @@ export function MobileNavBurger({ accent }: { accent?: string }) {
                     {tool.label}
                   </Link>
                 ))}
+                {/* Tool pages hide the floating Discord tile on phones (it shares the corner with the
+                    filter button), so the community link lives here instead. */}
+                <div className="mnav-divider" role="separator" />
+                <Link
+                  to="/community"
+                  className={`mnav-item mnav-item-community ${pathname === "/community" ? "active" : ""}`}
+                  onClick={() => setOpen(false)}
+                >
+                  Discord
+                </Link>
               </nav>
             </div>,
             document.body

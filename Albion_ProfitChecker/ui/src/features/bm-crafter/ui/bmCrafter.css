@@ -1663,6 +1663,73 @@ body.panel-open::before {
   font-weight: 600;
 }
 
+/* LastUpdatedBadge: nothing inside the chip may wrap, and the chip itself must not be squeezed
+   by a crowded header row, or it breaks into stacked half-words. */
+.bm-status {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bm-status-full {
+  display: contents;
+}
+
+.bm-status-compact {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .bm-header .bm-status-full {
+    display: none;
+  }
+
+  .bm-header .bm-status-compact {
+    display: inline;
+  }
+
+  .bm-header .bm-status {
+    letter-spacing: 0.1em;
+  }
+}
+
+/* Laptop widths: title, tool tabs, region and the full "Last updated: 12:39 (18h ago)" chip do
+   not fit one row, and wrapping the header there made it 40px taller on the most common
+   screens. The short form ("Updated 18h ago", clock time in the tooltip) keeps the one-row
+   header these widths always had. */
+@media (min-width: 1101px) and (max-width: 1600px) {
+  .bm-header .bm-status-full {
+    display: none;
+  }
+
+  .bm-header .bm-status-compact {
+    display: inline;
+  }
+}
+
+/* Below about 1260px even that does not fit and the header ran off the right edge (by up to
+   160px at 1101). There, and only there, the meta row wraps under the tabs, right-aligned.
+   Wrapping is limited to this band because a wrapping row measures the tabs at their one-line
+   width and would wrap at every laptop width. Below 1101px the header stacks anyway. */
+@media (min-width: 1101px) and (max-width: 1260px) {
+  .bm-header-row {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .bm-header-row > .bm-meta {
+    margin-left: auto;
+  }
+}
+
+/* From 768px down the account button is fixed top-right, like the burger on the left. The
+   meta row spreads to both edges there, so keep it clear of the button the same way it is
+   kept clear of the burger. */
+@media (max-width: 768px) {
+  .bm-header .bm-meta {
+    padding-right: 46px;
+  }
+}
+
 /* Visually-hidden, crawler-visible SEO heading/intro */
 .sr-only {
   position: absolute;
@@ -1801,4 +1868,392 @@ body.panel-open::before {
     width: 38px;
     height: 38px;
   }
+}
+
+/* ===========================================================================
+   Black Market Crafter on a phone
+
+   Seven columns do not fit 640px, and the one number people open the tool for, net profit,
+   ended up off-screen to the right. Each row becomes a two-line entry instead: what it is on
+   the left, what it earns on the right. Everything else moves into the detail sheet a tap
+   opens (BottomSheet + CrafterInsight).
+
+   Every rule sits inside the phone query and under body.bm-crafter, because this stylesheet
+   is also loaded by the crafting, refining and food tools. Desktop and tablet are untouched.
+   =========================================================================== */
+
+/* Only ever shown by the phone rows below; the desktop row already says it in full. */
+.bm-suspect-chip {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  body.bm-crafter {
+    --bm-row-icon: 38px;
+  }
+
+  /* bottom room so the last row can scroll clear of the filter button */
+  body.bm-crafter .bm-main {
+    padding: 12px 12px 92px;
+  }
+
+  /* the page scrolls as one; a second scroll box inside it is awkward on touch */
+  body.bm-crafter .table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.bm-crafter table,
+  body.bm-crafter thead,
+  body.bm-crafter tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.bm-crafter th,
+  body.bm-crafter td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  /* one grid for the header line and every row, so the labels sit over their numbers */
+  body.bm-crafter thead tr,
+  body.bm-crafter tr.high-density-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+
+  body.bm-crafter thead tr {
+    grid-template-areas: "item profit profit";
+    padding: 10px 14px;
+  }
+
+  body.bm-crafter tr.high-density-row {
+    grid-template-areas:
+      "item profit profit"
+      "item pct    sold";
+    row-gap: 3px;
+    height: auto;
+    min-height: 64px;
+    padding: 11px 14px;
+    border-left: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* hover sticks after a tap on touch screens, and zebra plus dividers is busy */
+  body.bm-crafter tr.high-density-row,
+  body.bm-crafter tr.high-density-row.alt,
+  body.bm-crafter tr.high-density-row:hover {
+    background: transparent;
+  }
+
+  body.bm-crafter tr.high-density-row:active {
+    background: rgba(var(--fx-accent-rgb), 0.08);
+  }
+
+  body.bm-crafter .bm-cell-item {
+    grid-area: item;
+    min-width: 0;
+  }
+
+  body.bm-crafter .bm-cell-profit {
+    grid-area: profit;
+    text-align: right;
+  }
+
+  body.bm-crafter .bm-cell-pct {
+    grid-area: pct;
+    text-align: right;
+  }
+
+  body.bm-crafter .bm-cell-sold {
+    grid-area: sold;
+    text-align: right;
+  }
+
+  /* moved to the detail sheet */
+  body.bm-crafter .bm-cell-bm,
+  body.bm-crafter .bm-cell-cost,
+  body.bm-crafter .bm-cell-daily,
+  body.bm-crafter thead .bm-cell-pct,
+  body.bm-crafter thead .bm-cell-sold,
+  body.bm-crafter .item-meta,
+  body.bm-crafter .bm-open-calc-icon,
+  body.bm-crafter .bm-suspect-note {
+    display: none;
+  }
+
+  body.bm-crafter thead th {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+  }
+
+  /* Left side: the icon spans both lines, the name runs across the top and the tier sits
+     under it. display: contents lifts the existing wrappers out of the way, so the desktop
+     markup can be laid out on this grid without being duplicated. */
+  body.bm-crafter .bm-cell-item .item {
+    display: grid;
+    grid-template-columns: var(--bm-row-icon) auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    row-gap: 4px;
+    align-items: center;
+  }
+
+  body.bm-crafter .bm-cell-item .item-info,
+  body.bm-crafter .bm-cell-item .item-info > div:last-child {
+    display: contents;
+  }
+
+  body.bm-crafter .bm-cell-item .item-icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: var(--bm-row-icon);
+    height: var(--bm-row-icon);
+    margin-right: 12px;
+    border-radius: 9px;
+  }
+
+  body.bm-crafter .bm-cell-item .item-name {
+    grid-column: 2 / span 2;
+    grid-row: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body.bm-crafter .bm-cell-item .item-tier-pill {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: start;
+    padding: 2px 8px;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+  }
+
+  body.bm-crafter .bm-cell-item .bm-suspect-chip {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 7px;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  /* Right side: what the craft earns. Tabular figures keep the column straight. */
+  body.bm-crafter tbody .bm-cell-profit {
+    padding-left: 12px;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body.bm-crafter tbody .bm-cell-pct,
+  body.bm-crafter tbody .bm-cell-sold {
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  body.bm-crafter tbody .bm-cell-sold {
+    color: var(--text-secondary);
+  }
+
+  body.bm-crafter tbody .bm-cell-sold::before {
+    content: "\00B7";
+    margin: 0 6px;
+    color: var(--text-muted);
+  }
+
+  body.bm-crafter tbody .bm-cell-sold::after {
+    content: "/day";
+    margin-left: 1px;
+    color: var(--text-muted);
+  }
+
+  /* A suspect row keeps its warning legible and dims the numbers the warning is about. */
+  body.bm-crafter .bm-suspect-row td {
+    opacity: 1;
+  }
+
+  body.bm-crafter .bm-suspect-row .bm-cell-profit,
+  body.bm-crafter .bm-suspect-row .bm-cell-pct,
+  body.bm-crafter .bm-suspect-row .bm-cell-sold {
+    opacity: 0.45;
+  }
+
+  body.bm-crafter .table-footer {
+    padding: 12px 14px;
+    letter-spacing: 0.14em;
+  }
+
+  /* The Discord tile and the filter button both want the bottom-right corner.
+     Discord is in the burger menu instead. */
+  body.bm-crafter .rk-community-tile {
+    display: none;
+  }
+}
+
+/* ---- detail sheet (phone only; portalled to <body>, so not under .bm-main) ---- */
+
+.bm-sheet .side-hero {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-areas:
+    "icon name"
+    "icon tags";
+  column-gap: 14px;
+  row-gap: 6px;
+  align-items: center;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.bm-sheet .side-icon {
+  grid-area: icon;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  border-radius: 14px;
+}
+
+.bm-sheet .side-icon-inner {
+  border-radius: 14px;
+}
+
+.bm-sheet .side-hero h2 {
+  grid-area: name;
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.bm-sheet .side-tags {
+  grid-area: tags;
+  justify-content: flex-start;
+}
+
+.bm-sheet #insightTier {
+  padding: 3px 10px;
+  font-size: 10px;
+}
+
+/* The side panel lists its figures as rows; here they become tiles, result first. */
+.bm-sheet .side-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bm-sheet .side-metrics > div {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.bm-sheet .side-metrics strong {
+  font-size: 15px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.bm-sheet .side-metrics > [data-metric="profit"],
+.bm-sheet .side-metrics > [data-metric="pct"] {
+  order: -1;
+  border-color: rgba(var(--fx-accent-rgb), 0.25);
+  background: rgba(var(--fx-accent-rgb), 0.07);
+}
+
+.bm-sheet .side-metrics > [data-metric="profit"] strong,
+.bm-sheet .side-metrics > [data-metric="pct"] strong {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+/* .side-metrics strong outranks .profit / .loss, which left the result white here while the
+   list shows it green. The result reads the same in both places; a loss is red anywhere. */
+.bm-sheet .side-metrics > [data-metric="profit"] strong.profit,
+.bm-sheet .side-metrics > [data-metric="pct"] strong.profit {
+  color: var(--profit);
+}
+
+.bm-sheet .side-metrics strong.loss {
+  color: #f87171;
+}
+
+.bm-sheet .side-metrics > [data-metric="id"] {
+  grid-column: 1 / -1;
+}
+
+.bm-sheet .side-metrics > [data-metric="id"] strong {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.bm-sheet .material-box {
+  margin: 12px 0 0;
+}
+
+.bm-sheet-warning {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 12px;
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.bm-sheet-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.45);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(var(--fx-accent-rgb), 0.22), rgba(var(--fx-accent-rgb), 0.1));
+  color: var(--fx-accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.bm-sheet-cta:active {
+  transform: translateY(1px);
+}
+
+.bm-sheet-cta:focus-visible {
+  outline: 2px solid rgba(var(--fx-accent-rgb), 0.7);
+  outline-offset: 2px;
 }

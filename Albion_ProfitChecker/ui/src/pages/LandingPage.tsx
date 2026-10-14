@@ -3,6 +3,34 @@ import { useSeo } from "../shared/seo/useSeo";
 import { assetUrl, assets, CommunityTile } from "@shared/index";
 import "./landing.css";
 
+/** Phone hero: the crafting tools as tiles under the one main action. Icons match the dashboard's tool rail. */
+const LAUNCH_TOOLS = [
+  {
+    href: "/bm-crafter",
+    name: "Blackmarket Crafter",
+    hint: "What to craft for the Black Market",
+    icon: "M14 3 4 9l6 3.5 8-4.7V14h2V6L14 3Zm-4 11-6-3.5V15l6 3.5V14Zm2 4.5L18 15v-2.5L12 16v2.5Z"
+  },
+  {
+    href: "/crafting-calculator",
+    name: "Crafting Calculator",
+    hint: "Profit for every tier and enchant",
+    icon: "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 4h10V5H7v2Zm0 4h2V9H7v2Zm4 0h2V9h-2v2Zm4 0h2V9h-2v2ZM7 15h2v-2H7v2Zm4 0h6v-2h-6v2Zm-4 4h2v-2H7v2Zm4 0h6v-2h-6v2Z"
+  },
+  {
+    href: "/refining-calculator",
+    name: "Refining Calculator",
+    hint: "Ore, wood, fiber, hide and stone",
+    icon: "M7 3h10v2H7V3Zm2 4h6l4 6-7 8-7-8 4-6Zm.96 2-2.23 3.35L12 17.2l4.27-4.85L14.04 9H9.96Z"
+  },
+  {
+    href: "/food-potion-crafter",
+    name: "Food & Potion Crafter",
+    hint: "Cooking and alchemy profit",
+    icon: "M11 2h2v6h-2V2Zm-4 0h2v6a3 3 0 0 1-6 0V2h2v6a1 1 0 0 0 2 0V2Zm10 0h2v20h-2v-8h-2V7a5 5 0 0 1 2-5Z"
+  }
+] as const;
+
 type ToolSlide = {
   title: string;
   badge?: string;
@@ -193,6 +221,33 @@ export function LandingPage() {
                 Food &amp; Potion Crafter
               </a>
             </div>
+            {/* Phone only (landing.css): one main action, then the crafting tools as tiles,
+                instead of five identical buttons stacked down the screen. */}
+            <nav className="hero-launch" aria-label="Tools">
+              <a className="hero-launch-main" href="/dashboard">
+                <span className="hero-launch-main-text">
+                  <strong>Open Dashboard</strong>
+                  <span>Black Market deals, synced daily</span>
+                </span>
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                  <path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+              <span className="hero-launch-label">Crafting tools</span>
+              <div className="hero-launch-grid">
+                {LAUNCH_TOOLS.map((tool) => (
+                  <a key={tool.href} className="hero-launch-tile" href={tool.href}>
+                    <span className="hero-launch-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d={tool.icon} fill="currentColor" />
+                      </svg>
+                    </span>
+                    <strong>{tool.name}</strong>
+                    <span>{tool.hint}</span>
+                  </a>
+                ))}
+              </div>
+            </nav>
             <p>A free community market tool for Albion Online. Free users get one market data sync per day.</p>
           </div>
         </div>

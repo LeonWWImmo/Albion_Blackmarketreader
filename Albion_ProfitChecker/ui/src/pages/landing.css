@@ -1852,3 +1852,176 @@ body {
     line-height: 1.62;
   }
 }
+
+/* ---- Phone hero: one main action + crafting tools as tiles ----------------------------
+   Five identical gold-rimmed buttons stacked down the screen read as a link list, not a
+   product. On a phone the dashboard gets one solid gold button and the four crafting tools
+   sit under it as a 2x2 grid of tiles. Desktop keeps its button row (.hero-launch is never
+   shown there). */
+
+.hero-launch {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hero-cta-row {
+    display: none;
+  }
+
+  .hero-launch {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+    text-align: left;
+  }
+
+  .hero-launch-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 64px;
+    padding: 12px 18px 12px 20px;
+    border: 1px solid rgba(255, 226, 160, 0.55);
+    border-radius: 16px;
+    background: linear-gradient(180deg, var(--albion-gold-bright, #f5cf7a) 0%, var(--albion-gold, #d9a441) 55%, #b47a28 100%);
+    box-shadow:
+      0 12px 32px rgba(217, 164, 65, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    color: #1a1206;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+
+  .hero-launch-main:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 6px 18px rgba(217, 164, 65, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .hero-launch-main-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hero-launch-main strong {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .hero-launch-main-text span {
+    color: rgba(26, 18, 6, 0.7);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .hero-launch-main svg {
+    flex: 0 0 auto;
+  }
+
+  .hero-launch-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    color: rgba(217, 164, 65, 0.85);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+
+  .hero-launch-label::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(to right, rgba(217, 164, 65, 0.4), transparent);
+  }
+
+  .hero-launch-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .hero-launch-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 112px;
+    padding: 14px 14px 13px;
+    overflow: hidden;
+    border: 1px solid rgba(217, 164, 65, 0.22);
+    border-radius: 16px;
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgba(217, 164, 65, 0.12), transparent 60%),
+      linear-gradient(180deg, rgba(20, 25, 36, 0.86), rgba(10, 13, 20, 0.92));
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    color: var(--albion-parchment, #f0e3c8);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 140ms ease, border-color 140ms ease;
+  }
+
+  /* a chevron in the corner says "this opens something" without another button */
+  .hero-launch-tile::after {
+    content: "";
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    width: 7px;
+    height: 7px;
+    border-top: 2px solid rgba(217, 164, 65, 0.6);
+    border-right: 2px solid rgba(217, 164, 65, 0.6);
+    transform: rotate(45deg);
+  }
+
+  .hero-launch-tile:active {
+    transform: scale(0.98);
+    border-color: rgba(245, 207, 122, 0.6);
+  }
+
+  .hero-launch-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    margin-bottom: 6px;
+    border: 1px solid rgba(217, 164, 65, 0.35);
+    border-radius: 11px;
+    background: linear-gradient(180deg, rgba(217, 164, 65, 0.22), rgba(217, 164, 65, 0.06));
+    color: var(--albion-gold-bright, #f5cf7a);
+  }
+
+  .hero-launch-tile strong {
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .hero-launch-tile > span:last-child {
+    color: rgba(240, 227, 200, 0.6);
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  /* The -9vh lift (max-width: 540px above) was tuned for the old button stack; with the taller
+     tile block it pushed the kicker under the nav on small phones. Centre it instead. */
+  .hero-content {
+    transform: none;
+  }
+
+  /* "SIGN IN" broke onto two lines next to the brand */
+  .nav-signin {
+    white-space: nowrap;
+  }
+}

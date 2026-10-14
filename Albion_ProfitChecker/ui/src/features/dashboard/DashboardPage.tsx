@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker } from "@shared/index";
+import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "@shared/index";
 import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
 import "./dashboard.css";
+import { PhoneDealDetail, PhoneDealRow, PhoneOverview, type PhoneCity, type PhoneDeal } from "./DashboardPhone";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type Region = "us" | "eu";
@@ -349,6 +350,49 @@ function displayName(id: string): string {
   return `${tier}${ench}  ${translated}`;
 }
 
+const RANGES: readonly Range[] = ["1W", "1M", "6M", "1Y"];
+
+const PHONE_CITIES: City[] = ["ALL", "Lymhurst", "Martlock", "Fort Sterling", "Thetford", "Bridgewatch", "Caerleon"];
+
+// 96px crops of the crests for the phone list and city chips. The originals are 1024px PNGs of
+// 120-280 KB each; dozens of 16px icons would otherwise decode megabytes.
+const SMALL_CREST: Record<City, string> = {
+  ALL: "picture/crests-small/caerleon.png",
+  Lymhurst: "picture/crests-small/lymhurst.png",
+  Martlock: "picture/crests-small/martlock.png",
+  "Fort Sterling": "picture/crests-small/fort-sterling.png",
+  Thetford: "picture/crests-small/thetford.png",
+  Bridgewatch: "picture/crests-small/bridgewatch.png",
+  Caerleon: "picture/crests-small/caerleon.png"
+};
+
+function smallCrestFor(city: string): string | null {
+  const key = (Object.keys(SMALL_CREST) as City[]).find((entry) => entry !== "ALL" && normalizeCity(entry) === normalizeCity(city));
+  return key ? assetUrl(SMALL_CREST[key]) : null;
+}
+
+function toPhoneDeal(item: ResultItem, key: string): PhoneDeal {
+  const enchant = getEnchantLevel(item.id);
+  const base = item.id.split("@")[0].replace(/^T\d+_/, "");
+  return {
+    key,
+    id: item.id,
+    name: baseName(item.id),
+    tierLabel: `${getItemTier(item.id) || "T?"}${enchant ? `.${enchant}` : ""}`,
+    enchant,
+    // Only the T4 icon of each item ships with the site; the tier is shown as a chip instead.
+    iconSrc: `/itemicons/T4_${base}.png`,
+    city: item.city,
+    cityCrest: smallCrestFor(item.city),
+    buy: Number(item.lym || 0),
+    bm: Number(item.bm || 0),
+    sold: Number(item.sold || 0),
+    profitPct: Number(item.profit || 0),
+    span: item.span || "14d",
+    suspect: item.lym > 0 && item.bm >= 20 * item.lym
+  };
+}
+
 function normalizeName(value: string): string {
   return (value || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
@@ -593,6 +637,13 @@ export function DashboardPage() {
   const [results, setResults] = useState<ResultItem[]>([]);
   const [history, setHistory] = useState<Record<string, unknown> | null>(null);
   const [range, setRange] = useSessionState<Range>("dash:range", "1W");
+  // On a phone the deal cards become a dense list and a tap opens the deal in a bottom sheet.
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const [openDeal, setOpenDeal] = useState<PhoneDeal | null>(null);
+  const [dealSheetOpen, setDealSheetOpen] = useState(false);
+  useEffect(() => {
+    if (!isPhone) setDealSheetOpen(false);
+  }, [isPhone]);
   const [showRegionModal, setShowRegionModal] = useState(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
@@ -982,6 +1033,15 @@ export function DashboardPage() {
   const chartStats = useMemo(() => calcStats(chartSeries.values), [chartSeries.values]);
   const stamp = useMemo(() => formatUpdated(dataUpdatedIso), [dataUpdatedIso]);
 
+  const phoneCities = useMemo<PhoneCity[]>(
+    () => PHONE_CITIES.map((entry) => ({ key: entry, label: entry === "ALL" ? "All" : entry, crest: assetUrl(SMALL_CREST[entry]) })),
+    []
+  );
+  const phoneDeals = useMemo(
+    () => (isPhone ? visibleCards.map((item, index) => toPhoneDeal(item, `${item.city}-${item.id}-${item.lym}-${item.bm}-${item.sold}-${item.profit}-${index}`)) : []),
+    [isPhone, visibleCards]
+  );
+
   useEffect(() => {
     setChartHover(null);
   }, [range, region, city, history]);
@@ -1297,6 +1357,29 @@ export function DashboardPage() {
           </div>
         </section>
 
+        {isPhone ? (
+          <PhoneOverview
+            regionLabel={region === "eu" ? "Europe" : "America"}
+            updated={stamp.relative || ""}
+            deals={kpis.deals}
+            best={kpis.best}
+            median={kpis.avg}
+            liquidity={kpis.silver}
+            chart={chartStats.best > 0 ? chart : null}
+            chartAvg={chartStats.avg}
+            chartPeak={chartStats.best}
+            ranges={RANGES}
+            range={range}
+            onRange={(next) => setRange(next as Range)}
+            cities={phoneCities}
+            city={city}
+            cityLabel={city === "ALL" ? "all cities" : city}
+            onCity={(next) => setCity(next as City)}
+            sortBySilver={sortBySilver}
+            onSort={setSortBySilver}
+          />
+        ) : null}
+
         <section className="kpi-row">
           <article className="kpi-card"><span className="kpi-label">Signals</span><strong className="kpi-value">{kpis.deals}</strong></article>
           <article className="kpi-card"><span className="kpi-label">Top Spread</span><strong className="kpi-value">{kpis.best}</strong></article>
@@ -1456,6 +1539,22 @@ export function DashboardPage() {
             Cards: {cardsItems.length} | City: {city} | Tier: {tier}
           </div>
         ) : null}
+        {isPhone ? (
+          <section className="dbm-deals" id="cards">
+            {!loading && !phoneDeals.length ? <p className="dbm-empty">No deals match these filters.</p> : null}
+            {phoneDeals.map((deal) => (
+              <PhoneDealRow
+                key={deal.key}
+                deal={deal}
+                sortBySilver={sortBySilver}
+                onOpen={() => {
+                  setOpenDeal(deal);
+                  setDealSheetOpen(true);
+                }}
+              />
+            ))}
+          </section>
+        ) : (
         <section className="grid" id="cards">
           {visibleCards.map((item, index) => (
             <article key={`${item.city}-${item.id}-${item.lym}-${item.bm}-${item.sold}-${item.profit}-${index}`} className={`card card-box ${item.lym > 0 && item.bm >= 20 * item.lym ? "card-suspect" : ""} ${getEnchantLevel(item.id) > 0 ? `border-enchant-${getEnchantLevel(item.id)}` : ""}`.trim()}>
@@ -1472,6 +1571,7 @@ export function DashboardPage() {
             </article>
           ))}
         </section>
+        )}
         <div ref={cardsSentinelRef} className="cards-sentinel" aria-hidden="true" />
 
         {showStylePicker && !showRegionModal ? (
@@ -1492,6 +1592,32 @@ export function DashboardPage() {
       </div>
 
       <ToolGuideLink slug="dashboard" authService={authService} />
+
+      {isPhone && openDeal ? (
+        <BottomSheet
+          open={dealSheetOpen}
+          onClose={() => setDealSheetOpen(false)}
+          label={openDeal.name}
+          accent="var(--fx-accent)"
+          footer={
+            <a
+              className="dbm-cta"
+              href={`/crafting-calculator?${new URLSearchParams({
+                item: openDeal.id.split("@")[0].replace(/^T\d+_/, ""),
+                tier: openDeal.tierLabel.replace(/^T/, "").split(".")[0],
+                enchant: String(openDeal.enchant),
+                sell: "bm",
+                region
+              }).toString()}`}
+            >
+              Craft it instead? Check crafting profit
+              <span aria-hidden="true">→</span>
+            </a>
+          }
+        >
+          <PhoneDealDetail deal={openDeal} />
+        </BottomSheet>
+      ) : null}
 
       {showPremiumPreview ? (
         <div className="preview-modal" onClick={() => setShowPremiumPreview(false)}>
