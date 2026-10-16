@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { normalizeItemId, parseEnchant, parseTier } from "../domain";
+import { calculateItemEconomics, getArtefactPriceFromMap, getMaterialPriceFromMap, normalizeItemId, parseEnchant, parseTier } from "../domain";
 import { normalizeCityMaterialsPayload, normalizeMarketPayload, normalizePricePayload, normalizeRecipesPayload } from "../data";
 import { deriveBmCrafterRows } from "./deriveRows";
 
@@ -30,28 +30,50 @@ function buildRealBundle(region: "eu" | "us") {
 describe("bm crafter parity integration", () => {
   it("derives stable profitable rows from real US dataset", () => {
     const bundle = buildRealBundle("us");
-    const rows = deriveBmCrafterRows(bundle, {
+    const options = {
       selectedTiers: [],
       selectedEnchants: [],
       minSold: 0,
       searchTerm: "",
       returnRate: 0.1525,
       sortByDailyTop: false,
-      showOnlyProfitable: true,
+      showOnlyProfitable: false,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
       usageFeePer100: 0
-    });
+    };
+    const all = deriveBmCrafterRows(bundle, options);
+    const rows = deriveBmCrafterRows(bundle, { ...options, showOnlyProfitable: true });
 
-    // Smoke-test floor: the number of profitable rows depends on the live market snapshot in
-    // the committed dataset, so this is a robust lower bound (the pipeline clearly yields many
-    // profitable rows) rather than a brittle exact count that flakes on every data refresh.
-    expect(rows.length).toBeGreaterThan(20);
+    // The committed dataset is refreshed daily and the tool only lists crafts with 20%+ profit,
+    // so how many rows show is up to that day's market (12 on 2026-10-14, which failed a fixed
+    // "more than 20" floor). What does not depend on the market is that the pipeline can price
+    // the dataset: count the items whose craft cost it can work out from the committed prices.
+    const cityPrices = new Map(Array.from(bundle.cityMaterials.entries(), ([id, prices]) => [id, prices["Caerleon"] ?? 0]));
+    let priced = 0;
+    for (const item of bundle.market.items) {
+      const recipe = bundle.recipes.byItemId.get(normalizeItemId(item.id));
+      if (!recipe) continue;
+      const economics = calculateItemEconomics({
+        item,
+        recipe,
+        returnRate: 0.1525,
+        usageFeePer100: 0,
+        getMaterialPrice: (materialId, t, e) => getMaterialPriceFromMap(cityPrices, materialId, t, e),
+        getArtefactPrice: (artefactId, t) => getArtefactPriceFromMap(bundle.artefacts.byItemId, artefactId, t)
+      });
+      if (economics && Number.isFinite(economics.craftCost) && economics.craftCost > 0) priced += 1;
+    }
+    expect(priced).toBeGreaterThan(100);
+    // and that rows still come out of it (any count: the market decides how many reach 20%)
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThanOrEqual(all.length);
 
     for (const row of rows.slice(0, 200)) {
       expect(Number.isFinite(row.economics.craftCost)).toBe(true);
       expect(Number.isFinite(row.economics.profit)).toBe(true);
       expect(row.economics.profit).toBeGreaterThanOrEqual(0);
+      expect(row.economics.profitPct as number).toBeGreaterThanOrEqual(20);
     }
 
     for (let i = 1; i < rows.length; i += 1) {

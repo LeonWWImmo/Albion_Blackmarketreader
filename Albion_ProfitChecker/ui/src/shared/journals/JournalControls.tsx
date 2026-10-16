@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { assetUrl, onItemIconError } from "../assets/assets";
+import { onItemIconError } from "../assets/assets";
 import { JOURNAL_PROFESSIONS, type JournalProfession } from "./journals";
 import { journalPriceTable, type JournalData, type OwnedJournals } from "./useJournals";
 import "./journalControls.css";

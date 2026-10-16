@@ -14,16 +14,31 @@ const shotsDir = path.join(rootDir, "..", ".mobile-shots");
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp", ".ico": "image/x-icon", ".woff2": "font/woff2", ".txt": "text/plain" };
 
+// A file inside dist/, or null. Request paths are joined onto dist/, so a request such as
+// "/../../secret" must not resolve to a file outside it.
+function insideDist(...parts) {
+  const file = path.resolve(distDir, ...parts);
+  return file === distDir || file.startsWith(distDir + path.sep) ? file : null;
+}
+
 // Static server with clean-URL + SPA fallback so client-routed pages resolve like on Vercel.
+// Listens on 127.0.0.1 only, so other devices on the network cannot reach it while it runs.
 function serve(port) {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
-      const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+      let urlPath;
+      try {
+        urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+      } catch {
+        res.statusCode = 400;
+        res.end("bad request");
+        return;
+      }
       const candidates = [
-        path.join(distDir, urlPath),
-        path.join(distDir, urlPath, "index.html"),
+        insideDist("." + urlPath),
+        insideDist("." + urlPath, "index.html"),
         path.join(distDir, "index.html")
-      ];
+      ].filter(Boolean);
       for (const file of candidates) {
         if (fs.existsSync(file) && fs.statSync(file).isFile()) {
           res.setHeader("Content-Type", MIME[path.extname(file)] || "application/octet-stream");
@@ -34,7 +49,7 @@ function serve(port) {
       res.statusCode = 404;
       res.end("not found");
     });
-    server.listen(port, () => resolve(server));
+    server.listen(port, "127.0.0.1", () => resolve(server));
   });
 }
 
@@ -64,7 +79,7 @@ async function main() {
   if (email && password) {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
-    await page.goto(`http://localhost:${PORT}/login`, { waitUntil: "networkidle", timeout: 20000 });
+    await page.goto(`http://127.0.0.1:${PORT}/login`, { waitUntil: "networkidle", timeout: 20000 });
     await page.fill('input[placeholder="Email"]', email);
     await page.fill('input[placeholder="Password"]', password);
     await page.press('input[placeholder="Password"]', "Enter"); // onKeyDown triggers onLogin
@@ -81,7 +96,7 @@ async function main() {
     for (const route of ROUTES) {
       const page = await context.newPage();
       try {
-        await page.goto(`http://localhost:${PORT}${route}`, { waitUntil: "networkidle", timeout: 20000 });
+        await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: "networkidle", timeout: 20000 });
         await page.waitForTimeout(600);
         // Dismiss a blocking "Free Trial"/info modal if present (best-effort).
         for (const label of ["OK", "Got it", "Continue"]) {

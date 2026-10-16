@@ -1801,6 +1801,21 @@ body.panel-open::before {
     background: rgba(var(--fx-accent-rgb), 0.08);
   }
 
+  /* item row + share button side by side; the row itself is a button, so they cannot nest */
+  .cc-phone-head {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .cc-phone-head .cc-phone-item {
+    flex: 1 1 auto;
+    min-width: 0;
+    border-bottom: 0;
+  }
+
   .cc-phone-item-change {
     flex: 0 0 auto;
     margin-left: auto;
@@ -2256,5 +2271,160 @@ body.panel-open::before {
   .cc-picker-backdrop,
   .cc-picker-dialog {
     animation: none;
+  }
+}
+
+/* ---- share link (ShareLinkButton) ---- */
+
+/* Desktop: a zero-height strip that sticks to the top of the table's scroll box. It is as wide as
+   the visible area, so the button stays in the visible top-right corner however the table is
+   scrolled, over the sticky header row. The fade behind it lets the column title under the
+   button run out instead of being cut by it. */
+.cc-table-share {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  height: 0;
+}
+
+.cc-table-share::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 84px;
+  height: var(--cc-head-h, 44px);
+  background: linear-gradient(to left, rgba(13, 20, 24, 1) 52%, rgba(13, 20, 24, 0));
+  pointer-events: none;
+}
+
+.cc-table-share .cc-share-btn {
+  position: absolute;
+  top: calc((var(--cc-head-h, 44px) - 28px) / 2);
+  right: 10px;
+  width: 28px;
+  height: 28px;
+}
+
+/* round icon button; the phone size, the desktop corner shrinks it (.cc-table-share above) */
+.cc-share-btn {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(var(--fx-accent-rgb), 0.45);
+  border-radius: 999px;
+  background: rgba(var(--fx-accent-rgb), 0.08);
+  color: rgb(var(--fx-accent-rgb));
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.cc-share-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.cc-share-btn:hover,
+.cc-share-btn:focus-visible {
+  border-color: rgba(var(--fx-accent-rgb), 0.75);
+  background: rgba(var(--fx-accent-rgb), 0.16);
+}
+
+.cc-share-btn:focus-visible {
+  outline: 2px solid rgba(var(--fx-accent-rgb), 0.7);
+  outline-offset: 2px;
+}
+
+.cc-share-btn.is-copied {
+  border-color: rgba(52, 211, 153, 0.7);
+  color: #34d399;
+}
+
+.cc-share-btn.is-failed {
+  border-color: rgba(248, 113, 113, 0.6);
+  color: #f87171;
+}
+
+/* short "Link copied" note beside the button */
+.cc-share-toast {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  padding: 4px 9px;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  border-radius: 8px;
+  background: #0d1418;
+  color: #34d399;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  transform: translateY(-50%);
+  pointer-events: none;
+  animation: cc-share-toast-in 160ms ease-out;
+}
+
+.cc-share-btn.is-failed .cc-share-toast {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+
+@keyframes cc-share-toast-in {
+  from { opacity: 0; transform: translate(4px, -50%); }
+  to { opacity: 1; transform: translateY(-50%); }
+}
+
+.cc-share-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Tablet and narrow laptop windows (641-1100px) ----
+   The two columns stack here, but the page stayed locked to one screen height (100vh,
+   overflow hidden) and the 1100px rule's `width: 100%` for the settings column sits above the
+   base `width: 560px` in this file, so it never applied. The settings column (about 1240px tall)
+   took the whole height and the table, allowed to shrink to nothing, got 0px: tablets saw no
+   table at all. Here the page scrolls instead; the table keeps a scroll box of its own, so its
+   sticky header and share button work as on a desktop, and the settings follow at full width. */
+@media (min-width: 641px) and (max-width: 1100px) {
+  body.crafting-calculator-body {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+
+  body.crafting-calculator-body .cc-page {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  body.crafting-calculator-body .workbench-container {
+    flex: none;
+    overflow: visible;
+  }
+
+  body.crafting-calculator-body .matrix-side {
+    flex: none;
+    height: min(72vh, 760px);
+    border-right: 0;
+    border-bottom: 1px solid var(--cc-border-soft);
+  }
+
+  body.crafting-calculator-body .detail-side {
+    width: 100%;
+    overflow: visible;
   }
 }

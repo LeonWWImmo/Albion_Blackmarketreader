@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enchant, type MarketRegion, type MaterialKey, type RefineTierInput, type RefineVariant, type ReturnRatePreset, type StackedRefining, type Tier } from "../core";
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
@@ -306,7 +306,10 @@ function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
       service.destroy();
     };
   }, [service]);
-  return [region, (next) => service.setRegion(next)];
+  // Stable across renders: the sign-in effect depends on it, and a new function every render
+  // re-ran that effect on every render, which re-rendered again (about 100 runs a second).
+  const update = useCallback((next: MarketRegion) => service.setRegion(next), [service]);
+  return [region, update];
 }
 
 export function RefiningCalculatorPage() {
@@ -317,6 +320,8 @@ export function RefiningCalculatorPage() {
   // Faction colours follow the account crest; the picker only asks once.
   useFactionTheme(user?.avatar ?? null);
   const [showStylePicker, setShowStylePicker] = useState(false);
+  // First visit on this tool (not only via the dashboard): ask which server's prices to load.
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
   useEffect(() => {
     if (user && !hasChosenFaction()) setShowStylePicker(true);
   }, [user]);
@@ -423,6 +428,7 @@ export function RefiningCalculatorPage() {
         // first-time visitor sees the same working page a crawler does.
         enterGuest();
         const guest = buildGuestProfile();
+        if (needsRegionChoice(null)) setShowRegionPicker(true);
         const guestRegion = readStoredRegion() || guest.region || "eu";
         setUser({ id: guest.id, email: guest.email, avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")), region: guestRegion });
         const guestSpecs = normalizeFocusSpecs(undefined);
@@ -443,6 +449,7 @@ export function RefiningCalculatorPage() {
       const currentUser = await authService.getCurrentUser().catch(() => null);
       const savedFocusSpecs = normalizeFocusSpecs(currentUser?.user_metadata?.refiningFocusSpecs);
       const safeRegion = readStoredRegion() || profile.region || "eu";
+      if (needsRegionChoice(profile.region)) setShowRegionPicker(true);
       setUser({ id: profile.id, email: profile.email, avatar: sanitizeAvatarUrl(profile.avatar || localStorage.getItem("avatar")), region: safeRegion });
       setFocusSpecs(savedFocusSpecs);
       if (!showFocusSpecsRef.current) setFocusSpecsDraft(savedFocusSpecs);
@@ -1200,7 +1207,15 @@ export function RefiningCalculatorPage() {
         </aside>
       </main>
 
-      {showStylePicker ? (
+      {showRegionPicker ? (
+        <RegionPicker
+          onPick={(next) => {
+            setShowRegionPicker(false);
+            void onRegionSave(next);
+          }}
+        />
+      ) : null}
+      {showStylePicker && !showRegionPicker ? (
         <StylePicker
           onPick={(faction) => {
             markFactionChosen();

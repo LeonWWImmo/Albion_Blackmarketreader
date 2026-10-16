@@ -8,7 +8,7 @@ import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import {
   buildArtefactId,
   buildMaterialId,
@@ -102,7 +102,7 @@ export function BmCrafterPage() {
     }),
     [journals.enabled, journals.data]
   );
-  const { rows, selectedRow, selectedRowKey, setSelectedRowKey, filters } = useBmCrafterState(data, journalConfig);
+  const { rows, selectedRow, setSelectedRowKey, filters } = useBmCrafterState(data, journalConfig);
   const navigate = useNavigate();
 
   // Open the clicked item in the Crafting Calculator, pre-set to sell to the Black Market
@@ -128,6 +128,8 @@ export function BmCrafterPage() {
   // Faction colours follow the account crest; the picker only asks once.
   useFactionTheme(user?.avatar ?? null);
   const [showStylePicker, setShowStylePicker] = useState(false);
+  // First visit on this tool (not only via the dashboard): ask which server's prices to load.
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
   useEffect(() => {
     if (user && !hasChosenFaction()) setShowStylePicker(true);
   }, [user]);
@@ -205,6 +207,7 @@ export function BmCrafterPage() {
         // first-time visitor sees the same working page a crawler does.
         enterGuest();
         const guest = buildGuestProfile();
+        if (needsRegionChoice(null)) setShowRegionPicker(true);
         const guestRegion: MarketRegion = readStoredRegion() || guest.region || "eu";
         setUser({
           id: guest.id,
@@ -238,6 +241,8 @@ export function BmCrafterPage() {
         return;
       }
       const safeRegion: MarketRegion = readStoredRegion() || profile.region || "eu";
+      const askRegion = needsRegionChoice(profile.region);
+      if (askRegion) setShowRegionPicker(true);
       setUser({
         id: profile.id,
         email: profile.email,
@@ -245,7 +250,7 @@ export function BmCrafterPage() {
         region: safeRegion
       });
       setRegion(safeRegion);
-      if (safeRegion !== profile.region) {
+      if (!askRegion && safeRegion !== profile.region) {
         await authService.updateUserMetadata({ region: safeRegion }).catch(() => undefined);
       }
     })();
@@ -891,7 +896,15 @@ export function BmCrafterPage() {
         </BottomSheet>
       ) : null}
 
-      {showStylePicker ? (
+      {showRegionPicker ? (
+        <RegionPicker
+          onPick={(next) => {
+            setShowRegionPicker(false);
+            void onRegionSave(next);
+          }}
+        />
+      ) : null}
+      {showStylePicker && !showRegionPicker ? (
         <StylePicker
           onPick={(faction) => {
             markFactionChosen();

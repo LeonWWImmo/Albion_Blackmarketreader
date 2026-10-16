@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../shared";
+import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -36,6 +36,7 @@ import {
 import { SpecsModal } from "./specs/SpecsModal";
 import { CraftRowDetail, type PriceLine, type Tone } from "./CraftRowDetail";
 import { ItemPicker, type PickerCategory } from "./ItemPicker";
+import { ShareLinkButton } from "./ShareLinkButton";
 import {
   applyFocusEfficiency,
   computeCraftBaseFocus,
@@ -415,17 +416,52 @@ function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
     };
   }, [service]);
 
-  return [region, (next) => service.setRegion(next)];
+  // Stable across renders: the sign-in effect depends on it, and a new function every render
+  // re-ran that effect on every render, which re-rendered again (about 100 runs a second).
+  const update = useCallback((next: MarketRegion) => service.setRegion(next), [service]);
+  return [region, update];
 }
 
 export function CraftingCalculatorPage() {
-  const [region, setRegion] = useRegion();
-  const [craftCity, setCraftCity] = useState<string>(() => getStoredCity(["craftCity", "selectedCity", "city", "cityFilter", "currentCity"]));
+  const [savedRegion, saveRegion] = useRegion();
+  // A shared link shows the prices of the server it was made on, without changing the region the
+  // visitor has saved for every tool. Their own region switch ends that and saves as usual.
+  const [linkRegionView, setLinkRegionView] = useState<MarketRegion | null>(() => {
+    const fromLink = new URLSearchParams(window.location.search).get("region");
+    return fromLink === "eu" || fromLink === "us" ? fromLink : null;
+  });
+  const region = linkRegionView ?? savedRegion;
+  const setRegion = useCallback(
+    (next: MarketRegion) => {
+      setLinkRegionView(null);
+      saveRegion(next);
+    },
+    [saveRegion]
+  );
+  // Whether the region is settled (chosen, saved, on the account or from the link). Until then it
+  // stays out of the address: a reload with the default written into it would look like a shared
+  // link and skip the first-visit question.
+  const [regionSettled, setRegionSettled] = useState(() => linkRegionView !== null || readStoredRegion() !== null);
+  // Cities that came with a shared link. They start the page (no flash of the visitor's own) and
+  // are not saved over the visitor's own cities until changed here (see the effects below).
+  const [linkCityParams] = useState(() => {
+    const query = new URLSearchParams(window.location.search);
+    const craft = query.get("craftCity");
+    const sell = query.get("sell");
+    return {
+      craft: craft && (CITY_FILTER_OPTIONS as readonly string[]).includes(craft) ? craft : null,
+      sell: sell === "bm" ? "Black Market" : sell && (KNOWN_CITIES as readonly string[]).includes(sell) ? sell : null
+    };
+  });
+  const linkCities = useRef<{ craft: string | null; sell: string | null }>({ ...linkCityParams });
+  const [craftCity, setCraftCity] = useState<string>(() => linkCityParams.craft ?? getStoredCity(["craftCity", "selectedCity", "city", "cityFilter", "currentCity"]));
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
   // Faction colours follow the account crest; the picker only asks once.
   useFactionTheme(user?.avatar ?? null);
   const [showStylePicker, setShowStylePicker] = useState(false);
+  // First visit on this tool (not only via the dashboard): ask which server's prices to load.
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
   useEffect(() => {
     if (user && !hasChosenFaction()) setShowStylePicker(true);
   }, [user]);
@@ -473,10 +509,24 @@ export function CraftingCalculatorPage() {
   const [allItems, setAllItems] = useState<CraftingItem[]>([]);
   const [itemCategories, setItemCategories] = useState<PickerCategory[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Height of the sticky table header (one or two text lines, depending on the column widths),
+  // so the share button in its corner can sit centred on it.
+  const tableHeadRef = useRef<HTMLTableSectionElement | null>(null);
+  const [tableHeadHeight, setTableHeadHeight] = useState(44);
+  useEffect(() => {
+    const head = tableHeadRef.current;
+    if (!head || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setTableHeadHeight(Math.round(head.getBoundingClientRect().height) || 44));
+    observer.observe(head);
+    return () => observer.disconnect();
+  }, []);
   const [selectedRowKey, setSelectedRowKey] = useSessionState("cc:selectedRowKey", "t8-4");
   const [selectedItem, setSelectedItem] = useState<CraftingItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // The region the page was opened with. The address is rewritten below as soon as the item list
+  // loads, which can be before the sign-in check asks "did this link bring a region?".
+  const [linkRegion] = useState(() => searchParams.get("region"));
   const [materialState, setMaterialState] = useState<MaterialDraft[]>([]);
   const [materialPriceMap, setMaterialPriceMap] = useState<Map<string, Record<string, number>>>(new Map());
   const [artefactPriceMap, setArtefactPriceMap] = useState<Map<string, Record<string, number>>>(new Map());
@@ -507,6 +557,7 @@ export function CraftingCalculatorPage() {
   const [hideoutPower, setHideoutPower] = useSessionState("cc:hideoutPower", DEFAULT_HIDEOUT_POWER);
   const [zoneQuality, setZoneQuality] = useSessionState("cc:zoneQuality", DEFAULT_ZONE_QUALITY);
   const [sellCity, setSellCity] = useState<string>(() => {
+    if (linkCityParams.sell) return linkCityParams.sell;
     const stored = localStorage.getItem("sellCity");
     return stored === "Black Market" ? "Black Market" : getStoredCity(["sellCity"], "Lymhurst");
   });
@@ -553,7 +604,6 @@ export function CraftingCalculatorPage() {
   }, [isPhone]);
   const specsState = useCraftingSpecs({ authService, enabled: Boolean(user) });
   const activeSpecKey = useMemo(() => resolveSpecKey(selectedItem), [selectedItem]);
-  const activeSpecLevel = activeSpecKey ? (specsState.progress.specs[activeSpecKey] ?? 0) : 0;
   const focusEfficiency = useMemo(
     () => computeFocusEfficiency(specsState.progress, activeSpecKey, selectedItem, allItems),
     [specsState.progress, activeSpecKey, selectedItem, allItems]
@@ -576,6 +626,30 @@ export function CraftingCalculatorPage() {
   );
   const returnRate = useMemo(() => returnRatePercent / 100, [returnRatePercent]);
   const isBlackMarketSell = sellCity === "Black Market";
+
+  // The address follows the item, tier, cities and region on screen, so the current URL opens the
+  // same item in the same setup (read back when the page opens: region and cities by the state
+  // above, item and tier row by the deep-link effects). Bonuses, specs, premium and typed-in prices
+  // stay the visitor's own. Starts once the item list has loaded, after an incoming link has been
+  // applied, and replaces the history entry instead of adding one per click.
+  const shareQuery = useMemo(() => {
+    if (!selectedItem) return null;
+    const params = new URLSearchParams({ item: selectedItem.id });
+    const row = /^t(\d)-(\d)$/.exec(selectedRowKey);
+    if (row) {
+      params.set("tier", row[1]);
+      params.set("enchant", row[2]);
+    }
+    params.set("sell", sellCity === "Black Market" ? "bm" : sellCity);
+    params.set("craftCity", craftCity);
+    if (regionSettled) params.set("region", region);
+    return params.toString();
+  }, [selectedItem, selectedRowKey, sellCity, craftCity, region, regionSettled]);
+
+  useEffect(() => {
+    if (shareQuery === null || shareQuery === window.location.search.replace(/^\?/, "")) return;
+    setSearchParams(new URLSearchParams(shareQuery), { replace: true });
+  }, [shareQuery, setSearchParams]);
   const effectiveSellCity = isBlackMarketSell ? "Caerleon" : sellCity;
   const effectiveSetupFeePercent = isBlackMarketSell ? 0 : setupFeePercent;
   const selectedItemMaterials = useMemo(
@@ -622,6 +696,8 @@ export function CraftingCalculatorPage() {
         // first-time visitor sees the same working page a crawler does.
         enterGuest();
         const guest = buildGuestProfile();
+        if (needsRegionChoice(null, linkRegion)) setShowRegionPicker(true);
+        else setRegionSettled(true);
         const guestRegion: MarketRegion = readStoredRegion() || guest.region || "eu";
         setUser({
           id: guest.id,
@@ -629,7 +705,7 @@ export function CraftingCalculatorPage() {
           avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
           region: guestRegion
         });
-        setRegion(guestRegion);
+        saveRegion(guestRegion);
         return;
       }
       exitGuest(); // real session supersedes any stale guest flag (prevents guest UI while logged in)
@@ -655,14 +731,19 @@ export function CraftingCalculatorPage() {
         return;
       }
       const safeRegion = readStoredRegion() || profile.region || "eu";
+      const storedRegion = readStoredRegion();
+      if (needsRegionChoice(profile.region, linkRegion)) setShowRegionPicker(true);
+      else setRegionSettled(true);
       setUser({
         id: profile.id,
         email: profile.email,
         avatar: sanitizeAvatarUrl(profile.avatar || localStorage.getItem("avatar")),
         region: safeRegion
       });
-      setRegion(safeRegion);
-      if (safeRegion !== profile.region) {
+      saveRegion(safeRegion);
+      // Keep the account in step with a region saved on this device; never with the "eu" fallback
+      // or a region that only came with a link.
+      if (storedRegion && storedRegion !== profile.region) {
         await authService.updateUserMetadata({ region: safeRegion }).catch(() => undefined);
       }
     })();
@@ -761,25 +842,31 @@ export function CraftingCalculatorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Deep-link from the BM Crafter: pre-fill region, sell city, craft city and tier/enchant row.
+  // Deep-link (shared link or the BM Crafter): the tier/enchant row. Region and cities are taken
+  // from the link when the state is created, above.
   useEffect(() => {
-    const rg = searchParams.get("region");
-    if (rg === "eu" || rg === "us") setRegion(rg); // match the region whose BM prices were shown
-    if (searchParams.get("sell") === "bm") setSellCity("Black Market");
-    const cc = searchParams.get("craftCity");
-    if (cc && (CITY_FILTER_OPTIONS as readonly string[]).includes(cc)) setCraftCity(cc);
+    // Only real table rows (T4-T8, .0-.4) are taken from a link; anything else keeps the current row.
     const tier = searchParams.get("tier");
-    if (tier) setSelectedRowKey(`t${tier}-${searchParams.get("enchant") ?? "0"}`);
+    const enchant = searchParams.get("enchant") ?? "0";
+    if (tier && /^[4-8]$/.test(tier) && /^[0-4]$/.test(enchant)) setSelectedRowKey(`t${tier}-${enchant}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    if (linkCities.current.craft !== null) {
+      if (craftCity === linkCities.current.craft) return;
+      linkCities.current.craft = null;
+    }
     localStorage.setItem("craftCity", craftCity);
     localStorage.setItem("selectedCity", craftCity);
     localStorage.setItem("city", craftCity);
   }, [craftCity]);
 
   useEffect(() => {
+    if (linkCities.current.sell !== null) {
+      if (sellCity === linkCities.current.sell) return;
+      linkCities.current.sell = null;
+    }
     localStorage.setItem("sellCity", sellCity);
   }, [sellCity]);
 
@@ -1154,11 +1241,6 @@ export function CraftingCalculatorPage() {
     selectedBaseFocus,
     getJournalProfit
   ]);
-  const roiBarWidth = useMemo(
-    () => `${Math.max(0, Math.min(100, Math.abs(typeof totals.roi === "number" ? totals.roi : 0)))}%`,
-    [totals.roi]
-  );
-
   const materialBreakdown = useMemo(() => {
     if (!selectedItem) return [] as Array<{ name: string; qty: number; unitPrice: number; total: number }>;
     const { tier, enchant } = parseTierEnchant(selectedRow.uid);
@@ -1226,6 +1308,7 @@ export function CraftingCalculatorPage() {
 
   async function onRegionSave(next: MarketRegion) {
     setRegion(next);
+    setRegionSettled(true);
     setUser((prev) => (prev ? { ...prev, region: next } : prev));
     if (!authService) return;
     await authService.updateUserMetadata({ region: next }).catch(() => undefined);
@@ -1521,6 +1604,7 @@ export function CraftingCalculatorPage() {
       <div className="workbench-container">
         <main className="matrix-side">
           {isPhone ? (
+            <div className="cc-phone-head">
             <button type="button" className="cc-phone-item" onClick={() => setPickerOpen(true)} aria-label={`Change item (current: ${selectedItem?.name || "none"})`}>
               <img
                 src={selectedItem ? `/itemicons/T4_${selectedItem.id}.png` : assetUrl("picture/accountsymbol.png")}
@@ -1533,9 +1617,17 @@ export function CraftingCalculatorPage() {
               </span>
               <span className="cc-phone-item-change" aria-hidden="true">Change</span>
             </button>
+            {selectedItem ? <ShareLinkButton shareTitle={`${selectedItem.name} crafting profit`} /> : null}
+            </div>
+          ) : null}
+          {/* desktop: pinned to the visible top-right corner of the table (the phone has it in its item row) */}
+          {!isPhone && selectedItem ? (
+            <div className="cc-table-share" style={{ "--cc-head-h": `${tableHeadHeight}px` } as CSSProperties}>
+              <ShareLinkButton shareTitle={`${selectedItem.name} crafting profit`} />
+            </div>
           ) : null}
           <table className="spreadsheet-table">
-            <thead>
+            <thead ref={tableHeadRef}>
               <tr>
                 <th className="cc-cell-uid">UID</th><th className="cc-cell-mat1">Material 1</th><th className="cc-cell-mat2">Material 2</th><th className="cc-cell-art">Artefact</th><th className="cc-cell-market">Market Value</th><th className="cc-cell-sold">Sold/Day</th><th className="cc-cell-profit">Profit</th><th className="cc-cell-gain">Gain %</th><th className="cc-cell-spf">Silver / Focus</th>
               </tr>
@@ -1983,7 +2075,15 @@ export function CraftingCalculatorPage() {
         </ResponsiveFilters>
       </div>
 
-      {showStylePicker ? (
+      {showRegionPicker ? (
+        <RegionPicker
+          onPick={(next) => {
+            setShowRegionPicker(false);
+            void onRegionSave(next);
+          }}
+        />
+      ) : null}
+      {showStylePicker && !showRegionPicker ? (
         <StylePicker
           onPick={(faction) => {
             markFactionChosen();

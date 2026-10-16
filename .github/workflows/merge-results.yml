@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "0 8 * * *"
 
+# Only checks the result files and calls the Vercel deploy hook; it never pushes.
+permissions:
+  contents: read
+
 jobs:
   merge:
     runs-on: ubuntu-latest

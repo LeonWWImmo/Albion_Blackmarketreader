@@ -38,7 +38,13 @@ export class RegionService {
     this.notify();
 
     if (options?.broadcast !== false) {
-      this.channel?.postMessage({ type: "region", value: normalized });
+      // The channel is closed once destroy() ran; in development React's StrictMode runs the
+      // pages' cleanup once and keeps the same service, so a later switch would throw here.
+      try {
+        this.channel?.postMessage({ type: "region", value: normalized });
+      } catch {
+        // other tabs simply are not told; they still pick it up from localStorage
+      }
     }
   }
 

@@ -9,4 +9,5 @@ export * from "./CommunityTile";
 export * from "./GuestSignInLink";
 export * from "./cn";
 export * from "./BottomSheet";
+export * from "./RegionPicker";
 

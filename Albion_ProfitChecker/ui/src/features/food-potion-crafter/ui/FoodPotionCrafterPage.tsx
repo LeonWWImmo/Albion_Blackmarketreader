@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
 import type { City, ConsumableCategory, ConsumableRecipe, MarketRegion, RecipeIngredient } from "../core";
 import { buildConsumablePriceSnapshot, ingredientPricesPath, loadIngredients, loadRecipes, outputPricesPath } from "../data";
 import { deriveFoodPotionRows, useFoodPotionState } from "../hooks";
@@ -239,6 +239,8 @@ export function FoodPotionCrafterPage() {
   // Faction colours follow the account crest; the picker only asks once.
   useFactionTheme(user?.avatar ?? null);
   const [showStylePicker, setShowStylePicker] = useState(false);
+  // First visit on this tool (not only via the dashboard): ask which server's prices to load.
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
   useEffect(() => {
     if (user && !hasChosenFaction()) setShowStylePicker(true);
   }, [user]);
@@ -289,6 +291,7 @@ export function FoodPotionCrafterPage() {
         // first-time visitor sees the same working page a crawler does.
         enterGuest();
         const guest = buildGuestProfile();
+        if (needsRegionChoice(null)) setShowRegionPicker(true);
         const guestRegion = guest.region === "eu" || guest.region === "us" ? (guest.region as MarketRegion) : null;
         setUser({
           id: guest.id,
@@ -301,7 +304,12 @@ export function FoodPotionCrafterPage() {
       }
       exitGuest(); // real session supersedes any stale guest flag (prevents guest UI while logged in)
       const profile = await authService.getUserProfile().catch(() => null);
-      if (cancelled || !profile) return;
+      if (cancelled) return;
+      if (!profile) {
+        // signed in but the profile did not load: still ask rather than silently using "eu"
+        if (needsRegionChoice(null)) setShowRegionPicker(true);
+        return;
+      }
       if (!profile.emailConfirmed) {
         await authService.signOut().catch(() => undefined);
         const next = encodeURIComponent(window.location.pathname || "/food-potion-crafter");
@@ -309,6 +317,7 @@ export function FoodPotionCrafterPage() {
         return;
       }
       const normalizedRegion = profile.region === "eu" || profile.region === "us" ? (profile.region as MarketRegion) : null;
+      if (needsRegionChoice(normalizedRegion)) setShowRegionPicker(true);
       setUser({
         id: profile.id,
         email: profile.email,
@@ -1044,7 +1053,15 @@ export function FoodPotionCrafterPage() {
         )}
       </main>
 
-      {showStylePicker ? (
+      {showRegionPicker ? (
+        <RegionPicker
+          onPick={(next) => {
+            setShowRegionPicker(false);
+            void onRegionSave(next);
+          }}
+        />
+      ) : null}
+      {showStylePicker && !showRegionPicker ? (
         <StylePicker
           onPick={(faction) => {
             markFactionChosen();

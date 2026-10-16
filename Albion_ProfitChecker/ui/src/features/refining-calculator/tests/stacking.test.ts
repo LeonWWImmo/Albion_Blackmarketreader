@@ -27,7 +27,7 @@ function buildInputs(refinedMarket: number): RefineTierInput[] {
   return [...map.values()];
 }
 
-function makeRefineFn(tierInputs: ReadonlyArray<RefineTierInput>) {
+function makeRefineFn() {
   const target = REFINE_VARIANTS.find((v) => v.tier === 6 && v.enchant === 0 && v.materialKey === "metal")!;
   const profile = getReturnRatePresetConfig("base");
   const refiner = makeRefiner({
@@ -46,7 +46,7 @@ function makeRefineFn(tierInputs: ReadonlyArray<RefineTierInput>) {
 describe("stacking refining", () => {
   it("self-refines the lower tiers when buying refined material is expensive", () => {
     const inputs = buildInputs(1_000_000); // refined market absurdly expensive
-    const { target, refine } = makeRefineFn(inputs);
+    const { target, refine } = makeRefineFn();
     const ctx = createStackingContext(variantByItemId, inputs, refine);
 
     const standard = refine(target, inputs);
@@ -59,7 +59,7 @@ describe("stacking refining", () => {
 
   it("buys the refined material when it is cheaper than self-refining", () => {
     const inputs = buildInputs(1); // refined market basically free
-    const { target, refine } = makeRefineFn(inputs);
+    const { target, refine } = makeRefineFn();
     const ctx = createStackingContext(variantByItemId, inputs, refine);
 
     const standard = refine(target, inputs);
@@ -72,7 +72,7 @@ describe("stacking refining", () => {
   it("never costs more than the standard (buy-everything) path", () => {
     for (const refinedMarket of [1, 1000, 50_000, 1_000_000]) {
       const inputs = buildInputs(refinedMarket);
-      const { target, refine } = makeRefineFn(inputs);
+      const { target, refine } = makeRefineFn();
       const ctx = createStackingContext(variantByItemId, inputs, refine);
       const standard = refine(target, inputs);
       const stacked = ctx.stackFor(target);

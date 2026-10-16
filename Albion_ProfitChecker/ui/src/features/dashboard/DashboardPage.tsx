@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY } from "@shared/index";
+import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY, RegionPicker, needsRegionChoice } from "@shared/index";
 import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
@@ -785,7 +785,7 @@ export function DashboardPage() {
           avatar: sanitizeAvatarUrl(guest.avatar || localStorage.getItem("avatar")),
           region: guestRegion
         });
-        if (!guest.region && !storedRegion) {
+        if (needsRegionChoice(null)) {
           setShowRegionModal(true);
         }
         regionService?.setRegion(guestRegion, { broadcast: false });
@@ -820,7 +820,7 @@ export function DashboardPage() {
         avatar: sanitizeAvatarUrl(profile.avatar || localStorage.getItem("avatar")),
         region: regionFromMeta
       });
-      if (!profile.region && !storedRegion) {
+      if (needsRegionChoice(profile.region)) {
         setShowRegionModal(true);
       }
       regionService?.setRegion(regionFromMeta, { broadcast: false });
@@ -1120,49 +1120,7 @@ export function DashboardPage() {
         <div className="loading-spinner" />
         <div className="loading-text">Loading data...</div>
       </div>
-      {showRegionModal ? (
-        <div className="modal-overlay region-overlay">
-          <div className="region-card">
-            <span className="region-eyebrow">Albion Online</span>
-            <h3>Choose your server region</h3>
-            <p className="region-lead">
-              Prices differ per server. Pick the one you play on &mdash; you can switch it any time
-              from your account panel.
-            </p>
-            <div className="region-grid">
-              <button type="button" className="region-option" onClick={() => onRegionConfirm("eu")}>
-                <span className="region-globe" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    <ellipse cx="12" cy="12" rx="4.2" ry="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M3.2 9h17.6M3.2 15h17.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                  </svg>
-                </span>
-                <span className="region-name">Europe</span>
-                <span className="region-sub">EU server data</span>
-                <span className="region-go" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </span>
-              </button>
-              <button type="button" className="region-option" onClick={() => onRegionConfirm("us")}>
-                <span className="region-globe" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    <ellipse cx="12" cy="12" rx="4.2" ry="9" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="M3.2 9h17.6M3.2 15h17.6" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                  </svg>
-                </span>
-                <span className="region-name">America</span>
-                <span className="region-sub">US server data</span>
-                <span className="region-go" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </span>
-              </button>
-            </div>
-            <p className="region-foot">Market data is synced once per day for free users.</p>
-          </div>
-        </div>
-      ) : null}
+      {showRegionModal ? <RegionPicker onPick={(next) => void onRegionConfirm(next)} /> : null}
       {showMaintenanceModal ? (
         <div className="modal-overlay" onClick={() => setShowMaintenanceModal(false)}>
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>

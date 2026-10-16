@@ -29,6 +29,11 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Crafting Calculator: you can now craft from a hideout or an island instead of a royal city. Hideout and Island sit as toggles next to the other return bonuses, and switching to Hideout lets you set your hideout power and zone quality, which replace the royal city bonus in the return rate. Island stations correctly give no return at all.
 - New look for the landing page: Albion artwork in the header, warm forge lighting with drifting embers, gold trim and stone panels instead of the old dark blue and green.
 
+- Every tool now has a proper phone version: compact rows with the profit up front, tap any row to see the full breakdown, and all filters and settings tucked behind one button at the bottom of the screen.
+- Dashboard on phones: your deal count with the profit trend at a glance, swipe through the city crests to switch city in one tap, sort by profit % or silver, and small city crests show where to buy and that it sells on the Black Market.
+- Crafting Calculator: tap the item icon to switch items from a searchable list sorted by category.
+- Crafting Calculator: share your calculation. The share button in the top corner of the table copies a link (on phones it opens your share menu, so it goes straight to Discord). The link opens the same item, tier, cities and server for whoever clicks it, without changing their own settings.
+
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):
        Crafting Calculator now shows fame per item

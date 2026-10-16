@@ -37,8 +37,9 @@ export function App() {
         <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />
         <Route path="/Blackmarket-Crafter/index.html" element={<Navigate to="/bm-crafter" replace />} />
         <Route path="/crafting-calculator/index.html" element={<Navigate to="/crafting-calculator" replace />} />
-        <Route path="/Refining%20Calculator" element={<Navigate to="/refining-calculator" replace />} />
-        <Route path="/Refining%20Calculator/index.html" element={<Navigate to="/refining-calculator" replace />} />
+        {/* old links: the router matches the decoded path, so the space is written as a space here */}
+        <Route path="/Refining Calculator" element={<Navigate to="/refining-calculator" replace />} />
+        <Route path="/Refining Calculator/index.html" element={<Navigate to="/refining-calculator" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -191,7 +191,7 @@ export function LandingPage() {
         <picture className="hero-media" aria-hidden="true">
           <source media="(max-width: 768px)" srcSet={heroMobile} />
           <source media="(max-width: 1280px)" srcSet={heroDesktop} />
-          <img src={heroOriginal} srcSet={heroSrcSet} sizes="100vw" alt="" fetchPriority="high" />
+          <img src={heroOriginal} srcSet={heroSrcSet} sizes="100vw" alt="" {...{ fetchpriority: "high" }} />
         </picture>
         <div className="hero-overlay" />
         <div className="eclipse-glow" />
