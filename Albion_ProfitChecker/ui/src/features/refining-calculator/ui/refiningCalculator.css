@@ -539,6 +539,12 @@
   font-size: 10px;
 }
 
+/* Today's daily refining bonus: a full row under the controls. */
+.rc-fixed-filters .rc-daily-block {
+  grid-column: 1 / -1;
+  gap: 7px;
+}
+
 .rc-filter-note {
   margin-top: -4px;
   color: var(--text-secondary);

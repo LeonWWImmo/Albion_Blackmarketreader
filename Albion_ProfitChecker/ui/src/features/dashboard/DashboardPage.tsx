@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY, RegionPicker, needsRegionChoice } from "@shared/index";
+import { createAuthService, RegionService, assetUrl, MobileNavBurger, ResponsiveFilters, useSessionState, isGuest, buildGuestProfile, enterGuest, exitGuest, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, BottomSheet, useMediaQuery, PHONE_QUERY, RegionPicker, needsRegionChoice, useFestivities } from "@shared/index";
 import type { AuthService } from "@shared/index";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { useSeo } from "../../shared/seo/useSeo";
 import "./dashboard.css";
 import { PhoneDealDetail, PhoneDealRow, PhoneOverview, type PhoneCity, type PhoneDeal } from "./DashboardPhone";
+import { DashboardEvents } from "./DashboardEvents";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 
 type Region = "us" | "eu";
@@ -639,6 +640,7 @@ export function DashboardPage() {
   const [range, setRange] = useSessionState<Range>("dash:range", "1W");
   // On a phone the deal cards become a dense list and a tap opens the deal in a bottom sheet.
   const isPhone = useMediaQuery(PHONE_QUERY);
+  const festivities = useFestivities(region);
   const [openDeal, setOpenDeal] = useState<PhoneDeal | null>(null);
   const [dealSheetOpen, setDealSheetOpen] = useState(false);
   useEffect(() => {
@@ -1182,6 +1184,14 @@ export function DashboardPage() {
           </span>
           <span className="tool-rail-label">Food &amp; Potion Crafter</span>
         </a>
+        <a className="tool-rail-link" href="/gold-tracker" title="Gold Tracker">
+          <span className="tool-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 4V8.5C5.7 9.6 8.7 10 12 10s6.3-.4 8-1.5V10c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V14c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V18c0 1.7-3.6 3-8 3s-8-1.3-8-3Z" />
+            </svg>
+          </span>
+          <span className="tool-rail-label">Gold Tracker</span>
+        </a>
       </aside>
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
@@ -1201,6 +1211,7 @@ export function DashboardPage() {
         <nav className="topbar-nav">
           <a className="nav-link active" href="/dashboard">Markets</a>
           <a className="nav-link" href="/#bm-crafter-access">Crafting-Tools</a>
+          <a className="nav-link" href="/gold-tracker">Gold Tracker</a>
           <a className="nav-link" href="/community">Community</a>
         </nav>
         <div className="topbar-right">
@@ -1313,8 +1324,10 @@ export function DashboardPage() {
             <p>&gt;= 30 % PROFIT  -  14-DAY RANGE  -  DAILY BLACK MARKET SYNC</p>
             <span className="hero-line" />
           </div>
+          {isPhone ? null : <DashboardEvents festivities={festivities} />}
         </section>
 
+        {isPhone ? <DashboardEvents festivities={festivities} /> : null}
         {isPhone ? (
           <PhoneOverview
             regionLabel={region === "eu" ? "Europe" : "America"}

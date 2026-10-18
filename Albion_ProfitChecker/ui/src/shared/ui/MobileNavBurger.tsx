@@ -10,6 +10,7 @@ const TOOLS: ReadonlyArray<{ to: string; label: string }> = [
   { to: "/crafting-calculator", label: "Crafting Calculator" },
   { to: "/refining-calculator", label: "Refining Calculator" },
   { to: "/food-potion-crafter", label: "Food & Potion Crafter" },
+  { to: "/gold-tracker", label: "Gold Tracker" },
 ];
 
 /**

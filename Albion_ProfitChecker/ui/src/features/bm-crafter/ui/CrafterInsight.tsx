@@ -1,4 +1,5 @@
 import { onItemIconError } from "@shared/assets/assets";
+import { DailyBonusTag } from "../../../shared";
 import { normalizeItemId } from "../domain";
 import type { BmCrafterRow } from "../hooks";
 import { formatNumber, formatPct, tierLabel } from "./format";
@@ -40,6 +41,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
         <h2>{row?.displayName || "Select an item"}</h2>
         <div className="side-tags">
           <span className="tag" id="insightTier">{row ? tierLabel(row.item.id) : "Tier --"}</span>
+          {row ? <DailyBonusTag percent={row.dailyBonusPercent ?? 0} /> : null}
         </div>
       </div>
       <div className="side-metrics">

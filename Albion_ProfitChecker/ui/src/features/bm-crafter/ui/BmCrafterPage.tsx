@@ -8,7 +8,7 @@ import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag } from "../../../shared";
 import {
   buildArtefactId,
   buildMaterialId,
@@ -80,6 +80,14 @@ function sanitizeAvatarUrl(value?: string | null): string {
   return fallback;
 }
 
+/** Daily bonus categories the BM Crafter lists items for (gear; no refining, food or potions). */
+const BM_BONUS_CATEGORIES: ReadonlySet<string> = new Set([
+  "sword", "axe", "crossbow", "hammer", "mace", "knuckles", "spear", "bow", "dagger", "quarterstaff",
+  "naturestaff", "arcanestaff", "cursestaff", "firestaff", "froststaff", "holystaff",
+  "plate_helmet", "plate_armor", "plate_shoes", "leather_helmet", "leather_armor", "leather_shoes",
+  "cloth_helmet", "cloth_armor", "cloth_shoes", "offhand", "tools", "gatherergear", "bag", "cape"
+]);
+
 function readStoredRegion(): MarketRegion | null {
   const stored = (localStorage.getItem("region") || "").toLowerCase();
   return stored === "us" || stored === "eu" ? stored : null;
@@ -102,7 +110,15 @@ export function BmCrafterPage() {
     }),
     [journals.enabled, journals.data]
   );
-  const { rows, selectedRow, setSelectedRowKey, filters } = useBmCrafterState(data, journalConfig);
+  const festivities = useFestivities(region);
+  // Only the bonuses for gear: a refining or food bonus covers none of these rows, and with no gear
+  // bonus the "only bonus items" filter switches itself off instead of emptying the table.
+  const bmBonuses = useMemo(
+    () => festivities.craftBonuses.filter((bonus) => BM_BONUS_CATEGORIES.has(bonus.category)),
+    [festivities.craftBonuses]
+  );
+  const { rows, selectedRow, setSelectedRowKey, filters } = useBmCrafterState(data, journalConfig, bmBonuses);
+  const hasRelevantBonus = bmBonuses.length > 0;
   const navigate = useNavigate();
 
   // Open the clicked item in the Crafting Calculator, pre-set to sell to the Black Market
@@ -321,7 +337,7 @@ export function BmCrafterPage() {
 
   useEffect(() => {
     setVisibleRows(INITIAL_ROWS);
-  }, [rows.length, region, filters.selectedTiers, filters.selectedEnchants, filters.minSold, filters.searchTerm, filters.sortByDailyTop, filters.showOnlyProfitable]);
+  }, [rows.length, region, filters.selectedTiers, filters.selectedEnchants, filters.minSold, filters.searchTerm, filters.sortByDailyTop, filters.showOnlyProfitable, filters.onlyBonusItems]);
 
   const lastUpdated = useMemo(
     () => formatUpdated(data?.market.generatedAt ?? data?.materials.generatedAt ?? null),
@@ -480,6 +496,7 @@ export function BmCrafterPage() {
               <a className="nav-tab" href="/crafting-calculator">Crafting Calculator</a>
               <a className="nav-tab" href="/refining-calculator">Refining Calculator</a>
               <a className="nav-tab" href="/food-potion-crafter">Food & Potion Crafter</a>
+              <a className="nav-tab" href="/gold-tracker">Gold Tracker</a>
             </div>
           </div>
           <div className="bm-meta">
@@ -751,6 +768,24 @@ export function BmCrafterPage() {
             />
           </div>
         </div>
+
+        <div className="filter-block bm-bonus-block">
+          <div className="filter-head">
+            <p>Daily Bonus</p>
+            <span className="filter-value">{filters.onlyBonusItems && hasRelevantBonus ? "Only" : "Auto"}</span>
+          </div>
+          <DailyBonusInfo festivities={festivities} relevant={BM_BONUS_CATEGORIES} noneLabel="No gear bonus today." />
+          {hasRelevantBonus ? (
+            <label className="daily-top-toggle">
+              <input
+                type="checkbox"
+                checked={filters.onlyBonusItems}
+                onChange={(e) => filters.setOnlyBonusItems(e.target.checked)}
+              />
+              <span>Only items with today&rsquo;s bonus</span>
+            </label>
+          ) : null}
+        </div>
       </section>
       </ResponsiveFilters>
 
@@ -805,7 +840,7 @@ export function BmCrafterPage() {
                               />
                             </div>
                             <div>
-                              <div className="item-name">{row.displayName}<span className="bm-open-calc-icon" aria-hidden="true">↗</span></div>
+                              <div className="item-name">{row.displayName}<DailyBonusTag percent={row.dailyBonusPercent ?? 0} /><span className="bm-open-calc-icon" aria-hidden="true">↗</span></div>
                               {suspect ? <div className="bm-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}
                               {suspect ? <span className="bm-suspect-chip">Check price</span> : null}
                               <div className="item-meta">{baseId}</div>

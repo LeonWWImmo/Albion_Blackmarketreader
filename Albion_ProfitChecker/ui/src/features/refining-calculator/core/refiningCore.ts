@@ -61,7 +61,8 @@ export function computeReturnRate(input: RefiningInput): number {
     ? input.bonuses.materialBonusPercent
     : 0;
   const focusBonus = input.bonuses.focusEnabled ? input.bonuses.focusBonusPercent : 0;
-  return computeReturnRateFromBonusPercent(input.bonuses.royalBonusPercent + materialBonus + focusBonus);
+  const dailyBonus = Math.max(0, input.bonuses.dailyBonusPercent ?? 0);
+  return computeReturnRateFromBonusPercent(input.bonuses.royalBonusPercent + materialBonus + focusBonus + dailyBonus);
 }
 
 export function getReturnRatePresetConfig(preset: ReturnRatePreset): {
@@ -233,6 +234,7 @@ export interface BuildInputParams {
   readonly nutritionFactor?: number;
   readonly marketTaxRate?: number;
   readonly returnRateOverride?: number | null;
+  readonly dailyBonusPercent?: number;
 }
 
 export function createRefiningInput(params: BuildInputParams): RefiningInput {
@@ -257,6 +259,7 @@ export function createRefiningInput(params: BuildInputParams): RefiningInput {
       focusEfficiency: Math.max(0, params.focusEfficiency ?? 0),
       focusBudget: Math.max(0, params.focusBudget ?? 10000),
       returnRateOverride: typeof params.returnRateOverride === "number" ? params.returnRateOverride : null,
+      dailyBonusPercent: Math.max(0, params.dailyBonusPercent ?? 0),
     },
   };
 }
@@ -274,6 +277,7 @@ export interface RefinerConfig {
   readonly marketTaxRate?: number;
   readonly amount?: number;
   readonly returnRateOverride?: number | null;
+  readonly dailyBonusPercent?: number;
 }
 
 export function makeRefiner(config: RefinerConfig) {
@@ -299,6 +303,7 @@ export function makeRefiner(config: RefinerConfig) {
         marketTaxRate: config.marketTaxRate,
         amount: config.amount,
         returnRateOverride: config.returnRateOverride,
+        dailyBonusPercent: config.dailyBonusPercent,
       }),
     );
 }

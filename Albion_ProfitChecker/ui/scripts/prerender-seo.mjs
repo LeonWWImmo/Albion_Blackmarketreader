@@ -34,6 +34,7 @@ const TOOL_LINKS = [
   { href: "/crafting-calculator", label: "Crafting Calculator" },
   { href: "/refining-calculator", label: "Refining Calculator" },
   { href: "/food-potion-crafter", label: "Food & Potion Crafter" },
+  { href: "/gold-tracker", label: "Gold Tracker" },
 ];
 
 /** Indexable routes. Home (/) keeps the as-built dist/index.html. */
@@ -87,6 +88,16 @@ const ROUTES = [
     h1: "Albion Online Food & Potion Crafter",
     intro:
       "Calculate cooking and alchemy profit in Albion Online. Scan profitable food and potion recipes or punch in your own ingredient prices — with return rate, station fees, focus, and all tiers shown at once for each product.",
+  },
+  {
+    path: "gold-tracker",
+    title: "Albion Online Gold Price Tracker | Blackmarket Reader",
+    description:
+      "Live Albion Online gold price for Europe and America: silver per gold, 24h and 7-day change, 90-day chart, the cheapest hours to buy gold and a gold to silver converter.",
+    keywords: "Albion Online gold price, Albion gold tracker, Albion gold to silver, Albion Online gold chart, Albion gold price history",
+    h1: "Albion Online Gold Price Tracker",
+    intro:
+      "Track the Albion Online gold price on the Europe and America servers. See silver per gold right now, the 24-hour and 7-day change, a 90-day price chart, whether gold is cheap or expensive compared with the last 30 days, the hours and weekdays when gold has been cheapest, and convert gold to silver and back.",
   },
   {
     path: "community",

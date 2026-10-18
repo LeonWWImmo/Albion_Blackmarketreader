@@ -1,0 +1,91 @@
+/* Today's Daily Production Bonuses (DailyBonusInfo) and the per-row "+10% today" tag.
+   Amber, so a bonus never reads as profit (green) or loss (red). Inner selectors sit under
+   .dbonus so the label styles of the panel it is placed in (spans, strongs) do not reach in. */
+.dbonus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.dbonus .dbonus-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dbonus .dbonus-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 196, 81, 0.45);
+  background: rgba(245, 196, 81, 0.1);
+  color: #f6dfa4;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.dbonus .dbonus-chip strong {
+  color: #f5c451;
+  font-size: inherit;
+  font-weight: 800;
+}
+
+.dbonus .dbonus-chip.is-rare {
+  border-color: rgba(251, 146, 60, 0.6);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.dbonus .dbonus-chip.is-rare strong {
+  color: #fb923c;
+}
+
+.dbonus .dbonus-none {
+  color: #dbe4ef;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dbonus .dbonus-note {
+  color: rgba(203, 213, 225, 0.7);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dbonus-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 196, 81, 0.5);
+  background: rgba(245, 196, 81, 0.12);
+  color: #f5c451;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.dbonus-tag.is-rare {
+  border-color: rgba(251, 146, 60, 0.6);
+  background: rgba(251, 146, 60, 0.14);
+  color: #fb923c;
+}

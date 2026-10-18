@@ -599,6 +599,12 @@ strong.fp-return-rate {
   background: var(--border);
 }
 
+/* Today's daily bonus, last in the summary bar. */
+.fp-summary-stat.fp-summary-daily {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
 /* --- Calculator workbench (crafting-calculator bento design) --- */
 .fp-workbench-title {
   display: flex;
@@ -828,16 +834,23 @@ tr.fp-avalonian-row td {
     overflow: visible;
   }
 
-  /* Category is already in the mode tabs; the other three fit one line. */
+  /* Category is already in the mode tabs; the other three fit one line, today's bonus gets the next. */
   body.food-potion-crafter-body .fp-summary-bar {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 12px;
     padding: 10px 14px;
   }
 
   body.food-potion-crafter-body .fp-summary-bar > :nth-child(4),
-  body.food-potion-crafter-body .fp-summary-bar > :nth-child(5) {
+  body.food-potion-crafter-body .fp-summary-bar > :nth-child(5),
+  body.food-potion-crafter-body .fp-summary-bar > .fp-summary-divider.fp-summary-daily {
     display: none;
+  }
+
+  body.food-potion-crafter-body .fp-summary-bar > .fp-summary-stat.fp-summary-daily {
+    flex: 1 0 100%;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
   }
 
   body.food-potion-crafter-body .fp-main .table-wrap table,

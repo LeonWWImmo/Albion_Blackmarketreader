@@ -34,6 +34,10 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Crafting Calculator: tap the item icon to switch items from a searchable list sorted by category.
 - Crafting Calculator: share your calculation. The share button in the top corner of the table copies a link (on phones it opens your share menu, so it goes straight to Discord). The link opens the same item, tier, cities and server for whoever clicks it, without changing their own settings.
 
+- New Gold Tracker: the live gold price for Europe and America with a 24h to 90-day chart, a buy-or-wait signal against the last 30 days, the cheapest hours and weekdays to buy gold, and a gold to silver converter.
+- Today's crafting bonus is now built in: every tool knows the daily production bonuses and adds them to the return rate of the items they cover, marked with a "+10% today" tag. The Black Market Crafter can show only today's bonus items, and the Crafting Calculator still lets you set the bonus by hand.
+- Dashboard: see today's crafting bonuses and this week's event (with when the next one starts) right under the header, each bonus linking to the tool that crafts it.
+
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):
        Crafting Calculator now shows fame per item

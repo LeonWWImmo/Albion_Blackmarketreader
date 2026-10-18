@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSessionState } from "../../../shared";
+import type { CraftBonus } from "../../../shared";
 import { DEFAULT_USAGE_FEE } from "../core";
 import type {
   City,
@@ -14,10 +15,14 @@ import type { CraftingProgress } from "../specs/data";
 // Lymhurst has the deepest market data, so default every city selector there.
 const DEFAULT_CITY: City = "Lymhurst";
 
+const NO_BONUSES: ReadonlyArray<CraftBonus> = [];
+
 export function useFoodPotionState(
   recipes: ConsumableRecipe[],
   priceByItemId: Map<string, number>,
-  specProgress?: CraftingProgress
+  specProgress?: CraftingProgress,
+  /** Today's daily crafting bonuses (empty when none are reported). */
+  dailyBonuses: ReadonlyArray<CraftBonus> = NO_BONUSES
 ) {
   const [category, setCategoryState] = useSessionState<ConsumableCategory>("fp:category", "food");
   const [selectedTier, setSelectedTier] = useSessionState<number | null>("fp:selectedTier", null);
@@ -66,6 +71,7 @@ export function useFoodPotionState(
           demandPerDay,
           showOnlyProfitable,
           specProgress,
+          dailyBonuses,
         },
         priceByItemId
       ),
@@ -87,6 +93,7 @@ export function useFoodPotionState(
       demandPerDay,
       showOnlyProfitable,
       specProgress,
+      dailyBonuses,
     ]
   );
 
@@ -140,6 +147,8 @@ export function useFoodPotionState(
       // Exposed so the crafter tab's familyRows (which spreads `filters`) applies spec-based
       // focus efficiency too — without this, focus cost ignores specs in the crafter view.
       specProgress,
+      // Same for today's daily bonus.
+      dailyBonuses,
     },
   };
 }

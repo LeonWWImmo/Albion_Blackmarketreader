@@ -1,0 +1,628 @@
+{
+  "source": "ao-data/ao-bin-dumps festivities.json + items.json",
+  "generatedAt": "2026-10-18",
+  "bonuses": {
+    "COMMON_SWORD": {
+      "category": "sword",
+      "percent": 10
+    },
+    "COMMON_AXE": {
+      "category": "axe",
+      "percent": 10
+    },
+    "COMMON_CROSSBOW": {
+      "category": "crossbow",
+      "percent": 10
+    },
+    "COMMON_HAMMER": {
+      "category": "hammer",
+      "percent": 10
+    },
+    "COMMON_MACE": {
+      "category": "mace",
+      "percent": 10
+    },
+    "COMMON_KNUCKLES": {
+      "category": "knuckles",
+      "percent": 10
+    },
+    "COMMON_PLATE_HELMET": {
+      "category": "plate_helmet",
+      "percent": 10
+    },
+    "COMMON_PLATE_ARMOR": {
+      "category": "plate_armor",
+      "percent": 10
+    },
+    "COMMON_PLATE_SHOES": {
+      "category": "plate_shoes",
+      "percent": 10
+    },
+    "COMMON_SPEAR": {
+      "category": "spear",
+      "percent": 10
+    },
+    "COMMON_BOW": {
+      "category": "bow",
+      "percent": 10
+    },
+    "COMMON_NATURESTAFF": {
+      "category": "naturestaff",
+      "percent": 10
+    },
+    "COMMON_DAGGER": {
+      "category": "dagger",
+      "percent": 10
+    },
+    "COMMON_QUARTERSTAFF": {
+      "category": "quarterstaff",
+      "percent": 10
+    },
+    "COMMON_SHAPESHIFTERSTAFF": {
+      "category": "shapeshifterstaff",
+      "percent": 10
+    },
+    "COMMON_LEATHER_HELMET": {
+      "category": "leather_helmet",
+      "percent": 10
+    },
+    "COMMON_LEATHER_ARMOR": {
+      "category": "leather_armor",
+      "percent": 10
+    },
+    "COMMON_LEATHER_SHOES": {
+      "category": "leather_shoes",
+      "percent": 10
+    },
+    "COMMON_ARCANESTAFF": {
+      "category": "arcanestaff",
+      "percent": 10
+    },
+    "COMMON_CURSESTAFF": {
+      "category": "cursestaff",
+      "percent": 10
+    },
+    "COMMON_FIRESTAFF": {
+      "category": "firestaff",
+      "percent": 10
+    },
+    "COMMON_FROSTSTAFF": {
+      "category": "froststaff",
+      "percent": 10
+    },
+    "COMMON_HOLYSTAFF": {
+      "category": "holystaff",
+      "percent": 10
+    },
+    "COMMON_CLOTH_HELMET": {
+      "category": "cloth_helmet",
+      "percent": 10
+    },
+    "COMMON_CLOTH_ARMOR": {
+      "category": "cloth_armor",
+      "percent": 10
+    },
+    "COMMON_CLOTH_SHOES": {
+      "category": "cloth_shoes",
+      "percent": 10
+    },
+    "COMMON_OFFHAND": {
+      "category": "offhand",
+      "percent": 10
+    },
+    "COMMON_FIBER": {
+      "category": "fiber",
+      "percent": 10
+    },
+    "COMMON_WOOD": {
+      "category": "wood",
+      "percent": 10
+    },
+    "COMMON_ROCK": {
+      "category": "rock",
+      "percent": 10
+    },
+    "COMMON_ORE": {
+      "category": "ore",
+      "percent": 10
+    },
+    "COMMON_HIDE": {
+      "category": "hide",
+      "percent": 10
+    },
+    "COMMON_TOOLS": {
+      "category": "tools",
+      "percent": 10
+    },
+    "COMMON_GATHERERGEAR": {
+      "category": "gatherergear",
+      "percent": 10
+    },
+    "COMMON_POTION": {
+      "category": "potion",
+      "percent": 10
+    },
+    "COMMON_FOOD": {
+      "category": "food",
+      "percent": 10
+    },
+    "COMMON_BAG": {
+      "category": "bag",
+      "percent": 10
+    },
+    "COMMON_CAPE": {
+      "category": "cape",
+      "percent": 10
+    },
+    "RARE_SWORD": {
+      "category": "sword",
+      "percent": 20
+    },
+    "RARE_AXE": {
+      "category": "axe",
+      "percent": 20
+    },
+    "RARE_CROSSBOW": {
+      "category": "crossbow",
+      "percent": 20
+    },
+    "RARE_HAMMER": {
+      "category": "hammer",
+      "percent": 20
+    },
+    "RARE_MACE": {
+      "category": "mace",
+      "percent": 20
+    },
+    "RARE_KNUCKLES": {
+      "category": "knuckles",
+      "percent": 20
+    },
+    "RARE_PLATE_HELMET": {
+      "category": "plate_helmet",
+      "percent": 20
+    },
+    "RARE_PLATE_ARMOR": {
+      "category": "plate_armor",
+      "percent": 20
+    },
+    "RARE_PLATE_SHOES": {
+      "category": "plate_shoes",
+      "percent": 20
+    },
+    "RARE_SPEAR": {
+      "category": "spear",
+      "percent": 20
+    },
+    "RARE_BOW": {
+      "category": "bow",
+      "percent": 20
+    },
+    "RARE_NATURESTAFF": {
+      "category": "naturestaff",
+      "percent": 20
+    },
+    "RARE_DAGGER": {
+      "category": "dagger",
+      "percent": 20
+    },
+    "RARE_QUARTERSTAFF": {
+      "category": "quarterstaff",
+      "percent": 20
+    },
+    "RARE_SHAPESHIFTERSTAFF": {
+      "category": "shapeshifterstaff",
+      "percent": 20
+    },
+    "RARE_LEATHER_HELMET": {
+      "category": "leather_helmet",
+      "percent": 20
+    },
+    "RARE_LEATHER_ARMOR": {
+      "category": "leather_armor",
+      "percent": 20
+    },
+    "RARE_LEATHER_SHOES": {
+      "category": "leather_shoes",
+      "percent": 20
+    },
+    "RARE_ARCANESTAFF": {
+      "category": "arcanestaff",
+      "percent": 20
+    },
+    "RARE_CURSESTAFF": {
+      "category": "cursestaff",
+      "percent": 20
+    },
+    "RARE_FIRESTAFF": {
+      "category": "firestaff",
+      "percent": 20
+    },
+    "RARE_FROSTSTAFF": {
+      "category": "froststaff",
+      "percent": 20
+    },
+    "RARE_HOLYSTAFF": {
+      "category": "holystaff",
+      "percent": 20
+    },
+    "RARE_CLOTH_HELMET": {
+      "category": "cloth_helmet",
+      "percent": 20
+    },
+    "RARE_CLOTH_ARMOR": {
+      "category": "cloth_armor",
+      "percent": 20
+    },
+    "RARE_CLOTH_SHOES": {
+      "category": "cloth_shoes",
+      "percent": 20
+    },
+    "RARE_OFFHAND": {
+      "category": "offhand",
+      "percent": 20
+    },
+    "RARE_FIBER": {
+      "category": "fiber",
+      "percent": 20
+    },
+    "RARE_WOOD": {
+      "category": "wood",
+      "percent": 20
+    },
+    "RARE_ROCK": {
+      "category": "rock",
+      "percent": 20
+    },
+    "RARE_ORE": {
+      "category": "ore",
+      "percent": 20
+    },
+    "RARE_HIDE": {
+      "category": "hide",
+      "percent": 20
+    },
+    "RARE_TOOLS": {
+      "category": "tools",
+      "percent": 20
+    },
+    "RARE_GATHERERGEAR": {
+      "category": "gatherergear",
+      "percent": 20
+    },
+    "RARE_POTION": {
+      "category": "potion",
+      "percent": 20
+    },
+    "RARE_FOOD": {
+      "category": "food",
+      "percent": 20
+    },
+    "RARE_BAG": {
+      "category": "bag",
+      "percent": 20
+    },
+    "RARE_CAPE": {
+      "category": "cape",
+      "percent": 20
+    }
+  },
+  "categoryOf": {
+    "2H_ARCANESTAFF": "arcanestaff",
+    "2H_ARCANESTAFF_CRYSTAL": "arcanestaff",
+    "2H_ARCANESTAFF_HELL": "arcanestaff",
+    "2H_ARCANE_RINGPAIR_AVALON": "arcanestaff",
+    "2H_AXE": "axe",
+    "2H_AXE_AVALON": "axe",
+    "2H_BOW": "bow",
+    "2H_BOW_AVALON": "bow",
+    "2H_BOW_HELL": "bow",
+    "2H_BOW_KEEPER": "bow",
+    "2H_CLAWPAIR": "dagger",
+    "2H_CLAYMORE": "sword",
+    "2H_CLAYMORE_AVALON": "sword",
+    "2H_CLEAVER_HELL": "sword",
+    "2H_COMBATSTAFF_MORGANA": "quarterstaff",
+    "2H_CROSSBOW": "crossbow",
+    "2H_CROSSBOWLARGE": "crossbow",
+    "2H_CROSSBOWLARGE_MORGANA": "crossbow",
+    "2H_CROSSBOW_CANNON_AVALON": "crossbow",
+    "2H_CURSEDSTAFF": "cursestaff",
+    "2H_CURSEDSTAFF_MORGANA": "cursestaff",
+    "2H_DAGGERPAIR": "dagger",
+    "2H_DAGGERPAIR_CRYSTAL": "dagger",
+    "2H_DAGGER_KATAR_AVALON": "dagger",
+    "2H_DEMONICSTAFF": "cursestaff",
+    "2H_DIVINESTAFF": "holystaff",
+    "2H_DOUBLEBLADEDSTAFF": "quarterstaff",
+    "2H_DOUBLEBLADEDSTAFF_CRYSTAL": "quarterstaff",
+    "2H_DUALAXE_KEEPER": "axe",
+    "2H_DUALCROSSBOW_HELL": "crossbow",
+    "2H_DUALHAMMER_HELL": "hammer",
+    "2H_DUALMACE_AVALON": "mace",
+    "2H_DUALSCIMITAR_UNDEAD": "sword",
+    "2H_DUALSWORD": "sword",
+    "2H_ENIGMATICORB_MORGANA": "arcanestaff",
+    "2H_ENIGMATICSTAFF": "arcanestaff",
+    "2H_FIRESTAFF": "firestaff",
+    "2H_FIRESTAFF_HELL": "firestaff",
+    "2H_FIRE_RINGPAIR_AVALON": "firestaff",
+    "2H_FLAIL": "mace",
+    "2H_FROSTSTAFF": "froststaff",
+    "2H_FROSTSTAFF_CRYSTAL": "froststaff",
+    "2H_GLACIALSTAFF": "froststaff",
+    "2H_GLAIVE": "spear",
+    "2H_GLAIVE_CRYSTAL": "spear",
+    "2H_HALBERD": "axe",
+    "2H_HALBERD_MORGANA": "axe",
+    "2H_HAMMER": "hammer",
+    "2H_HAMMER_AVALON": "hammer",
+    "2H_HAMMER_UNDEAD": "hammer",
+    "2H_HARPOON_HELL": "spear",
+    "2H_HOLYSTAFF": "holystaff",
+    "2H_HOLYSTAFF_HELL": "holystaff",
+    "2H_HOLYSTAFF_UNDEAD": "holystaff",
+    "2H_ICECRYSTAL_UNDEAD": "froststaff",
+    "2H_ICEGAUNTLETS_HELL": "froststaff",
+    "2H_INFERNOSTAFF": "firestaff",
+    "2H_INFERNOSTAFF_MORGANA": "firestaff",
+    "2H_IRONCLADEDSTAFF": "quarterstaff",
+    "2H_KNUCKLES_AVALON": "knuckles",
+    "2H_KNUCKLES_HELL": "knuckles",
+    "2H_KNUCKLES_KEEPER": "knuckles",
+    "2H_KNUCKLES_MORGANA": "knuckles",
+    "2H_KNUCKLES_SET1": "knuckles",
+    "2H_KNUCKLES_SET2": "knuckles",
+    "2H_KNUCKLES_SET3": "knuckles",
+    "2H_LONGBOW": "bow",
+    "2H_LONGBOW_UNDEAD": "bow",
+    "2H_MACE": "mace",
+    "2H_MACE_MORGANA": "mace",
+    "2H_NATURESTAFF": "naturestaff",
+    "2H_NATURESTAFF_HELL": "naturestaff",
+    "2H_NATURESTAFF_KEEPER": "naturestaff",
+    "2H_POLEHAMMER": "hammer",
+    "2H_QUARTERSTAFF": "quarterstaff",
+    "2H_QUARTERSTAFF_AVALON": "quarterstaff",
+    "2H_REPEATINGCROSSBOW_UNDEAD": "crossbow",
+    "2H_ROCKSTAFF_KEEPER": "quarterstaff",
+    "2H_SCYTHE_CRYSTAL": "axe",
+    "2H_SCYTHE_HELL": "axe",
+    "2H_SHAPESHIFTER_AVALON": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_HELL": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_KEEPER": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_MORGANA": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_SET1": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_SET2": "shapeshifterstaff",
+    "2H_SHAPESHIFTER_SET3": "shapeshifterstaff",
+    "2H_SKULLORB_HELL": "cursestaff",
+    "2H_SPEAR": "spear",
+    "2H_TOOL_AXE": "tools",
+    "2H_TOOL_FISHINGROD": "tools",
+    "2H_TOOL_HAMMER": "tools",
+    "2H_TOOL_KNIFE": "tools",
+    "2H_TOOL_PICK": "tools",
+    "2H_TOOL_SICKLE": "tools",
+    "2H_TOOL_SIEGEHAMMER": "tools",
+    "2H_TOOL_TRACKING": "tools",
+    "2H_TRIDENT_UNDEAD": "spear",
+    "2H_TWINSCYTHE_HELL": "quarterstaff",
+    "2H_WARBOW": "bow",
+    "2H_WILDSTAFF": "naturestaff",
+    "ALCOHOL": "food",
+    "ARMOR_CLOTH_AVALON": "cloth_armor",
+    "ARMOR_CLOTH_FEY": "cloth_armor",
+    "ARMOR_CLOTH_HELL": "cloth_armor",
+    "ARMOR_CLOTH_KEEPER": "cloth_armor",
+    "ARMOR_CLOTH_MORGANA": "cloth_armor",
+    "ARMOR_CLOTH_SET1": "cloth_armor",
+    "ARMOR_CLOTH_SET2": "cloth_armor",
+    "ARMOR_CLOTH_SET3": "cloth_armor",
+    "ARMOR_GATHERER_FIBER": "gatherergear",
+    "ARMOR_GATHERER_FISH": "gatherergear",
+    "ARMOR_GATHERER_HIDE": "gatherergear",
+    "ARMOR_GATHERER_ORE": "gatherergear",
+    "ARMOR_GATHERER_ROCK": "gatherergear",
+    "ARMOR_GATHERER_WOOD": "gatherergear",
+    "ARMOR_LEATHER_AVALON": "leather_armor",
+    "ARMOR_LEATHER_FEY": "leather_armor",
+    "ARMOR_LEATHER_HELL": "leather_armor",
+    "ARMOR_LEATHER_MORGANA": "leather_armor",
+    "ARMOR_LEATHER_SET1": "leather_armor",
+    "ARMOR_LEATHER_SET2": "leather_armor",
+    "ARMOR_LEATHER_SET3": "leather_armor",
+    "ARMOR_LEATHER_UNDEAD": "leather_armor",
+    "ARMOR_PLATE_AVALON": "plate_armor",
+    "ARMOR_PLATE_FEY": "plate_armor",
+    "ARMOR_PLATE_HELL": "plate_armor",
+    "ARMOR_PLATE_KEEPER": "plate_armor",
+    "ARMOR_PLATE_SET1": "plate_armor",
+    "ARMOR_PLATE_SET2": "plate_armor",
+    "ARMOR_PLATE_SET3": "plate_armor",
+    "ARMOR_PLATE_UNDEAD": "plate_armor",
+    "BACKPACK_GATHERER_FIBER": "gatherergear",
+    "BACKPACK_GATHERER_FISH": "gatherergear",
+    "BACKPACK_GATHERER_HIDE": "gatherergear",
+    "BACKPACK_GATHERER_ORE": "gatherergear",
+    "BACKPACK_GATHERER_ROCK": "gatherergear",
+    "BACKPACK_GATHERER_WOOD": "gatherergear",
+    "BAG": "bag",
+    "BAG_INSIGHT": "bag",
+    "BREAD": "food",
+    "BUTTER": "food",
+    "CAPE": "cape",
+    "CLOTH": "fiber",
+    "FLOUR": "food",
+    "HEAD_CLOTH_AVALON": "cloth_helmet",
+    "HEAD_CLOTH_FEY": "cloth_helmet",
+    "HEAD_CLOTH_HELL": "cloth_helmet",
+    "HEAD_CLOTH_KEEPER": "cloth_helmet",
+    "HEAD_CLOTH_MORGANA": "cloth_helmet",
+    "HEAD_CLOTH_SET1": "cloth_helmet",
+    "HEAD_CLOTH_SET2": "cloth_helmet",
+    "HEAD_CLOTH_SET3": "cloth_helmet",
+    "HEAD_GATHERER_FIBER": "gatherergear",
+    "HEAD_GATHERER_FISH": "gatherergear",
+    "HEAD_GATHERER_HIDE": "gatherergear",
+    "HEAD_GATHERER_ORE": "gatherergear",
+    "HEAD_GATHERER_ROCK": "gatherergear",
+    "HEAD_GATHERER_WOOD": "gatherergear",
+    "HEAD_LEATHER_AVALON": "leather_helmet",
+    "HEAD_LEATHER_FEY": "leather_helmet",
+    "HEAD_LEATHER_HELL": "leather_helmet",
+    "HEAD_LEATHER_MORGANA": "leather_helmet",
+    "HEAD_LEATHER_SET1": "leather_helmet",
+    "HEAD_LEATHER_SET2": "leather_helmet",
+    "HEAD_LEATHER_SET3": "leather_helmet",
+    "HEAD_LEATHER_UNDEAD": "leather_helmet",
+    "HEAD_PLATE_AVALON": "plate_helmet",
+    "HEAD_PLATE_FEY": "plate_helmet",
+    "HEAD_PLATE_HELL": "plate_helmet",
+    "HEAD_PLATE_KEEPER": "plate_helmet",
+    "HEAD_PLATE_SET1": "plate_helmet",
+    "HEAD_PLATE_SET2": "plate_helmet",
+    "HEAD_PLATE_SET3": "plate_helmet",
+    "HEAD_PLATE_UNDEAD": "plate_helmet",
+    "LEATHER": "hide",
+    "MAIN_1HCROSSBOW": "crossbow",
+    "MAIN_ARCANESTAFF": "arcanestaff",
+    "MAIN_ARCANESTAFF_UNDEAD": "arcanestaff",
+    "MAIN_AXE": "axe",
+    "MAIN_CURSEDSTAFF": "cursestaff",
+    "MAIN_CURSEDSTAFF_AVALON": "cursestaff",
+    "MAIN_CURSEDSTAFF_CRYSTAL": "cursestaff",
+    "MAIN_CURSEDSTAFF_UNDEAD": "cursestaff",
+    "MAIN_DAGGER": "dagger",
+    "MAIN_FIRESTAFF": "firestaff",
+    "MAIN_FIRESTAFF_KEEPER": "firestaff",
+    "MAIN_FROSTSTAFF": "froststaff",
+    "MAIN_FROSTSTAFF_AVALON": "froststaff",
+    "MAIN_FROSTSTAFF_KEEPER": "froststaff",
+    "MAIN_HAMMER": "hammer",
+    "MAIN_HOLYSTAFF": "holystaff",
+    "MAIN_HOLYSTAFF_AVALON": "holystaff",
+    "MAIN_HOLYSTAFF_MORGANA": "holystaff",
+    "MAIN_MACE": "mace",
+    "MAIN_MACE_HELL": "mace",
+    "MAIN_NATURESTAFF": "naturestaff",
+    "MAIN_NATURESTAFF_AVALON": "naturestaff",
+    "MAIN_NATURESTAFF_KEEPER": "naturestaff",
+    "MAIN_SPEAR": "spear",
+    "MAIN_SWORD": "sword",
+    "MAIN_SWORD_CRYSTAL": "sword",
+    "MEAL_GRILLEDFISH": "food",
+    "MEAL_OMELETTE": "food",
+    "MEAL_OMELETTE_AVALON": "food",
+    "MEAL_OMELETTE_FISH": "food",
+    "MEAL_PIE": "food",
+    "MEAL_PIE_FISH": "food",
+    "MEAL_ROAST": "food",
+    "MEAL_ROAST_FISH": "food",
+    "MEAL_SALAD": "food",
+    "MEAL_SALAD_FISH": "food",
+    "MEAL_SANDWICH": "food",
+    "MEAL_SANDWICH_AVALON": "food",
+    "MEAL_SANDWICH_FISH": "food",
+    "MEAL_SEAWEEDSALAD": "food",
+    "MEAL_SOUP": "food",
+    "MEAL_SOUP_FISH": "food",
+    "MEAL_STEW": "food",
+    "MEAL_STEW_AVALON": "food",
+    "MEAL_STEW_FISH": "food",
+    "METALBAR": "ore",
+    "OFF_BOOK": "offhand",
+    "OFF_CENSER_AVALON": "offhand",
+    "OFF_DEMONSKULL_HELL": "offhand",
+    "OFF_HORN_KEEPER": "offhand",
+    "OFF_JESTERCANE_HELL": "offhand",
+    "OFF_LAMP_UNDEAD": "offhand",
+    "OFF_ORB_MORGANA": "offhand",
+    "OFF_SHIELD": "offhand",
+    "OFF_SHIELD_AVALON": "offhand",
+    "OFF_SHIELD_HELL": "offhand",
+    "OFF_SPIKEDSHIELD_MORGANA": "offhand",
+    "OFF_TALISMAN_AVALON": "offhand",
+    "OFF_TORCH": "offhand",
+    "OFF_TOTEM_KEEPER": "offhand",
+    "OFF_TOWERSHIELD_UNDEAD": "offhand",
+    "PLANKS": "wood",
+    "POTION_ACID": "potion",
+    "POTION_BERSERK": "potion",
+    "POTION_CLEANSE": "potion",
+    "POTION_CLEANSE2": "potion",
+    "POTION_COOLDOWN": "potion",
+    "POTION_ENERGY": "potion",
+    "POTION_GATHER": "potion",
+    "POTION_HEAL": "potion",
+    "POTION_LAVA": "potion",
+    "POTION_MOB_RESET": "potion",
+    "POTION_REVIVE": "potion",
+    "POTION_SLOWFIELD": "potion",
+    "POTION_STONESKIN": "potion",
+    "POTION_TORNADO": "potion",
+    "SHOES_CLOTH_AVALON": "cloth_shoes",
+    "SHOES_CLOTH_FEY": "cloth_shoes",
+    "SHOES_CLOTH_HELL": "cloth_shoes",
+    "SHOES_CLOTH_KEEPER": "cloth_shoes",
+    "SHOES_CLOTH_MORGANA": "cloth_shoes",
+    "SHOES_CLOTH_SET1": "cloth_shoes",
+    "SHOES_CLOTH_SET2": "cloth_shoes",
+    "SHOES_CLOTH_SET3": "cloth_shoes",
+    "SHOES_GATHERER_FIBER": "gatherergear",
+    "SHOES_GATHERER_FISH": "gatherergear",
+    "SHOES_GATHERER_HIDE": "gatherergear",
+    "SHOES_GATHERER_ORE": "gatherergear",
+    "SHOES_GATHERER_ROCK": "gatherergear",
+    "SHOES_GATHERER_WOOD": "gatherergear",
+    "SHOES_LEATHER_AVALON": "leather_shoes",
+    "SHOES_LEATHER_FEY": "leather_shoes",
+    "SHOES_LEATHER_HELL": "leather_shoes",
+    "SHOES_LEATHER_MORGANA": "leather_shoes",
+    "SHOES_LEATHER_SET1": "leather_shoes",
+    "SHOES_LEATHER_SET2": "leather_shoes",
+    "SHOES_LEATHER_SET3": "leather_shoes",
+    "SHOES_LEATHER_UNDEAD": "leather_shoes",
+    "SHOES_PLATE_AVALON": "plate_shoes",
+    "SHOES_PLATE_FEY": "plate_shoes",
+    "SHOES_PLATE_HELL": "plate_shoes",
+    "SHOES_PLATE_KEEPER": "plate_shoes",
+    "SHOES_PLATE_SET1": "plate_shoes",
+    "SHOES_PLATE_SET2": "plate_shoes",
+    "SHOES_PLATE_SET3": "plate_shoes",
+    "SHOES_PLATE_UNDEAD": "plate_shoes",
+    "STONEBLOCK": "rock"
+  },
+  "craftItemOf": {
+    "sword": "MAIN_SWORD",
+    "axe": "2H_AXE",
+    "mace": "2H_MACE",
+    "hammer": "2H_HAMMER",
+    "spear": "2H_SPEAR",
+    "bow": "2H_BOW",
+    "crossbow": "2H_CROSSBOW",
+    "dagger": "2H_CLAWPAIR",
+    "arcanestaff": "2H_ARCANESTAFF",
+    "cursestaff": "2H_CURSEDSTAFF",
+    "firestaff": "2H_FIRESTAFF",
+    "froststaff": "2H_FROSTSTAFF",
+    "holystaff": "2H_HOLYSTAFF",
+    "naturestaff": "2H_WILDSTAFF",
+    "quarterstaff": "2H_QUARTERSTAFF",
+    "knuckles": "2H_KNUCKLES_SET1",
+    "shapeshifterstaff": "2H_SHAPESHIFTER_SET1",
+    "offhand": "OFF_BOOK",
+    "leather_helmet": "HEAD_LEATHER_SET1",
+    "cloth_helmet": "HEAD_CLOTH_SET1",
+    "plate_helmet": "HEAD_PLATE_SET1",
+    "plate_armor": "ARMOR_PLATE_SET1",
+    "leather_armor": "ARMOR_LEATHER_SET1",
+    "cloth_armor": "ARMOR_CLOTH_SET1",
+    "leather_shoes": "SHOES_LEATHER_SET1",
+    "plate_shoes": "SHOES_PLATE_SET1",
+    "cloth_shoes": "SHOES_CLOTH_SET1",
+    "bag": "BAG",
+    "cape": "CAPE",
+    "gatherergear": "HEAD_GATHERER_ORE",
+    "tools": "2H_TOOL_AXE"
+  }
+}

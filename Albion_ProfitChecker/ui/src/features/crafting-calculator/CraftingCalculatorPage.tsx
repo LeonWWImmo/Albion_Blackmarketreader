@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../shared";
+import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, craftBonusPercentFor, craftCategoryOf, craftCategoryLabel, nextDailyReset } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -552,7 +552,9 @@ export function CraftingCalculatorPage() {
   });
   const [usePremium, setUsePremium] = useSessionState("cc:usePremium", true);
   const [useFocus, setUseFocus] = useSessionState("cc:useFocus", false);
-  const [dailyBonusPercent, setDailyBonusPercent] = useSessionState<0 | 10 | 20>("cc:dailyBonusPercent", 0);
+  // A daily bonus picked by hand, for the item and the day (reset) it was picked on. Without one
+  // the bonus follows today's reported Daily Production Bonuses (see dailyBonusPercent below).
+  const [dailyBonusOverride, setDailyBonusOverride] = useSessionState<{ itemId: string | null; percent: number; reset?: number } | null>("cc:dailyBonusOverride", null);
   const [stationKind, setStationKind] = useSessionState<StationKind>("cc:stationKind", "city");
   const [hideoutPower, setHideoutPower] = useSessionState("cc:hideoutPower", DEFAULT_HIDEOUT_POWER);
   const [zoneQuality, setZoneQuality] = useSessionState("cc:zoneQuality", DEFAULT_ZONE_QUALITY);
@@ -592,6 +594,23 @@ export function CraftingCalculatorPage() {
       sold: 0
     };
   }, [rowEdits, selectedRow, artefactByTier]);
+  const festivities = useFestivities(region);
+  const itemBonusCategory = selectedItem ? craftCategoryOf(selectedItem.id) : null;
+  const autoDailyBonus = selectedItem ? craftBonusPercentFor(selectedItem.id, festivities.craftBonuses) : 0;
+  // A hand-picked bonus holds for the item it was picked on. While no bonus is reported for the
+  // server it holds for every item, as the plain toggle did before the bonus was known.
+  // Daily bonuses change at 10:00 UTC, so a value picked by hand ends with the day it was picked on.
+  const currentReset = nextDailyReset(festivities.now);
+  const dailyBonusIsManual = Boolean(
+    dailyBonusOverride &&
+      dailyBonusOverride.reset === currentReset &&
+      (!festivities.confirmed || dailyBonusOverride.itemId === (selectedItem?.id ?? null))
+  );
+  const dailyBonusPercent = dailyBonusIsManual && dailyBonusOverride ? dailyBonusOverride.percent : autoDailyBonus;
+  const pickDailyBonus = (percent: 10 | 20) => {
+    const next = dailyBonusPercent === percent ? 0 : percent;
+    setDailyBonusOverride(next === autoDailyBonus && festivities.confirmed ? null : { itemId: selectedItem?.id ?? null, percent: next, reset: currentReset });
+  };
   const bonusCity = useMemo(() => getBonusCityForItem(selectedItem), [selectedItem]);
   const isBonusCityActive = Boolean(bonusCity && bonusCity === craftCity);
   const [showSpecsModal, setShowSpecsModal] = useState(false);
@@ -1521,6 +1540,7 @@ export function CraftingCalculatorPage() {
               <span className="nav-tab active">Crafting Calculator</span>
               <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
               <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
+              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
             </div>
           </div>
           <div className="bm-meta">
@@ -1867,17 +1887,17 @@ export function CraftingCalculatorPage() {
                   <button
                     type="button"
                     className={`bonus-tile ${dailyBonusPercent === 10 ? "active" : ""}`}
-                    onClick={() => setDailyBonusPercent((prev) => (prev === 10 ? 0 : 10))}
+                    onClick={() => pickDailyBonus(10)}
                   >
-                    <span>Daily Bonus</span>
+                    <span>Daily Bonus{autoDailyBonus === 10 ? " · today" : ""}</span>
                     <strong>+10%</strong>
                   </button>
                   <button
                     type="button"
                     className={`bonus-tile ${dailyBonusPercent === 20 ? "active" : ""}`}
-                    onClick={() => setDailyBonusPercent((prev) => (prev === 20 ? 0 : 20))}
+                    onClick={() => pickDailyBonus(20)}
                   >
-                    <span>Daily Bonus</span>
+                    <span>Daily Bonus{autoDailyBonus === 20 ? " · today" : ""}</span>
                     <strong>+20%</strong>
                   </button>
                   <button
@@ -1904,6 +1924,27 @@ export function CraftingCalculatorPage() {
                     <span>Island</span>
                     <strong>{stationKind === "island" ? "Active" : "Off"}</strong>
                   </button>
+                </div>
+
+                <div className="cc-daily">
+                  <DailyBonusInfo
+                    festivities={festivities}
+                    relevant={itemBonusCategory ? new Set([itemBonusCategory]) : new Set<string>()}
+                    noneLabel={itemBonusCategory ? `No bonus for ${craftCategoryLabel(itemBonusCategory)} today.` : "This item never gets a daily bonus."}
+                    fallback="Pick +10% or +20% above if your item has one."
+                  />
+                  {dailyBonusIsManual && festivities.confirmed && dailyBonusPercent !== autoDailyBonus ? (
+                    <p className="station-note">
+                      Daily bonus set by hand.{" "}
+                      <button type="button" className="cc-daily-reset" onClick={() => setDailyBonusOverride(null)}>
+                        Use today&rsquo;s ({autoDailyBonus > 0 ? `+${autoDailyBonus}%` : "none"})
+                      </button>
+                    </p>
+                  ) : autoDailyBonus > 0 && itemBonusCategory && stationKind !== "island" ? (
+                    <p className="station-note">
+                      Applied: {craftCategoryLabel(itemBonusCategory)} get +{autoDailyBonus}% today.
+                    </p>
+                  ) : null}
                 </div>
 
                 {stationKind === "hideout" ? (

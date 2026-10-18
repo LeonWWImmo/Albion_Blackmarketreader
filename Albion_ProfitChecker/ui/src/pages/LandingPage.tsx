@@ -28,6 +28,12 @@ const LAUNCH_TOOLS = [
     name: "Food & Potion Crafter",
     hint: "Cooking and alchemy profit",
     icon: "M11 2h2v6h-2V2Zm-4 0h2v6a3 3 0 0 1-6 0V2h2v6a1 1 0 0 0 2 0V2Zm10 0h2v20h-2v-8h-2V7a5 5 0 0 1 2-5Z"
+  },
+  {
+    href: "/gold-tracker",
+    name: "Gold Tracker",
+    hint: "Live gold price and the best time to buy",
+    icon: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 4V8.5C5.7 9.6 8.7 10 12 10s6.3-.4 8-1.5V10c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V14c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V18c0 1.7-3.6 3-8 3s-8-1.3-8-3Z"
   }
 ] as const;
 
@@ -220,6 +226,9 @@ export function LandingPage() {
               <a className="hero-cta" href="/food-potion-crafter">
                 Food &amp; Potion Crafter
               </a>
+              <a className="hero-cta" href="/gold-tracker">
+                Gold Tracker
+              </a>
             </div>
             {/* Phone only (landing.css): one main action, then the crafting tools as tiles,
                 instead of five identical buttons stacked down the screen. */}
@@ -233,7 +242,7 @@ export function LandingPage() {
                   <path d="M5 12h13M12 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
-              <span className="hero-launch-label">Crafting tools</span>
+              <span className="hero-launch-label">Tools</span>
               <div className="hero-launch-grid">
                 {LAUNCH_TOOLS.map((tool) => (
                   <a key={tool.href} className="hero-launch-tile" href={tool.href}>

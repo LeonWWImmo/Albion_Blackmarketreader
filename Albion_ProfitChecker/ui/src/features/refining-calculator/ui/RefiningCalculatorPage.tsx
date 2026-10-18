@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag, craftBonusPercentFor } from "../../../shared";
 import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enchant, type MarketRegion, type MaterialKey, type RefineTierInput, type RefineVariant, type ReturnRatePreset, type StackedRefining, type Tier } from "../core";
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
@@ -296,6 +296,10 @@ function hasManualOverrideValues(overrides: ManualOverrides): boolean {
   return Object.values(overrides.pricesByItemId).some((value) => String(value || "").trim() !== "");
 }
 
+/** The refined item of each material, which carries the game's refining category for the daily bonus. */
+const REFINED_BASE_ID: Record<MaterialKey, string> = { metal: "METALBAR", wood: "PLANKS", fiber: "CLOTH", hide: "LEATHER", stone: "STONEBLOCK" };
+const REFINING_BONUS_CATEGORIES: ReadonlySet<string> = new Set(["ore", "wood", "fiber", "hide", "rock"]);
+
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   const [service] = useState(() => new RegionService("eu"));
   const [region, setRegion] = useState<MarketRegion>(service.getRegion());
@@ -560,6 +564,16 @@ export function RefiningCalculatorPage() {
 
   const variantByItemId = useMemo(() => new Map<string, RefineVariant>(REFINE_VARIANTS.map((v) => [v.itemId, v])), []);
 
+  // Today's daily refining bonus per material (e.g. +10% for Metal Bars), added to the return rate.
+  const festivities = useFestivities(region);
+  const dailyBonusByMaterial = useMemo(
+    () =>
+      Object.fromEntries(
+        (Object.keys(REFINED_BASE_ID) as MaterialKey[]).map((key) => [key, craftBonusPercentFor(REFINED_BASE_ID[key], festivities.craftBonuses)])
+      ) as Record<MaterialKey, number>,
+    [festivities.craftBonuses]
+  );
+
   // Configured refiner + stacking context (rebuilt only when calc inputs change), shared by
   // the rows table and the selected-row path display.
   const refineEngine = useMemo(() => {
@@ -583,10 +597,11 @@ export function RefiningCalculatorPage() {
         focusEfficiency: computeFocusEfficiencyForVariant(variant, focusSpecs),
         marketTaxRate: parsedMarketTaxRate,
         amount: runAmount,
-        returnRateOverride: customReturnRate
+        returnRateOverride: customReturnRate,
+        dailyBonusPercent: dailyBonusByMaterial[variant.materialKey]
       })(variant, ti, feeValue);
     return { refineAny, ctx: createStackingContext(variantByItemId, tierInputs, refineAny) };
-  }, [amount, bonusCityOverrides, customMarketTaxRate, customReturnRatePercent, focusSpecs, returnRatePreset, selectedRefineCity, taxMode, tierInputs, usageFeePer100, variantByItemId]);
+  }, [amount, bonusCityOverrides, customMarketTaxRate, customReturnRatePercent, dailyBonusByMaterial, focusSpecs, returnRatePreset, selectedRefineCity, taxMode, tierInputs, usageFeePer100, variantByItemId]);
 
   const rows = useMemo(() => {
     return REFINE_VARIANTS.flatMap((variant) => {
@@ -788,7 +803,10 @@ export function RefiningCalculatorPage() {
             <span>Profitable Items</span>
             <strong>{formatNumber(profitableCount)}</strong>
           </div>
-          <small>{`${bonusCityOverrides[editorMaterial] || MATERIAL_BY_KEY[editorMaterial].bonusCity} bonus for ${MATERIAL_BY_KEY[editorMaterial].rawLabel}`}</small>
+          <small>
+            {`${bonusCityOverrides[editorMaterial] || MATERIAL_BY_KEY[editorMaterial].bonusCity} bonus for ${MATERIAL_BY_KEY[editorMaterial].rawLabel}`}
+            {dailyBonusByMaterial[editorMaterial] > 0 && returnRatePreset !== "custom" ? ` + ${dailyBonusByMaterial[editorMaterial]}% daily bonus` : ""}
+          </small>
         </div>
       </div>
       <div className="rc-fixed-filters">
@@ -865,9 +883,14 @@ export function RefiningCalculatorPage() {
           <p>Manual Overrides</p>
           <button type="button" className="execute-btn ghost-btn" onClick={clearManualOverrides}>Reset Live</button>
         </div>
+        <div className="filter-block rc-daily-block">
+          <p>Daily Bonus</p>
+          <DailyBonusInfo festivities={festivities} relevant={REFINING_BONUS_CATEGORIES} noneLabel="No refining bonus today." />
+          {returnRatePreset === "custom" ? <span className="rc-filter-note">Not added to a custom return rate</span> : null}
+        </div>
       </div>
     </div>
-  ), [amount, bonusCityOverrides, clearManualOverrides, customMarketTaxRate, customReturnRatePercent, displayedPriceByItemId, editorMaterial, focusSpecs, returnRatePreset, rows, selectedBuyCity, selectedEditorRow, selectedRefineCity, selectedSellCity, taxMode, updateBonusCityOverride, updateManualPrice, usageFeePer100]);
+  ), [amount, bonusCityOverrides, clearManualOverrides, customMarketTaxRate, customReturnRatePercent, dailyBonusByMaterial, displayedPriceByItemId, editorMaterial, festivities, focusSpecs, returnRatePreset, rows, selectedBuyCity, selectedEditorRow, selectedRefineCity, selectedSellCity, taxMode, updateBonusCityOverride, updateManualPrice, usageFeePer100]);
 
   async function onAvatarChange(next: string) {
     const avatar = sanitizeAvatarUrl(next);
@@ -1018,6 +1041,7 @@ export function RefiningCalculatorPage() {
               <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
               <span className="nav-tab active">Refining Calculator</span>
               <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
+              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
             </div>
           </div>
           <div className="bm-meta">
@@ -1147,7 +1171,7 @@ export function RefiningCalculatorPage() {
                   const suspect = row.grossMaterialCost > 0 && row.netRevenue >= 10 * row.grossMaterialCost;
                   return (
                   <tr key={row.rowKey} className={`high-density-row ${index % 2 === 1 ? "alt" : ""} ${selectedRowKey === row.rowKey ? "selected-row" : ""} ${suspect ? "rc-suspect-row" : ""} ${row.logic === "stacking" ? "rc-stack-row" : ""}`} onClick={() => { setSelectedRowKey(row.rowKey); if (isPhone) { setDetailOpen(true); return; } if (row.logic === "stacking") setStackModalKey(row.rowKey); }}>
-                    <td className="rc-cell-variant"><div className="item"><div className="item-info"><div className="item-icon"><img src={row.variant.icon} alt={formatVariantName(row.variant)} onError={onRefiningIconError} /></div><div><div className="item-name">{formatVariantName(row.variant)}{row.missingInputCost ? " *" : ""}<span className={`rc-logic-chip rc-logic-${row.logic}`}>{row.logic === "stacking" ? "Stacking" : "Standard"}</span>{suspect ? <span className="rc-suspect-chip">Check price</span> : null}</div>{suspect ? <div className="rc-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}{row.logic === "stacking" && row.stack && row.stack.selfRefinedTiers.length > 0 ? (<div className="rc-stack-flow">{stackFlowNodes(row.variant, row.stack.selfRefinedTiers).map((n, i) => (<span key={i} className={`rc-flow-node rc-flow-${n.kind}`}>{n.kind === "buy" ? "Buy " : ""}{tierEnchLabel(n.tier, n.enchant)}</span>))}</div>) : null}<div className="item-meta">{row.variant.ingredients.map((ingredient) => `${ingredient.quantity}x ${formatIngredientName({ ...ingredient, variant: row.variant })}`).join(" + ")}</div></div></div></div></td>
+                    <td className="rc-cell-variant"><div className="item"><div className="item-info"><div className="item-icon"><img src={row.variant.icon} alt={formatVariantName(row.variant)} onError={onRefiningIconError} /></div><div><div className="item-name">{formatVariantName(row.variant)}{row.missingInputCost ? " *" : ""}<span className={`rc-logic-chip rc-logic-${row.logic}`}>{row.logic === "stacking" ? "Stacking" : "Standard"}</span>{returnRatePreset !== "custom" ? <DailyBonusTag percent={dailyBonusByMaterial[row.variant.materialKey]} /> : null}{suspect ? <span className="rc-suspect-chip">Check price</span> : null}</div>{suspect ? <div className="rc-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}{row.logic === "stacking" && row.stack && row.stack.selfRefinedTiers.length > 0 ? (<div className="rc-stack-flow">{stackFlowNodes(row.variant, row.stack.selfRefinedTiers).map((n, i) => (<span key={i} className={`rc-flow-node rc-flow-${n.kind}`}>{n.kind === "buy" ? "Buy " : ""}{tierEnchLabel(n.tier, n.enchant)}</span>))}</div>) : null}<div className="item-meta">{row.variant.ingredients.map((ingredient) => `${ingredient.quantity}x ${formatIngredientName({ ...ingredient, variant: row.variant })}`).join(" + ")}</div></div></div></div></td>
                     <td className="num">{formatPct(row.returnRate * 100)}</td>
                     <td className="num">{formatNumber(row.grossMaterialCost)}</td>
                     <td className="num profit">-{formatNumber(row.returnedMaterialCost)}</td>

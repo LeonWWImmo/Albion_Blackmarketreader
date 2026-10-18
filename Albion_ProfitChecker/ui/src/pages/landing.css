@@ -199,6 +199,16 @@ body {
   align-items: center;
 }
 
+/* Six tools: two even rows of three instead of five and one left over. */
+@media (min-width: 721px) {
+  .hero-cta-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(960px, 100%);
+    margin: 0 auto;
+  }
+}
+
 .hero-cta {
   display: inline-flex;
   align-items: center;
@@ -1248,6 +1258,11 @@ body {
     grid-column: 1 / -1;
   }
 
+  /* the dashboard spans the first row, so a sixth tool would sit alone on the last */
+  .hero-cta-row .hero-cta:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+
   .hero-cta {
     width: 100%;
     min-width: 0;
@@ -2012,6 +2027,28 @@ body {
     color: rgba(240, 227, 200, 0.6);
     font-size: 11.5px;
     line-height: 1.35;
+  }
+
+  /* An odd tile out (the Gold Tracker) runs the full width as one short row. */
+  .hero-launch-tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 2px;
+    min-height: 0;
+    padding: 12px 34px 12px 14px;
+  }
+
+  .hero-launch-tile:last-child:nth-child(odd) .hero-launch-icon {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+
+  .hero-launch-tile:last-child:nth-child(odd)::after {
+    top: 50%;
+    margin-top: -4px;
   }
 
   /* The -9vh lift (max-width: 540px above) was tuned for the old button stack; with the taller

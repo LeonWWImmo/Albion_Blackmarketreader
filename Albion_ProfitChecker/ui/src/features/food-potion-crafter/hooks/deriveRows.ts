@@ -6,6 +6,7 @@ import {
 import type { BonusConfig, ConsumableRecipe, PriceMap } from "../core";
 import { computeFocusEfficiency, resolveSpecFamily } from "../specs/data";
 import type { FoodPotionFilters, FoodPotionRow } from "./types";
+import { craftBonusPercentFor } from "../../../shared";
 
 function toSearchKey(value: string): string {
   return String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -58,7 +59,7 @@ export function deriveFoodPotionRows(
       materialBonusPercent: presetConfig.materialBonusPercent,
       focusEnabled: presetConfig.focusEnabled,
       focusBonusPercent: presetConfig.focusBonusPercent,
-      dailyBonusPercent: 0,
+      dailyBonusPercent: filters.dailyBonuses ? craftBonusPercentFor(recipe.itemId, filters.dailyBonuses) : 0,
       stationKind: filters.stationKind,
       hideoutBonusPercent: 0,
     };

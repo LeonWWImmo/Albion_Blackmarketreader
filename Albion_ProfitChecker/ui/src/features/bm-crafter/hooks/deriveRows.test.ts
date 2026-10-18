@@ -132,4 +132,40 @@ describe("deriveBmCrafterRows", () => {
     const e01 = deriveBmCrafterRows(bundle, { ...base, selectedTiers: [], selectedEnchants: [0, 1] });
     expect(e01).toHaveLength(3);
   });
+
+  it("adds today's daily bonus to the return rate of the items it covers, and can list only those", () => {
+    const bundle = buildBundle();
+    bundle.recipes.byItemId.set("MAIN_SWORD", bundle.recipes.items[0]);
+    bundle.recipes.byItemId.set("MAIN_AXE", bundle.recipes.items[1]);
+    const base = {
+      selectedTiers: [4],
+      selectedEnchants: [],
+      minSold: 0,
+      searchTerm: "",
+      returnRate: 0.1525,
+      sortByDailyTop: false,
+      showOnlyProfitable: false,
+      nonArtefactOnly: false,
+      craftCity: "Caerleon",
+      usageFeePer100: 0
+    };
+    const swordBonus = [{ name: "COMMON_SWORD", category: "sword", percent: 10, label: "Swords", end: "2026-10-19T10:00:00.000Z" }];
+
+    const plain = deriveBmCrafterRows(bundle, base);
+    const boosted = deriveBmCrafterRows(bundle, { ...base, dailyBonus: { bonuses: swordBonus, onlyBonusItems: false } });
+    const byId = (rows: typeof plain, id: string) => rows.find((r) => r.item.id === id)!;
+
+    // materials 16x200 + 8x100 = 4000. 15.25% is the 18% royal base (rounded); +10% daily makes
+    // about 28%, i.e. 1 / (1 / (1 - 0.1525) + 0.10) of the materials are paid for.
+    expect(byId(boosted, "T4_MAIN_SWORD").economics.craftCost).toBeCloseTo(4000 / (1 / (1 - 0.1525) + 0.1), 6);
+    expect(byId(boosted, "T4_MAIN_SWORD").economics.craftCost).toBeCloseTo(4000 / 1.28, 0);
+    expect(byId(plain, "T4_MAIN_SWORD").economics.craftCost).toBeCloseTo(4000 * (1 - 0.1525), 6);
+    expect(byId(boosted, "T4_MAIN_SWORD").dailyBonusPercent).toBe(10);
+    // the axe has no bonus today and keeps its numbers
+    expect(byId(boosted, "T4_MAIN_AXE").economics).toEqual(byId(plain, "T4_MAIN_AXE").economics);
+    expect(byId(boosted, "T4_MAIN_AXE").dailyBonusPercent).toBe(0);
+
+    const only = deriveBmCrafterRows(bundle, { ...base, dailyBonus: { bonuses: swordBonus, onlyBonusItems: true } });
+    expect(only.map((r) => r.item.id)).toEqual(["T4_MAIN_SWORD"]);
+  });
 });

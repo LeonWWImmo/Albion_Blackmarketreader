@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY } from "../../../shared";
+import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag, craftBonusPercentFor } from "../../../shared";
 import type { City, ConsumableCategory, ConsumableRecipe, MarketRegion, RecipeIngredient } from "../core";
 import { buildConsumablePriceSnapshot, ingredientPricesPath, loadIngredients, loadRecipes, outputPricesPath } from "../data";
 import { deriveFoodPotionRows, useFoodPotionState } from "../hooks";
@@ -482,7 +482,9 @@ export function FoodPotionCrafterPage() {
     return out;
   }, [recipes]);
 
-  const { rows, selectedRow, selectedRowKey, setSelectedRowKey, filters } = useFoodPotionState(scannerRecipes, priceByItemId, specsState.progress);
+  const festivities = useFestivities(region);
+  const { rows, selectedRow, selectedRowKey, setSelectedRowKey, filters } = useFoodPotionState(scannerRecipes, priceByItemId, specsState.progress, festivities.craftBonuses);
+  const bonusFor = (itemId: string) => (filters.returnRatePreset === "custom" || filters.stationKind === "island" ? 0 : craftBonusPercentFor(itemId, festivities.craftBonuses));
 
   const updatePrice = (itemId: string, value: string) => setManualPrices((prev) => ({ ...prev, [itemId]: value }));
 
@@ -578,6 +580,7 @@ export function FoodPotionCrafterPage() {
               <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
               <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
               <span className="nav-tab active">Food &amp; Potion Crafter</span>
+              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
             </div>
           </div>
           <div className="bm-meta">
@@ -799,6 +802,15 @@ export function FoodPotionCrafterPage() {
               <div className="fp-summary-stat"><span>Category</span><strong>{filters.category === "food" ? "Food" : "Potions"}</strong></div>
               <div className="fp-summary-divider" />
               <div className="fp-summary-stat"><span>Return</span><strong className="fp-return-rate">{selectedRow ? formatPct(selectedRow.result.returnRate * 100) : "--"}</strong></div>
+              <div className="fp-summary-divider fp-summary-daily" />
+              <div className="fp-summary-stat fp-summary-daily">
+                <span>Daily Bonus</span>
+                <DailyBonusInfo
+                  festivities={festivities}
+                  relevant={new Set([filters.category])}
+                  noneLabel={filters.category === "food" ? "No food bonus today." : "No potion bonus today."}
+                />
+              </div>
             </div>
             <div className="table-wrap custom-scrollbar fp-scanner-scroll">
               <table>
@@ -837,6 +849,7 @@ export function FoodPotionCrafterPage() {
                               <div className="item-name">
                                 {row.recipe.name}
                                 <EnchantBadge itemId={row.recipe.itemId} />
+                                <DailyBonusTag percent={bonusFor(row.recipe.itemId)} />
                                 {priced ? null : <span className="fp-chip fp-missing-chip" style={{ marginLeft: 6 }}>No price</span>}
                                 {row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}
                                 {suspect ? <span className="fp-chip fp-suspect-chip">Check price</span> : null}
@@ -909,7 +922,7 @@ export function FoodPotionCrafterPage() {
                         <div className="item"><div className="item-info">
                           <div className="fp-item-icon"><img src={iconUrl(row.recipe.itemId)} alt="" loading="lazy" onError={onItemIconError} /></div>
                           <div>
-                            <div className="item-name">{row.recipe.name}<EnchantBadge itemId={row.recipe.itemId} />{row.result.missingIngredientCost ? " *" : ""}{row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}{isSuspectPrice(row.result) ? <span className="fp-chip fp-suspect-chip">Check price</span> : null}</div>
+                            <div className="item-name">{row.recipe.name}<EnchantBadge itemId={row.recipe.itemId} /><DailyBonusTag percent={bonusFor(row.recipe.itemId)} />{row.result.missingIngredientCost ? " *" : ""}{row.recipe.isAvalonian ? <span className="fp-chip fp-avalonian-chip" style={{ marginLeft: 6 }}>Avalon</span> : null}{isSuspectPrice(row.result) ? <span className="fp-chip fp-suspect-chip">Check price</span> : null}</div>
                             {isSuspectPrice(row.result) ? <div className="fp-suspect-note">This profit looks unrealistic — market price probably not real</div> : null}
                           </div>
                         </div></div>
@@ -1004,7 +1017,7 @@ export function FoodPotionCrafterPage() {
 
                   <div className="bento-card span-4 fp-summary-card">
                     <div className="fp-summary-card-head">
-                      <span className="cc-caption">Profit Summary · 1 craft ({oq} item{oq === 1 ? "" : "s"})</span>
+                      <span className="cc-caption">Profit Summary · 1 craft ({oq} item{oq === 1 ? "" : "s"})<DailyBonusTag percent={bonusFor(crafterSelected.recipe.itemId)} /></span>
                       <span className={`fp-summary-pill ${!cPriced ? "" : crafterSelected.result.profit >= 0 ? "profit" : "loss"}`}>
                         {!cPriced ? "Incomplete" : crafterSelected.result.profit >= 0 ? "Profit" : "Loss"}
                       </span>

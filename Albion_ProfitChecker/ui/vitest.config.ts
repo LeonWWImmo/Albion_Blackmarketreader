@@ -12,6 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"]
+    // api/ holds the Vercel functions' shared code (plain JS, see api/_lib)
+    include: ["src/**/*.test.ts", "api/**/*.test.js"]
   }
 });

@@ -51,6 +51,8 @@ export interface BonusConfig {
   readonly focusBudget: number;
   /** When set (0..0.99), overrides the computed return rate (custom profile). */
   readonly returnRateOverride?: number | null;
+  /** Today's daily refining bonus for this material in percent (0, 10 or 20). */
+  readonly dailyBonusPercent?: number;
 }
 
 export interface RefiningInput {

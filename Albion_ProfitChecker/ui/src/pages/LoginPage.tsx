@@ -12,6 +12,7 @@ const ALLOWED_NEXT_PATHS = new Set([
   "/crafting-calculator",
   "/refining-calculator",
   "/food-potion-crafter",
+  "/gold-tracker",
   "/community",
   "/legal"
 ]);

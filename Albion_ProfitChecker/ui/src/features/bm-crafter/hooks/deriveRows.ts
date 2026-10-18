@@ -6,7 +6,7 @@ import {
   parseEnchant,
   parseTier
 } from "../domain";
-import { resolveJournalProfit } from "../../../shared";
+import { addBonusToReturnRate, craftBonusPercentFor, resolveJournalProfit } from "../../../shared";
 import type { BmCrafterDataBundle } from "../data";
 import type { BmCrafterFilters, BmCrafterRow } from "./types";
 
@@ -54,6 +54,10 @@ export function deriveBmCrafterRows(bundle: BmCrafterDataBundle | null, filters:
     if (!recipe) continue;
     if (filters.nonArtefactOnly && recipe.artifactId) continue;
 
+    // Today's daily crafting bonus raises this item's return rate on top of the one entered.
+    const dailyBonusPercent = filters.dailyBonus ? craftBonusPercentFor(baseId, filters.dailyBonus.bonuses) : 0;
+    if (filters.dailyBonus?.onlyBonusItems && dailyBonusPercent <= 0) continue;
+
     const displayName = toDisplayName(id, recipe.name);
     if (search) {
       const idKey = toSearchKey(baseId.replace(/_/g, " "));
@@ -65,7 +69,7 @@ export function deriveBmCrafterRows(bundle: BmCrafterDataBundle | null, filters:
     const economics = calculateItemEconomics({
       item,
       recipe,
-      returnRate: filters.returnRate,
+      returnRate: addBonusToReturnRate(filters.returnRate, dailyBonusPercent),
       usageFeePer100: filters.usageFeePer100,
       getMaterialPrice: (materialId, t, e) => getMaterialPriceFromMap(materialMap, materialId, t, e),
       getArtefactPrice: (artefactId, t) => getArtefactPriceFromMap(bundle.artefacts.byItemId, artefactId, t)
@@ -109,7 +113,8 @@ export function deriveBmCrafterRows(bundle: BmCrafterDataBundle | null, filters:
       enchant,
       displayName,
       journalProfit,
-      journalProfession
+      journalProfession,
+      dailyBonusPercent
     });
     rowCounter += 1;
   }

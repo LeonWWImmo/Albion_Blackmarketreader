@@ -183,6 +183,24 @@ describe("refining core", () => {
     expect(sumRepeatedValue(125, 0)).toBe(0);
   });
 
+  it("adds today's daily refining bonus to the production bonus, but never to a custom rate", () => {
+    const variant = REFINE_VARIANTS.find((entry) => entry.tier === 4 && entry.enchant === 0 && entry.materialKey === "metal")!;
+    const base = {
+      variant,
+      tierInputs: inputsForVariant(variant),
+      usageFeePer100: 400,
+      city: "Martlock" as const,
+      materialBonusCity: MATERIAL_BY_KEY[variant.materialKey].bonusCity,
+      ...getReturnRatePresetConfig("base")
+    };
+    expect(computeReturnRate(createRefiningInput(base))).toBeCloseTo(computeReturnRateFromBonusPercent(18), 10);
+    expect(computeReturnRate(createRefiningInput({ ...base, dailyBonusPercent: 20 }))).toBeCloseTo(computeReturnRateFromBonusPercent(38), 10);
+    expect(computeReturnRate(createRefiningInput({ ...base, dailyBonusPercent: 20, returnRateOverride: 0.5 }))).toBe(0.5);
+
+    const refine = makeRefiner({ ...base, dailyBonusPercent: 10 });
+    expect(refine(variant, inputsForVariant(variant), 400).returnRate).toBeCloseTo(computeReturnRateFromBonusPercent(28), 10);
+  });
+
   it("applyBonuses is immutable", () => {
     const variant = REFINE_VARIANTS[0];
     const input = createRefiningInput({
