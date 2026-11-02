@@ -30,12 +30,7 @@ concurrency:
 jobs:
   post:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
-    env:
-      DISCORD_WEBHOOK_EU: ${{ secrets.DISCORD_WEBHOOK_EU }}
-      DISCORD_WEBHOOK_US: ${{ secrets.DISCORD_WEBHOOK_US }}
-      DISCORD_ROLE_EU: ${{ vars.DISCORD_ROLE_EU }}
-      DISCORD_ROLE_US: ${{ vars.DISCORD_ROLE_US }}
+    timeout-minutes: 380
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,11 +48,20 @@ jobs:
 
       - name: Post daily update
         working-directory: Albion_ProfitChecker/ui
+        # the webhooks only reach this step, not npm ci and its install scripts
+        env:
+          DISCORD_WEBHOOK_EU: ${{ secrets.DISCORD_WEBHOOK_EU }}
+          DISCORD_WEBHOOK_US: ${{ secrets.DISCORD_WEBHOOK_US }}
+          DISCORD_ROLE_EU: ${{ vars.DISCORD_ROLE_EU }}
+          DISCORD_ROLE_US: ${{ vars.DISCORD_ROLE_US }}
+          EVENT: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          REGION: ${{ inputs.region }}
         run: |
           set -euo pipefail
           ARGS=()
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS+=(--dry-run); fi
-            if [ "${{ inputs.region }}" != "both" ]; then ARGS+=(--region "${{ inputs.region }}"); fi
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            if [ "$DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
+            if [ "$REGION" != "both" ]; then ARGS+=(--region "$REGION"); fi
           fi
           node scripts/discord-daily.mjs "${ARGS[@]}"

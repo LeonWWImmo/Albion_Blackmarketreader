@@ -92,7 +92,7 @@ describe("discord interactions handler", () => {
 
   it("switches from the other region", async () => {
     const res = await call(click("region:us", [EU]));
-    expect(calls).toEqual([`PUT /guilds/${GUILD}/members/42/roles/${US}`, `DELETE /guilds/${GUILD}/members/42/roles/${EU}`]);
+    expect(calls.sort()).toEqual([`DELETE /guilds/${GUILD}/members/42/roles/${EU}`, `PUT /guilds/${GUILD}/members/42/roles/${US}`]);
     expect(res.body.data.content).toContain("Switched to America");
   });
 

@@ -51,9 +51,12 @@ export async function pickRegion(region, member) {
     await discord("DELETE", `${rolesPath}/${pick.role}`);
     return reply(`Removed ${pick.flag} ${pick.name}. You no longer get its daily update. Click a button any time to pick again.`);
   }
-  await discord("PUT", `${rolesPath}/${pick.role}`);
+  // both calls at once: Discord wants the answer within 3 seconds
   const other = Object.values(REGIONS).find((r) => r !== pick && roles.includes(r.role));
-  if (other) await discord("DELETE", `${rolesPath}/${other.role}`);
+  await Promise.all([
+    discord("PUT", `${rolesPath}/${pick.role}`),
+    other && discord("DELETE", `${rolesPath}/${other.role}`)
+  ]);
   return reply(`${pick.flag} ${other ? "Switched to" : "You picked"} ${pick.name}. Your daily update is in <#${pick.channel}>.`);
 }
 
@@ -79,6 +82,6 @@ export default async function handler(req, res) {
     return res.status(200).json(await pickRegion(region, interaction.member));
   } catch (err) {
     console.error("discord region button failed", err);
-    return res.status(200).json(reply("Could not change your role right now, please try again in a minute."));
+    return res.status(200).json(reply("Something went wrong, please check your roles and try again in a minute."));
   }
 }

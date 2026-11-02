@@ -320,8 +320,11 @@ while (pending.length) {
     }
   }
   if (pending.length) {
-    console.log(`waiting ${POLL_MINUTES} min for: ${pending.join(", ")}`);
-    await new Promise((resolve) => setTimeout(resolve, POLL_MINUTES * 60 * 1000));
+    // never sleep past the deadline, so the fallback post happens at DEADLINE_UTC_HOUR
+    const deadlineAt = new Date(now).setUTCHours(DEADLINE_UTC_HOUR, 0, 0, 0);
+    const wait = Math.max(60 * 1000, Math.min(POLL_MINUTES * 60 * 1000, deadlineAt - Date.now()));
+    console.log(`waiting ${Math.round(wait / 60000)} min for: ${pending.join(", ")}`);
+    await new Promise((resolve) => setTimeout(resolve, wait));
   }
 }
 
