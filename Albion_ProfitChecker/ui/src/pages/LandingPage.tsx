@@ -528,6 +528,14 @@ export function LandingPage() {
                 </p>
               </details>
               <details>
+                <summary>Where can I check the Albion Online gold price?</summary>
+                <p>
+                  In the <a href="/gold-tracker">Gold Tracker</a>: the live gold price for Europe and America, updated
+                  hourly, with a 90-day chart, a buy-or-wait signal and a gold to silver calculator. It also shows what
+                  30 days of Premium (3,750 gold) cost in silver.
+                </p>
+              </details>
+              <details>
                 <summary>Which regions are available?</summary>
                 <p>America and Europe. You choose the region after login.</p>
               </details>

@@ -532,5 +532,105 @@
         "Start with cheap items until you know the route, then scale up."
       ]
     }
+  },
+  "gold-tracker": {
+    "title": "How the Albion Online gold price works",
+    "sections": [
+      {
+        "heading": "What gold is, and what it buys",
+        "paragraphs": [
+          "Gold is Albion Online's premium currency. You can buy it with real money in the game store, or with silver from other players on the in-game Gold Market. Silver is what everything else in the game runs on, so the gold price is really the exchange rate between the two currencies.",
+          "Most players buy gold for Premium: 30 days of Premium cost 3,750 gold. Gold also pays for things like vanity items and a new guild logo, which costs 3,000 gold. Whatever you want it for, the question is the same: how much silver does it cost right now, and is now a good moment to buy?"
+        ]
+      },
+      {
+        "heading": "Why the price moves",
+        "paragraphs": [
+          "The Gold Market is made of player orders. Someone who wants silver sells gold, someone who wants Premium buys it, and the price is wherever those orders meet. Nothing sets it from above, so it drifts with demand for Premium, with how much silver is around and with how many people are playing.",
+          "Each server runs its own economy. Europe and America have different players and different prices, which is why the Gold Tracker shows both and compares them. The difference is often a few percent and can flip from one week to the next."
+        ]
+      },
+      {
+        "heading": "How the Gold Tracker measures it",
+        "paragraphs": [
+          "The tracker records the gold price once an hour for Europe and America and keeps 90 days of history. The big number is the latest hourly price; the chart shows the last 24 hours, 7, 30 or 90 days, with the low, high and average of the range you pick. An open page reloads every ten minutes, so it keeps up with the hourly updates on its own."
+        ],
+        "list": [
+          "24h and 7-day change: the price now against the price one day or one week ago.",
+          "Buy or wait: where today's price sits in the last 30 days, from cheapest to most expensive.",
+          "Market details: 24-hour and 30-day lows and highs, averages, the cheapest hour of the day and day of the week, and Europe against America.",
+          "Gold calculator: gold to silver and silver to gold at the current price."
+        ]
+      },
+      {
+        "heading": "When to buy gold",
+        "paragraphs": [
+          "The single most useful signal is the 30-day range. If gold is cheaper now than on most of the last 30 days, it is a better moment to buy than average; if it is near the top, you may want to wait, or it is a good moment to sell gold for silver instead.",
+          "The hour and weekday charts look for patterns: they compare every hourly price with the average of the prices around it, so a rising or falling trend does not distort them. The differences are usually a fraction of a percent. They matter for large amounts, not for a single month of Premium, and they describe the past, not a promise about tomorrow."
+        ]
+      },
+      {
+        "heading": "Fees and the in-game price",
+        "paragraphs": [
+          "The calculator converts at the tracked market rate and adds no fees. In game, buying gold directly charges a Purchase Fee on top, while buying Premium directly does not. A gold buy order pays the fee when you place it and gets it back if you cancel the order. Instant buy and sell offers also sit a little above and below the market rate, so what you pay in game can be slightly different from the number here."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "How much silver is 1 gold in Albion Online?",
+        "a": "It changes every hour and differs between Europe and America. The Gold Tracker shows the latest price for both servers, with the change over the last day and week."
+      },
+      {
+        "q": "How much silver does Premium cost?",
+        "a": "30 days of Premium cost 3,750 gold, so the silver price is 3,750 times the gold price. At 8,500 silver per gold that is about 31.9 million silver. Type 3750 into the gold calculator to get the exact number at today's price."
+      },
+      {
+        "q": "Is there a fee when buying gold?",
+        "a": "Buying gold directly on the Gold Market charges a Purchase Fee, while buying Premium directly does not. A gold buy order pays the fee up front and refunds it if you cancel. The calculator shows the plain market rate without fees."
+      },
+      {
+        "q": "Why is gold cheaper on one server than the other?",
+        "a": "Europe and America are separate economies with their own players, so their gold markets set their own prices. The Gold Tracker compares both under Market details."
+      },
+      {
+        "q": "How often is the gold price updated?",
+        "a": "The price is recorded once an hour and the tracker keeps 90 days of it. An open Gold Tracker page reloads on its own every ten minutes."
+      }
+    ],
+    "guide": {
+      "slug": "albion-online-gold-price",
+      "h1": "The Albion Online gold price, explained",
+      "title": "Albion Online Gold Price Guide: Gold to Silver, Premium and When to Buy | Blackmarket Reader",
+      "description": "How the Albion Online gold price works: what moves it, how much silver Premium costs, fees on the Gold Market, and how to tell a good moment to buy gold.",
+      "keywords": "Albion Online gold price, Albion gold to silver, Albion Online gold calculator, Albion Premium silver cost, Albion gold market",
+      "toolLabel": "Gold Tracker"
+    },
+    "summary": {
+      "intro": "Gold is bought and sold for silver on each server's Gold Market, so its price is the exchange rate between the game's two currencies. It moves every hour, and it is not the same in Europe and America.",
+      "cards": [
+        {
+          "label": "Gold to silver",
+          "formula": "silver = gold x gold price",
+          "text": "The calculator converts both ways at the latest hourly price of the server you picked."
+        },
+        {
+          "label": "Premium in silver",
+          "formula": "3,750 gold x gold price",
+          "text": "30 days of Premium cost 3,750 gold, so the gold price decides what Premium costs you in silver."
+        },
+        {
+          "label": "Buy or wait",
+          "formula": "share of the last 30 days that were cheaper",
+          "text": "Low in the 30-day range is a better moment to buy; high is a better moment to sell gold for silver."
+        }
+      ],
+      "tipsHeading": "Quick tips",
+      "tips": [
+        "Compare against the 30-day range before buying a large amount.",
+        "Check both servers: the gap between Europe and America changes over time.",
+        "Buying Premium directly avoids the Purchase Fee that direct gold purchases pay."
+      ]
+    }
   }
 }

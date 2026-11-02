@@ -28,6 +28,11 @@ const toolContent = JSON.parse(
   await fs.readFile(path.join(process.cwd(), "src", "shared", "content", "toolContent.json"), "utf8")
 );
 
+/** Tool pages with their own share image; the rest use OG_IMAGE. Guides use their tool's. */
+const TOOL_OG_IMAGE = {
+  "gold-tracker": `${SITE}/picture/gold-tracker-preview.png`,
+};
+
 const TOOL_LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/bm-crafter", label: "Black Market Crafter" },
@@ -91,13 +96,14 @@ const ROUTES = [
   },
   {
     path: "gold-tracker",
-    title: "Albion Online Gold Price Tracker | Blackmarket Reader",
+    title: "Albion Online Gold Price Tracker & Gold Calculator | Blackmarket Reader",
     description:
-      "Live Albion Online gold price for Europe and America: silver per gold, 24h and 7-day change, 90-day chart, the cheapest hours to buy gold and a gold to silver converter.",
-    keywords: "Albion Online gold price, Albion gold tracker, Albion gold to silver, Albion Online gold chart, Albion gold price history",
-    h1: "Albion Online Gold Price Tracker",
+      "Live Albion Online gold price for Europe and America: silver per gold, 24h and 7-day change, a 90-day gold chart, a buy-or-wait signal and a gold to silver calculator, including what Premium costs in silver.",
+    keywords: "Albion Online gold price, Albion gold, Albion gold tracker, Albion Online gold calculator, Albion gold to silver, Albion silver to gold, Albion gold chart, Albion Premium silver, Albion Online Gold Rechner",
+    h1: "Albion Online Gold Price Tracker & Gold Calculator",
+    ogImage: `${SITE}/picture/gold-tracker-preview.png`,
     intro:
-      "Track the Albion Online gold price on the Europe and America servers. See silver per gold right now, the 24-hour and 7-day change, a 90-day price chart, whether gold is cheap or expensive compared with the last 30 days, the hours and weekdays when gold has been cheapest, and convert gold to silver and back.",
+      "Track the Albion Online gold price on the Europe and America servers. See silver per gold right now, the 24-hour and 7-day change, a 90-day gold chart, whether gold is cheap or expensive compared with the last 30 days, the hours and weekdays when gold has been cheapest, and convert gold to silver and back with the gold calculator, including what 30 days of Premium (3,750 gold) cost in silver.",
   },
   {
     path: "community",
@@ -133,15 +139,16 @@ const GUIDE_ROUTES = [
     path: "guides",
     title: "Albion Online Crafting & Market Guides | Blackmarket Reader",
     description:
-      "Free Albion Online guides on crafting profit, refining, cooking and alchemy, Black Market crafting and flipping, with the exact formulas the calculators use.",
+      "Free Albion Online guides on crafting profit, refining, cooking and alchemy, Black Market crafting and flipping and the gold price, with the exact formulas the tools use.",
     keywords: "Albion Online guides, Albion crafting guide, Albion refining guide, Albion black market guide",
     h1: "Albion Online guides",
     intro:
       "The maths behind every calculator on this site, written out in full. Each guide covers how the game actually works, the formulas the tool uses, worked examples and the mistakes that quietly cost silver.",
     guidesIndex: Object.values(toolContent).map((entry) => entry.guide),
   },
-  ...Object.values(toolContent).map((entry) => ({
+  ...Object.entries(toolContent).map(([toolSlug, entry]) => ({
     path: `guides/${entry.guide.slug}`,
+    ogImage: TOOL_OG_IMAGE[toolSlug],
     title: entry.guide.title,
     description: entry.guide.description,
     keywords: entry.guide.keywords,
@@ -304,7 +311,7 @@ function articleLd(route, canonical) {
     headline: route.h1,
     description: route.description,
     url: canonical,
-    image: OG_IMAGE,
+    image: route.ogImage || OG_IMAGE,
     author: { "@type": "Organization", name: "RomulusKings" },
     publisher: { "@type": "Organization", name: "RomulusKings" },
   };
@@ -351,7 +358,8 @@ async function main() {
     html = setMeta(html, "property", "og:title", route.title);
     html = setMeta(html, "property", "og:description", route.description);
     html = setMeta(html, "property", "og:url", canonical);
-    html = setMeta(html, "property", "og:image", OG_IMAGE);
+    html = setMeta(html, "property", "og:image", route.ogImage || OG_IMAGE);
+    html = setMeta(html, "name", "twitter:image", route.ogImage || OG_IMAGE);
     html = setMeta(html, "name", "twitter:title", route.title);
     html = setMeta(html, "name", "twitter:description", route.description);
 

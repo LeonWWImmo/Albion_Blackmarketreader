@@ -8,7 +8,7 @@ export function GuidesIndexPage() {
   useSeo({
     title: "Albion Online Crafting & Market Guides | Blackmarket Reader",
     description:
-      "Free Albion Online guides on crafting profit, refining, cooking and alchemy, Black Market crafting and flipping, with the exact formulas the calculators use.",
+      "Free Albion Online guides on crafting profit, refining, cooking and alchemy, Black Market crafting and flipping and the gold price, with the exact formulas the tools use.",
     keywords: "Albion Online guides, Albion crafting guide, Albion refining guide, Albion black market guide",
     canonical: "https://blackmarketreader.com/guides"
   });

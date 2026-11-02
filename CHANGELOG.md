@@ -37,6 +37,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - New Gold Tracker: the live gold price for Europe and America with a 24h to 90-day chart, a buy-or-wait signal against the last 30 days, the cheapest hours and weekdays to buy gold, and a gold to silver converter.
 - Today's crafting bonus is now built in: every tool knows the daily production bonuses and adds them to the return rate of the items they cover, marked with a "+10% today" tag. The Black Market Crafter can show only today's bonus items, and the Crafting Calculator still lets you set the bonus by hand.
 - Dashboard: see today's crafting bonuses and this week's event (with when the next one starts) right under the header, each bonus linking to the tool that crafts it.
+- New guide: the Albion Online gold price explained - what moves it, how much silver 30 days of Premium cost (3,750 gold), fees on the Gold Market and when it is a good moment to buy.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

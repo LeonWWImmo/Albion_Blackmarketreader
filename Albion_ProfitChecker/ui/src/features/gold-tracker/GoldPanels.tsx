@@ -82,7 +82,7 @@ export function Converter({ price }: { price: number }) {
 
   return (
     <section className="gt-panel gt-converter">
-      <h2 className="gt-panel-title">Exchange</h2>
+      <h2 className="gt-panel-title">Gold calculator</h2>
       <div className="gt-exchange">
         <label className={`gt-field gt-field-gold ${invalid && source.side === "gold" ? "is-invalid" : ""}`}>
           <span>Gold</span>

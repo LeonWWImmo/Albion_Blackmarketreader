@@ -7,6 +7,7 @@ import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../shared/seo/useSeo";
+import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
 import {
   CommunityTile,
@@ -141,19 +142,19 @@ export function GoldTrackerPage() {
   const profileChannelRef = useRef<BroadcastChannel | null>(null);
 
   useSeo({
-    title: "Albion Online Gold Price Tracker | Blackmarket Reader",
+    title: "Albion Online Gold Price Tracker & Gold Calculator | Blackmarket Reader",
     description:
-      "Live Albion Online gold price for Europe and America: silver per gold, 24h and 7-day change, 90-day chart, the cheapest hours to buy gold and a gold to silver converter.",
+      "Live Albion Online gold price for Europe and America: silver per gold, 24h and 7-day change, a 90-day gold chart, a buy-or-wait signal and a gold to silver calculator, including what Premium costs in silver.",
     keywords:
-      "Albion Online gold price, Albion gold tracker, Albion gold to silver, Albion Online gold chart, Albion gold price history",
+      "Albion Online gold price, Albion gold, Albion gold tracker, Albion Online gold calculator, Albion gold to silver, Albion silver to gold, Albion gold chart, Albion Premium silver, Albion Online Gold Rechner",
     canonical: "https://blackmarketreader.com/gold-tracker",
-    ogTitle: "Albion Online Gold Price Tracker | Blackmarket Reader",
-    ogDescription: "Live Albion Online gold price with chart, buy signal, best time to buy and a gold to silver converter.",
+    ogTitle: "Albion Online Gold Price Tracker & Gold Calculator | Blackmarket Reader",
+    ogDescription: "Live Albion Online gold price for Europe and America with a 90-day chart, buy-or-wait signal and gold to silver calculator.",
     ogUrl: "https://blackmarketreader.com/gold-tracker",
-    ogImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
-    twitterTitle: "Albion Online Gold Price Tracker | Blackmarket Reader",
-    twitterDescription: "Live Albion Online gold price with chart, buy signal, best time to buy and a gold to silver converter.",
-    twitterImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
+    ogImage: "https://blackmarketreader.com/picture/gold-tracker-preview.png",
+    twitterTitle: "Albion Online Gold Price Tracker & Gold Calculator | Blackmarket Reader",
+    twitterDescription: "Live Albion Online gold price for Europe and America with a 90-day chart, buy-or-wait signal and gold to silver calculator.",
+    twitterImage: "https://blackmarketreader.com/picture/gold-tracker-preview.png",
     structuredData: {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -161,7 +162,8 @@ export function GoldTrackerPage() {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: "https://blackmarketreader.com/gold-tracker",
-      description: "Albion Online gold price tracker with history chart, buy signal and gold to silver converter.",
+      description: "Albion Online gold price tracker for Europe and America with a 90-day chart, buy-or-wait signal and gold to silver calculator.",
+      image: "https://blackmarketreader.com/picture/gold-tracker-preview.png",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
     }
   });
@@ -404,9 +406,10 @@ export function GoldTrackerPage() {
 
   return (
     <>
-      <SeoHeading title="Albion Online Gold Price Tracker">
+      <SeoHeading title="Albion Online Gold Price Tracker &amp; Gold Calculator">
         Live Albion Online gold price for the Europe and America servers: silver per gold, 24-hour and 7-day change, a
-        90-day price chart, the cheapest hours and weekdays to buy gold, and a gold to silver converter.
+        90-day gold chart, the cheapest hours and weekdays to buy gold, and a gold to silver calculator that also shows
+        what Premium costs in silver.
       </SeoHeading>
 
       <header className="bm-header">
@@ -710,8 +713,9 @@ export function GoldTrackerPage() {
               <dd>Each server has its own players and its own economy, so the two gold markets set their own prices.</dd>
               <dt>How do I convert silver to gold?</dt>
               <dd>
-                Type an amount into either field of Exchange. It uses the latest hourly price of the server you picked, so the
-                in-game offer can be slightly different.
+                Type an amount into either field of the gold calculator. It uses the latest hourly price of the server you
+                picked; for Premium, type 3750 (30 days). In game, buying gold directly adds a Purchase Fee, so the offer
+                can be slightly different.
               </dd>
             </dl>
           </div>
@@ -740,6 +744,7 @@ export function GoldTrackerPage() {
         />
       ) : null}
       <CommunityTile />
+      <ToolGuideLink slug="gold-tracker" authService={authService} />
     </>
   );
 }
