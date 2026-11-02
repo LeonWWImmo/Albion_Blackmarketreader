@@ -1,0 +1,63 @@
+name: Discord Daily Update
+
+# One run per day for both servers: today's crafting bonus, the gold price and the best Black
+# Market crafts with the bonus, one message per region channel that pings the region role.
+# The job starts after the 10:00 UTC reset and waits inside the script until AODP reports the
+# new bonus (checks every 30 min, posts each region once, gives up at 16:00 UTC), so it never
+# starts more than once a day. See Albion_ProfitChecker/ui/scripts/discord-daily.mjs.
+on:
+  schedule:
+    - cron: "20 10 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only print the messages, post nothing"
+        type: boolean
+        default: true
+      region:
+        description: "Only this server"
+        type: choice
+        options: [both, eu, us]
+        default: both
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      DISCORD_WEBHOOK_EU: ${{ secrets.DISCORD_WEBHOOK_EU }}
+      DISCORD_WEBHOOK_US: ${{ secrets.DISCORD_WEBHOOK_US }}
+      DISCORD_ROLE_EU: ${{ vars.DISCORD_ROLE_EU }}
+      DISCORD_ROLE_US: ${{ vars.DISCORD_ROLE_US }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Albion_ProfitChecker/ui/package-lock.json
+
+      - name: Install
+        working-directory: Albion_ProfitChecker/ui
+        run: npm ci --no-audit --no-fund
+
+      - name: Post daily update
+        working-directory: Albion_ProfitChecker/ui
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS+=(--dry-run); fi
+            if [ "${{ inputs.region }}" != "both" ]; then ARGS+=(--region "${{ inputs.region }}"); fi
+          fi
+          node scripts/discord-daily.mjs "${ARGS[@]}"
