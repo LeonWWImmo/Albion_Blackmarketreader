@@ -216,6 +216,11 @@ async function checkWebsite(chromium, speed) {
     });
   }
   await api("sitemap", async () => ((await (await http(`${SITE}/sitemap.xml`)).text()).includes("<loc>") ? null : "no URLs"));
+  // the error reporter only takes reports from the site itself
+  await api("/api/client-error", async () => {
+    const { status } = await http(`${SITE}/api/client-error`, { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"message":"health check"}' });
+    return status === 403 ? null : `answers ${status} to a report from outside the site (expected 403)`;
+  });
   for (const p of ["/api/cron/discord-daily", "/api/cron/health-check"]) {
     await api(p, async () => {
       const { status } = await http(SITE + p);

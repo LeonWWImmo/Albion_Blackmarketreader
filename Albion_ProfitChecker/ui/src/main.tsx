@@ -4,6 +4,9 @@ import { BrowserRouter } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { App } from "./App";
+import { installErrorReporter } from "./shared/errorReporter";
+
+installErrorReporter();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
