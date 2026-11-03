@@ -61,6 +61,12 @@
       "permanent": true
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/discord-daily",
+      "schedule": "15 10 * * *"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

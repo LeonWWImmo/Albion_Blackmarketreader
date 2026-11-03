@@ -1,10 +1,18 @@
 name: Discord Daily Update
+# dry runs get their own title, so "already posted today" below only counts real posts
+# (format() because the API may send the boolean input as a string)
+run-name: ${{ format('{0}', inputs.dry_run) == 'true' && 'Discord Daily Update (dry run)' || 'Discord Daily Update' }}
 
 # One run per day for both servers: today's crafting bonus, the gold price and the best Black
 # Market crafts with the bonus, one message per region channel that pings the region role.
 # The job starts after the 10:00 UTC reset and waits inside the script until AODP reports the
 # new bonus (checks every 30 min, posts each region once, gives up at 16:00 UTC), so it never
 # starts more than once a day. See Albion_ProfitChecker/ui/scripts/discord-daily.mjs.
+#
+# Vercel Cron starts it at 10:15 UTC by workflow_dispatch (api/cron/discord-daily.js), because
+# GitHub's schedule trigger can run hours late. The schedule stays as a backup. Every real run
+# does nothing when today's update was already posted (the channels are public, so no double
+# pings), unless it is started by hand with "force".
 on:
   schedule:
     - cron: "20 10 * * *"
@@ -19,18 +27,46 @@ on:
         type: choice
         options: [both, eu, us]
         default: both
+      force:
+        description: "Post even if today's update already went out"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: discord-daily
   cancel-in-progress: false
 
 jobs:
-  post:
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 380
+    outputs:
+      posted: ${{ steps.today.outputs.posted }}
+    steps:
+      - name: Already posted today?
+        id: today
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          posted=false
+          if [ "$DRY_RUN" != "true" ] && [ "$FORCE" != "true" ]; then
+            runs=$(gh run list -R "$GITHUB_REPOSITORY" --workflow discord-daily.yml --status success --created ">=$(date -u +%F)" --json displayTitle -q '[.[] | select(.displayTitle == "Discord Daily Update")] | length')
+            if [ "$runs" -gt 0 ]; then posted=true; fi
+          fi
+          echo "posted=$posted" >> "$GITHUB_OUTPUT"
+          echo "already posted today: $posted"
+
+  post:
+    needs: check
+    if: needs.check.outputs.posted != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Checkout
         uses: actions/checkout@v4
