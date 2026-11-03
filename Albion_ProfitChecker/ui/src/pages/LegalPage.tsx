@@ -44,6 +44,7 @@ export function LegalPage() {
           <ul>
             <li>Data collected: login email, access timestamps, device/session metadata.</li>
             <li>Purpose: authentication, security, service reliability, and support.</li>
+            <li>Error reports: when something breaks on a page, your browser sends us a technical error report (the error message, the page and your browser name and system) so we can fix it. It contains no account details, email or IP address and is kept only as long as needed to fix the problem.</li>
             <li>Advertising: we use Google AdSense to fund the service; ad partners may set cookies to show relevant ads (see Cookies, Tracking &amp; Advertising below).</li>
             <li>Retention: kept only as long as needed for account operation or legal duties.</li>
             <li>Rights: you can request access, correction, or deletion of your data.</li>
