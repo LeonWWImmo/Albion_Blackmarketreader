@@ -1,0 +1,60 @@
+name: Daily Health Check
+
+# Once a day: GitHub workflows, the Vercel deploy, the live website (every page on desktop and
+# phone), data freshness and the Discord bot, as one status picture in the private #status
+# channel. Vercel Cron starts it at 14:00 UTC (api/cron/health-check.js), because GitHub's own
+# schedule can run hours late. See Albion_ProfitChecker/ui/scripts/health-check.mjs.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only print the report, post nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Albion_ProfitChecker/ui
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: Albion_ProfitChecker/ui/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/health-check.mjs check
+
+      - name: Post report
+        if: always()
+        env:
+          DISCORD_WEBHOOK_STATUS: ${{ secrets.DISCORD_WEBHOOK_STATUS }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then node scripts/health-check.mjs post --dry-run; else node scripts/health-check.mjs post; fi
