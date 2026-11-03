@@ -71,6 +71,19 @@ describe("client error endpoint", () => {
     expect(posts).toHaveLength(20);
   });
 
+  it("reads a body that arrives as a Buffer", async () => {
+    expect((await call(Buffer.from(JSON.stringify(report("Error: buffered"))))).statusCode).toBe(204);
+    expect(posts).toHaveLength(1);
+  });
+
+  it("masks emails and keeps the page on one line", async () => {
+    await call({ ...report("Error: no user mail.me@example.com found"), page: "/x\n**fake**" });
+    const { content } = JSON.parse(posts[0].init.body);
+    expect(content).not.toContain("mail.me@example.com");
+    expect(content).toContain("[email]");
+    expect(content.split("\n")[0]).toContain("/x'**fake**");
+  });
+
   it("still answers when Discord fails", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("down"); }));
     vi.spyOn(console, "error").mockImplementation(() => {});

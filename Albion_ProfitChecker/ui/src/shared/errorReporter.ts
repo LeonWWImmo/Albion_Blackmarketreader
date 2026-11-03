@@ -35,7 +35,9 @@ export function installErrorReporter(): void {
   // dev runs on localhost and previews on vercel.app, so this is the live build only
   if (location.hostname !== LIVE_HOST) return;
   const seen = new Set<string>();
-  const report = (r: Report) => {
+  const report = (raw: Report) => {
+    // a thrown object can carry anything in these fields
+    const r = { message: String(raw.message ?? ""), stack: String(raw.stack ?? ""), source: String(raw.source ?? "") };
     const key = `${r.message}|${r.stack.split("\n")[1] ?? ""}`;
     if (seen.size >= MAX_REPORTS || seen.has(key) || !shouldReport(r)) return;
     seen.add(key);

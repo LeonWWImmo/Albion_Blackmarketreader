@@ -1,8 +1,10 @@
 // POST /api/client-error  ->  a JavaScript error a visitor's browser hit (src/shared/errorReporter.ts).
 // Each new error is posted once to the private Discord #errors channel through the bot
 // (DISCORD_BOT_TOKEN). The same error is posted again at most every 6 hours per function instance,
-// and an instance posts at most 20 errors an hour, so a broken deploy or someone spamming the
-// endpoint cannot flood the channel. Nothing is stored; the browser is reduced to name + system.
+// and an instance posts at most 20 errors an hour, so a broken deploy cannot flood the channel.
+// The origin check only keeps other websites out: a script that fakes the headers can still post
+// (the limits are per warm instance), and if that ever happens a Vercel firewall rule stops it.
+// Nothing is stored here; the browser is reduced to name + system and emails are masked.
 const SITE = "https://blackmarketreader.com";
 const CHANNEL = "1567285839178764378";
 const REPEAT_MS = 6 * 36e5;
@@ -18,7 +20,8 @@ export function clearMemory() {
   hour.count = 0;
 }
 
-const clean = (value, max) => (typeof value === "string" ? value.slice(0, max) : "");
+// error texts can echo what a visitor typed, so emails never reach Discord
+const clean = (value, max) => (typeof value === "string" ? value.slice(0, max).replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, "[email]") : "");
 
 /** The same error from the same place gets the same key, whatever the visitor. */
 export function fingerprint(message, stack) {
@@ -40,7 +43,7 @@ export function errorMessage({ message, stack, source, page, browser }) {
   const lines = stack.split("\n").slice(1, 7).map((line) => line.trim()).filter(Boolean);
   const where = lines.length ? lines.join("\n") : source || "no stack";
   return {
-    content: `🐞 **New error** · \`${block(page || "/").replace(/`/g, "'")}\` · ${shortBrowser(browser)}\n\`\`\`\n${block(message)}\n\`\`\`\n\`\`\`\n${block(where)}\n\`\`\``.slice(0, 1990),
+    content: `🐞 **New error** · \`${block(page || "/").replace(/[`\r\n]/g, "'")}\` · ${shortBrowser(browser)}\n\`\`\`\n${block(message)}\n\`\`\`\n\`\`\`\n${block(where)}\n\`\`\``.slice(0, 1990),
     allowed_mentions: { parse: [] }
   };
 }
@@ -56,6 +59,7 @@ export default async function handler(req, res) {
   if (!fromSite(req)) return res.status(403).send("Forbidden");
 
   let body = req.body;
+  if (Buffer.isBuffer(body)) body = body.toString("utf8");
   if (typeof body === "string") {
     try {
       body = JSON.parse(body);
