@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "./health-check.js";
+import handler from "../cron/health-check.js";
 
 function response() {
   const res = { statusCode: 0, body: undefined };

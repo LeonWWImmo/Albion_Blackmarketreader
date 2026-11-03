@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler from "./discord-daily.js";
+import handler from "../cron/discord-daily.js";
 
 function response() {
   const res = { statusCode: 0, body: undefined };

@@ -1,7 +1,7 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler, { isValidSignature } from "./interactions.js";
+import handler, { isValidSignature } from "../discord/interactions.js";
 
 const EU = "1566853201263861870";
 const US = "1566853202404573245";

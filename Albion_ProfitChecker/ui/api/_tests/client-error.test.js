@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler, { clearMemory, errorMessage, fingerprint, shortBrowser } from "./client-error.js";
+import handler, { clearMemory, errorMessage, fingerprint, shortBrowser } from "../client-error.js";
 
 const SITE = "https://blackmarketreader.com";
 const CHROME = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36";
