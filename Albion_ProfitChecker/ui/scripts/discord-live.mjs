@@ -10,8 +10,8 @@ import { REGIONS, SITE, fetchJson, formatPct, formatSilver, goldSummary, priceBa
 
 const CHANNELS = {
   tester: "1567453537372344360",
-  // the public alert channel; until it exists, live mode also posts to the tester channel
-  alerts: "1567453537372344360",
+  // #💰-gold-alerts, where members turn the alerts on and off
+  alerts: "1567519806012526722",
   gold: { eu: "1567454937636409437", us: "1567454939503005726" }
 };
 const GOLD_ALERT_ROLE = "1567454898612600857";
