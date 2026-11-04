@@ -2,12 +2,14 @@ name: Discord Changelog
 
 # Posts new CHANGELOG entries to a Discord updates channel whenever real code is
 # pushed to main. The `paths` filter means data-refresh bot commits (which never
-# touch CHANGELOG.md) do not trigger this workflow at all.
+# touch CHANGELOG.md) do not trigger this workflow at all. Started by hand it posts the newest
+# three bullets to the private tester channel, to try out the look.
 on:
   push:
     branches: [main]
     paths:
       - 'CHANGELOG.md'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,8 +17,6 @@ permissions:
 jobs:
   announce:
     runs-on: ubuntu-latest
-    env:
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +26,12 @@ jobs:
         id: notes
         run: |
           set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ADDED="$(grep -E '^- ' CHANGELOG.md | head -3)"
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+            { echo 'notes<<__EOF__'; echo "$ADDED"; echo '__EOF__'; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.event.after }}"
 
@@ -57,19 +63,40 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Post to Discord
-        if: steps.notes.outputs.has_notes == 'true' && env.DISCORD_WEBHOOK_URL != ''
+        if: steps.notes.outputs.has_notes == 'true'
         env:
           NOTES: ${{ steps.notes.outputs.notes }}
+          EVENT: ${{ github.event_name }}
+          PUBLIC_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TESTER_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_TESTER }}
         run: |
           set -euo pipefail
-          PAYLOAD="$(jq -n --arg desc "$NOTES" '{
+          # a manual test run goes to the tester channel only, never to the public one
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            DISCORD_WEBHOOK_URL="$TESTER_WEBHOOK"
+            if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "DISCORD_WEBHOOK_TESTER is not set"; exit 1; fi
+          else
+            DISCORD_WEBHOOK_URL="$PUBLIC_WEBHOOK"
+            if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "No Discord webhook configured; nothing posted."; exit 0; fi
+          fi
+          # one card (Discord components V2): banner, the new bullets, a button to the site
+          PAYLOAD="$(jq -n --arg notes "$NOTES" '{
             username: "Blackmarket Reader",
-            embeds: [ {
-              title: "🚀 New update is live!",
-              description: ($desc + "\n\n**[→ Check it out on blackmarketreader.com](https://blackmarketreader.com)**"),
-              url: "https://blackmarketreader.com",
-              color: 16766720
+            flags: 32768,
+            allowed_mentions: { parse: [] },
+            components: [ {
+              type: 17,
+              accent_color: 14263361,
+              components: [
+                { type: 12, items: [ { media: { url: "https://blackmarketreader.com/picture/hero-forge-1280.jpg" } } ] },
+                { type: 10, content: ("-# 🚀 NEW ON BLACKMARKETREADER.COM\n## What is new\n" + $notes) },
+                { type: 14, divider: true, spacing: 1 },
+                { type: 1, components: [
+                  { type: 2, style: 5, label: "Open the tools", emoji: { name: "🌐" }, url: "https://blackmarketreader.com" },
+                  { type: 2, style: 5, label: "Full changelog", emoji: { name: "📜" }, url: "https://github.com/LeonWWImmo/Albion_Blackmarketreader/blob/main/CHANGELOG.md" }
+                ] }
+              ]
             } ]
           }')"
           curl -sf -X POST -H "Content-Type: application/json" \
-            -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
+            -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL?with_components=true"

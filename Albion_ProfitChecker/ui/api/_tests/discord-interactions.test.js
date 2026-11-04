@@ -104,8 +104,19 @@ describe("discord interactions handler", () => {
 
   it("ignores unknown buttons and other servers", async () => {
     expect((await call(click("region:asia", []))).body.data.content).toContain("does nothing");
-    expect((await call({ ...click("region:eu", []), guild_id: "1" })).body.data.content).toContain("does nothing");
+    expect((await call({ ...click("region:eu", []), guild_id: "1" })).body.data.content).toContain("only works on the Blackmarket Reader server");
     expect(calls).toEqual([]);
+  });
+
+  it("switches gold alerts on and off", async () => {
+    const ALERTS = "1567454898612600857";
+    let res = await call(click("alerts:gold", [EU]));
+    expect(calls).toEqual([`PUT /guilds/${GUILD}/members/42/roles/${ALERTS}`]);
+    expect(res.body.data.content).toContain("Gold alerts on");
+    calls.length = 0;
+    res = await call(click("alerts:gold", [EU, ALERTS]));
+    expect(calls).toEqual([`DELETE /guilds/${GUILD}/members/42/roles/${ALERTS}`]);
+    expect(res.body.data.content).toContain("Gold alerts off");
   });
 
   it("tells the member when Discord refuses the role change", async () => {
@@ -114,5 +125,51 @@ describe("discord interactions handler", () => {
     const res = await call(click("region:eu", []));
     expect(res.statusCode).toBe(200);
     expect(res.body.data.content).toContain("try again");
+  });
+});
+
+describe("slash commands", () => {
+  const TESTER = "1567453537372344360";
+  const command = (name, channel = TESTER, options) => ({
+    type: 2,
+    guild_id: GUILD,
+    channel_id: channel,
+    data: { name, ...(options ? { options } : {}) },
+    member: { user: { id: "42" }, roles: [EU] }
+  });
+  const hour = 3600;
+  const latest = Math.floor(Date.now() / 1000);
+  const points = Array.from({ length: 30 * 24 }, (_, i) => [latest - (30 * 24 - 1 - i) * hour, 9000 + (i % 24)]);
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async (url) => {
+      calls.push(`GET ${url}`);
+      const body = url.includes("/api/aodp/gold") ? { points } : { confirmed: true, events: [] };
+      return { ok: true, status: 200, json: async () => body };
+    }));
+  });
+
+  it("only answer in the tester channel while they are tested", async () => {
+    const res = await call(command("gold", "999"));
+    expect(res.body.data.content).toContain("still being tested");
+    expect(calls).toEqual([]);
+  });
+
+  it("/gold answers privately for the asker's server", async () => {
+    const res = await call(command("gold"));
+    expect(res.body.type).toBe(4);
+    expect(res.body.data.flags).toBe((1 << 6) | (1 << 15));
+    const text = JSON.stringify(res.body.data.components);
+    expect(text).toContain("Europe");
+    expect(text).not.toContain("America");
+    expect(text).toContain("30-day low");
+    expect(calls).toEqual(["GET https://blackmarketreader.com/api/aodp/gold?region=eu"]);
+  });
+
+  it("/bonus takes the chosen server and says when nothing is reported yet", async () => {
+    const res = await call(command("bonus", TESTER, [{ name: "server", value: "us" }]));
+    const text = JSON.stringify(res.body.data.components);
+    expect(text).toContain("America");
+    expect(text).toContain("Not reported for this server yet");
   });
 });

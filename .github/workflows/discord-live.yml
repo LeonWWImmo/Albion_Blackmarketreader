@@ -1,0 +1,67 @@
+name: Discord Live Gold
+
+# Gold alerts (every hour: ping the Gold Alerts role when a server's gold price hits a 30-day low
+# or high, once per server and kind a day) and the live "💰 Gold EU / US" channel names (three times
+# a day). GitHub may start these late or skip a run; for alerts and names that is fine.
+# See Albion_ProfitChecker/ui/scripts/discord-live.mjs.
+on:
+  schedule:
+    - cron: "41 * * * *"
+    - cron: "11 0,8,16 * * *"
+  workflow_dispatch:
+    inputs:
+      alerts:
+        description: "Check for gold alerts"
+        type: boolean
+        default: true
+      names:
+        description: "Update the gold channel names"
+        type: boolean
+        default: true
+      dry_run:
+        description: "Only print, post and rename nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discord-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # plain Node, no npm install, so no package code ever sees the bot token
+      - name: Gold alerts and channel names
+        working-directory: Albion_ProfitChecker/ui
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_LIVE_MODE: ${{ vars.DISCORD_LIVE_MODE }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          IN_ALERTS: ${{ inputs.alerts }}
+          IN_NAMES: ${{ inputs.names }}
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [ "$EVENT" = "schedule" ]; then
+            if [ "$SCHEDULE" = "41 * * * *" ]; then ARGS+=(--alerts); else ARGS+=(--names); fi
+          else
+            if [ "$IN_ALERTS" = "true" ]; then ARGS+=(--alerts); fi
+            if [ "$IN_NAMES" = "true" ]; then ARGS+=(--names); fi
+            if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
+          fi
+          node scripts/discord-live.mjs "${ARGS[@]}"
