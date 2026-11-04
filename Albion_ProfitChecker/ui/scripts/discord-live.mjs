@@ -1,6 +1,6 @@
 // Live gold features of the Discord bot, run from .github/workflows/discord-live.yml:
-//   --alerts  post a gold alert (pinging the Gold Alerts role) when a server's gold price is at its
-//             30-day low or high; at most one alert per server and kind in 24 hours
+//   --alerts  post a gold alert (pinging the Gold Alerts role) when a server's gold price breaks its
+//             30-day low or high; only the big moves, see RULES
 //   --names   rename the two "💰 Gold EU / US" channels to the current price
 //   --dry-run print instead of posting / renaming
 // DISCORD_LIVE_MODE=test sends alerts to the private tester channel instead of the alert channel.
@@ -10,14 +10,22 @@ import { REGIONS, SITE, fetchJson, formatPct, formatSilver, goldSummary, priceBa
 
 const CHANNELS = {
   tester: "1567453537372344360",
-  // #💰-gold-alerts, where members turn the alerts on and off
-  alerts: "1567519806012526722",
+  // #🚨-gold-signals: only members with the Gold Alerts role see it (turned on in #💰-gold-alerts)
+  alerts: "1567578257170239508",
   gold: { eu: "1567454937636409437", us: "1567454939503005726" }
 };
 const GOLD_ALERT_ROLE = "1567454898612600857";
-const ALERT_REPEAT_MS = 24 * 3600 * 1000;
 // a gold point older than this is not "right now" any more
 const STALE_MS = 6 * 3600 * 1000;
+const DAY_S = 24 * 3600;
+// What counts as a big move. Tried on 61 days of hourly prices: about two alerts a month for both
+// servers together (the plain "at its 30-day low / high, once a day" rule gave 18).
+export const RULES = {
+  confirmHours: 2, // the newest 2 hourly prices must both be past the old extreme: no one-hour spikes
+  minRangePct: 10, // the 30-day low and high must be at least 10% apart: no alerts in a flat market
+  repeatDays: 7, // the same server and direction alerts again after 7 days ...
+  furtherPct: 3 // ... or sooner when the price went another 3% past the last alert
+};
 
 const KIND = {
   low: { title: "30-day low", color: 0x22c55e, icon: "🟢", advice: "Cheapest gold of the last 30 days: a good time to **buy gold**." },
@@ -42,11 +50,18 @@ export function channelName(region, summary) {
   return `💰 Gold ${region.toUpperCase()} · ${formatSilver(summary.price)}${trend}`;
 }
 
-/** The alert to send for a region now, or null. */
-export function alertKind(summary, now) {
-  if (!summary?.stats || now - summary.at * 1000 > STALE_MS) return null;
-  if (summary.isLow) return "low";
-  if (summary.isHigh) return "high";
+/** "low" / "high" when the newest prices break the 30-day low / high of the hours before, else null. */
+export function alertKind(points, now) {
+  if (!points || points.length <= RULES.confirmHours || now - points.at(-1)[0] * 1000 > STALE_MS) return null;
+  const last = points.at(-1)[0];
+  const recent = points.slice(-RULES.confirmHours).map((p) => p[1]);
+  const before = points.slice(0, -RULES.confirmHours).filter((p) => p[0] >= last - 30 * DAY_S).map((p) => p[1]);
+  if (!before.length) return null;
+  const low = Math.min(...before);
+  const high = Math.max(...before);
+  if (((high - low) / low) * 100 < RULES.minRangePct) return null;
+  if (recent.every((v) => v < low)) return "low";
+  if (recent.every((v) => v > high)) return "high";
   return null;
 }
 
@@ -60,7 +75,7 @@ export function alertMessage(region, kind, summary) {
     flags: 1 << 15,
     allowed_mentions: { roles: [GOLD_ALERT_ROLE] },
     components: [
-      { type: 10, content: `<@&${GOLD_ALERT_ROLE}> ${REGIONS[region].flag} gold is at its ${k.title}` },
+      { type: 10, content: `<@&${GOLD_ALERT_ROLE}> ${REGIONS[region].flag} gold just broke its ${k.title}` },
       {
         type: 17,
         accent_color: k.color,
@@ -82,12 +97,23 @@ export function alertMessage(region, kind, summary) {
   };
 }
 
-/** True when the bot already sent this alert within ALERT_REPEAT_MS. */
-export function alreadyAlerted(messages, botId, region, kind, now) {
+/** Time and price of the newest alert the bot sent for this server and direction, or null. */
+export function lastAlert(messages, botId, region, kind) {
   const tag = alertTag(region, kind);
-  return messages.some(
-    (m) => m.author?.id === botId && now - Date.parse(m.timestamp) < ALERT_REPEAT_MS && JSON.stringify(m.components ?? []).includes(tag)
-  );
+  const sent = messages
+    .filter((m) => m.author?.id === botId && JSON.stringify(m.components ?? []).includes(tag))
+    .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))[0];
+  if (!sent) return null;
+  const price = /## \S+\s+([\d,]+) silver per gold/.exec(JSON.stringify(sent.components))?.[1];
+  return { at: Date.parse(sent.timestamp), price: price ? Number(price.replace(/,/g, "")) : NaN };
+}
+
+/** True when this alert would only repeat the last one (see RULES.repeatDays and furtherPct). */
+export function isRepeat(last, kind, price, now) {
+  if (!last || now - last.at >= RULES.repeatDays * DAY_S * 1000) return false;
+  if (!Number.isFinite(last.price)) return true;
+  const step = RULES.furtherPct / 100;
+  return kind === "low" ? price > last.price * (1 - step) : price < last.price * (1 + step);
 }
 
 async function main() {
@@ -97,9 +123,11 @@ async function main() {
   if (!dryRun && !process.env.DISCORD_BOT_TOKEN) throw new Error("DISCORD_BOT_TOKEN is not set");
   const alertChannel = process.env.DISCORD_LIVE_MODE === "live" ? CHANNELS.alerts : CHANNELS.tester;
 
+  const points = {};
   const summaries = {};
   for (const region of Object.keys(REGIONS)) {
-    summaries[region] = goldSummary((await fetchJson(`${SITE}/api/aodp/gold?region=${region}`).catch((e) => (console.error(`gold ${region}:`, e.message), null)))?.points);
+    points[region] = (await fetchJson(`${SITE}/api/aodp/gold?region=${region}`).catch((e) => (console.error(`gold ${region}:`, e.message), null)))?.points;
+    summaries[region] = goldSummary(points[region]);
   }
 
   let failed = false;
@@ -123,14 +151,14 @@ async function main() {
   }
 
   if (args.includes("--alerts")) {
-    const due = Object.keys(REGIONS).map((region) => [region, alertKind(summaries[region], now)]).filter(([, kind]) => kind);
-    if (!due.length) console.log("alerts: no server at a 30-day low or high");
+    const due = Object.keys(REGIONS).map((region) => [region, alertKind(points[region], now)]).filter(([, kind]) => kind);
+    if (!due.length) console.log("alerts: no server broke its 30-day low or high");
     if (due.length && !dryRun) {
       const me = await discord("GET", "/users/@me");
       const recent = await discord("GET", `/channels/${alertChannel}/messages?limit=100`);
       for (const [region, kind] of due) {
-        if (alreadyAlerted(recent, me.id, region, kind, now)) {
-          console.log(`alert ${region} ${kind}: already sent in the last 24 h`);
+        if (isRepeat(lastAlert(recent, me.id, region, kind), kind, summaries[region].price, now)) {
+          console.log(`alert ${region} ${kind}: repeat of a recent alert, skipped`);
           continue;
         }
         try {

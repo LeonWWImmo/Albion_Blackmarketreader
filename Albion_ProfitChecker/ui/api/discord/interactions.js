@@ -15,6 +15,7 @@ const REGIONS = {
   us: { role: "1566853202404573245", channel: "1566853515840856240", flag: "🇺🇸", name: "America" }
 };
 const GOLD_ALERT_ROLE = "1567454898612600857";
+const GOLD_SIGNALS_CHANNEL = "1567578257170239508";
 const TESTER_CHANNEL = "1567453537372344360";
 const COMMANDS_LIVE = false;
 const EPHEMERAL = 1 << 6;
@@ -75,7 +76,7 @@ export async function toggleGoldAlerts(member) {
     return reply("🔕 Gold alerts off. Click again any time to turn them back on.");
   }
   await discord("PUT", rolePath);
-  return reply("🚨 Gold alerts on. You get a ping when gold hits a 30-day low or high, on either server.");
+  return reply(`🚨 Gold alerts on. You get a ping in <#${GOLD_SIGNALS_CHANNEL}> when gold breaks its 30-day low or high, on either server. Only the big moves.`);
 }
 
 async function runCommand(interaction) {

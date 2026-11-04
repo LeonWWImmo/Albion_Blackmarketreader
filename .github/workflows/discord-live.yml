@@ -1,7 +1,7 @@
 name: Discord Live Gold
 
-# Gold alerts (every hour: ping the Gold Alerts role when a server's gold price hits a 30-day low
-# or high, once per server and kind a day) and the live "💰 Gold EU / US" channel names (three times
+# Gold alerts (every hour: ping the Gold Alerts role when a server's gold price breaks its 30-day
+# low or high, only the big moves) and the live "💰 Gold EU / US" channel names (three times
 # a day). GitHub may start these late or skip a run; for alerts and names that is fine.
 # See Albion_ProfitChecker/ui/scripts/discord-live.mjs.
 on:
