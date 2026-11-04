@@ -2,8 +2,8 @@
 // - buttons "region:eu" / "region:us" (#get-your-role) give that role and remove the other one,
 //   clicking your own region again removes it
 // - button "alerts:gold" switches the Gold Alerts role on and off
-// - slash commands /gold and /bonus (api/_lib/discordCommands.js); until COMMANDS_LIVE they only
-//   answer in the private tester channel
+// - slash commands /gold and /bonus (api/_lib/discordCommands.js), answered in every channel while
+//   COMMANDS_LIVE, else only in the private tester channel
 // Every request must carry a valid Ed25519 signature from Discord. The bot token comes from
 // DISCORD_BOT_TOKEN (Vercel env).
 import { createPublicKey, verify } from "node:crypto";
@@ -17,7 +17,8 @@ const REGIONS = {
 const GOLD_ALERT_ROLE = "1567454898612600857";
 const GOLD_SIGNALS_CHANNEL = "1567578257170239508";
 const TESTER_CHANNEL = "1567453537372344360";
-const COMMANDS_LIVE = false;
+// false: commands only answer in the tester channel (for trying out new ones)
+const COMMANDS_LIVE = true;
 const EPHEMERAL = 1 << 6;
 
 function readBody(req) {

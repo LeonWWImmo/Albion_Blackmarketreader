@@ -149,10 +149,10 @@ describe("slash commands", () => {
     }));
   });
 
-  it("only answer in the tester channel while they are tested", async () => {
+  it("answer in every channel now that they are live", async () => {
     const res = await call(command("gold", "999"));
-    expect(res.body.data.content).toContain("still being tested");
-    expect(calls).toEqual([]);
+    expect(res.body.data.flags).toBe((1 << 6) | (1 << 15));
+    expect(JSON.stringify(res.body.data.components)).toContain("Gold price");
   });
 
   it("/gold answers privately for the asker's server", async () => {
