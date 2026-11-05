@@ -5,7 +5,8 @@
 //   node scripts/health-check.mjs check            GitHub workflows, Vercel deploy, live website
 //                                                  (Playwright), data freshness, Discord
 //                                                  -> health-report.json + health-card.png
-//   node scripts/health-check.mjs post [--dry-run] the card to DISCORD_WEBHOOK_STATUS
+//   node scripts/health-check.mjs post [--dry-run] the card to DISCORD_WEBHOOK_STATUS, then deletes
+//                                                  #errors posts older than 30 days (DISCORD_BOT_TOKEN)
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -622,6 +623,43 @@ async function runPost(dryRun) {
   if (!res || res.status >= 500 || res.status === 429) res = await send().catch((error) => ({ ok: false, status: error.name, text: async () => "" }));
   if (!res.ok) throw new Error(`Discord: HTTP ${res.status} ${await res.text()}`);
   console.log("posted to #status");
+  await pruneErrors(Date.now()).catch((error) => console.log("errors cleanup skipped:", error.message));
+}
+
+// #errors (api/client-error.js): the bot's own posts older than this are deleted, as the privacy page
+// promises; an error that still happens gets posted again anyway
+const ERRORS_CHANNEL = "1567285839178764378";
+const ERRORS_KEEP_DAYS = 30;
+
+export function oldErrorPosts(messages, botId, now) {
+  return messages.filter((m) => m.author?.id === botId && !m.pinned && now - Date.parse(m.timestamp) > ERRORS_KEEP_DAYS * 24 * HOUR);
+}
+
+export async function pruneErrors(now) {
+  if (!process.env.DISCORD_BOT_TOKEN) return console.log("errors cleanup skipped: DISCORD_BOT_TOKEN is not set");
+  const discord = async (method, p) => {
+    const res = await fetch(`https://discord.com/api/v10${p}`, {
+      method,
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, "User-Agent": USER_AGENT },
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!res.ok) throw new Error(`${method} ${p.split("?")[0]}: HTTP ${res.status}`);
+    return res.status === 204 ? null : res.json();
+  };
+  const me = await discord("GET", "/users/@me");
+  const messages = [];
+  for (let before = ""; ; ) {
+    const page = await discord("GET", `/channels/${ERRORS_CHANNEL}/messages?limit=100${before && `&before=${before}`}`);
+    messages.push(...page);
+    if (page.length < 100) break;
+    before = page.at(-1).id;
+  }
+  const old = oldErrorPosts(messages, me.id, now);
+  for (const m of old) {
+    await discord("DELETE", `/channels/${ERRORS_CHANNEL}/messages/${m.id}`);
+    await new Promise((resolve) => setTimeout(resolve, 1100)); // stay under Discord's delete rate limit
+  }
+  console.log(`#errors: deleted ${old.length} posts older than ${ERRORS_KEEP_DAYS} days`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ago, auditSummary, buildCard, cardHtml, cityCoverage, coverageProblems, overall } from "./health-check.mjs";
+import { ago, auditSummary, buildCard, cardHtml, cityCoverage, coverageProblems, oldErrorPosts, overall } from "./health-check.mjs";
 
 const at = Date.parse("2026-11-04T14:02:00Z");
 const ok = (label) => ({ label, status: "ok", value: "1/1", caption: "fine", summary: "1/1 fine", problems: [] });
@@ -121,5 +121,15 @@ describe("ago", () => {
     expect(ago(30 * 1000)).toBe("1 min");
     expect(ago(5 * 36e5)).toBe("5 h");
     expect(ago(72 * 36e5)).toBe("3 d");
+  });
+});
+
+describe("oldErrorPosts", () => {
+  const now = Date.parse("2026-11-05T12:00:00Z");
+  const post = (id, days, extra = {}) => ({ id, author: { id: "bot" }, timestamp: new Date(now - days * 24 * 36e5).toISOString(), ...extra });
+
+  it("picks only the bot's own posts older than 30 days, never pinned ones", () => {
+    const messages = [post("new", 2), post("old", 31), post("edge", 30), post("pinned", 40, { pinned: true }), post("human", 40, { author: { id: "king" } })];
+    expect(oldErrorPosts(messages, "bot", now).map((m) => m.id)).toEqual(["old"]);
   });
 });
