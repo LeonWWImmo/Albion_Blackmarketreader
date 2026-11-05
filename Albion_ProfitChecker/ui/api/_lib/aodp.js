@@ -168,6 +168,85 @@ export async function getFestivities(regionInput, now = new Date()) {
   });
 }
 
+/** Markets the Loot Split values items in. Brecilien is left out: few orders, odd prices. */
+const PRICE_CITIES = ["Black Market", "Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford"];
+const PRICE_MAX_IDS = 300;
+const PRICE_CHUNK = 100;
+/** Orders older than this are ignored: they are probably filled or cancelled by now. */
+const PRICE_FRESH_MS = 72 * 3600 * 1000;
+const ITEM_ID = /^[A-Z0-9_]{2,80}(@[1-4])?$/;
+
+/** "T4_BAG,T5_2H_CROSSBOW@1" -> sorted unique ids, or null when anything looks wrong. */
+export function parseItemIds(value) {
+  const ids = [...new Set(String(value || "").split(",").map((id) => id.trim()).filter(Boolean))];
+  if (!ids.length || ids.length > PRICE_MAX_IDS || !ids.every((id) => ITEM_ID.test(id))) return null;
+  return ids.sort();
+}
+
+const fresh = (price, stamp, now) => {
+  const ms = Date.parse(/[zZ]$/.test(String(stamp)) ? stamp : `${stamp}Z`);
+  return price > 0 && Number.isFinite(ms) && now.getTime() - ms <= PRICE_FRESH_MS ? price : 0;
+};
+
+/**
+ * AODP rows -> { [itemId]: [[quality, bm, buy, buyCity, sell, sellCity], ...] }.
+ * bm: best Black Market buy order; buy: best city buy order (sell instantly); sell: best city
+ * sell order to list against, capped at 1.5x the cities' median so one stale listing does not win.
+ */
+export function parsePrices(raw, now = new Date()) {
+  const cells = new Map();
+  for (const row of Array.isArray(raw) ? raw : []) {
+    const id = String(row?.item_id || "");
+    const quality = Number(row?.quality);
+    if (!ITEM_ID.test(id) || !(quality >= 1 && quality <= 5)) continue;
+    const key = `${id}|${quality}`;
+    const cell = cells.get(key) || { id, quality, bm: 0, buy: 0, buyCity: "", sells: [] };
+    const buy = fresh(Number(row.buy_price_max), row.buy_price_max_date, now);
+    const sell = fresh(Number(row.sell_price_min), row.sell_price_min_date, now);
+    if (row.city === "Black Market") cell.bm = Math.max(cell.bm, buy);
+    else if (PRICE_CITIES.includes(row.city)) {
+      if (buy > cell.buy) Object.assign(cell, { buy, buyCity: row.city });
+      if (sell) cell.sells.push([sell, row.city]);
+    }
+    cells.set(key, cell);
+  }
+  const out = {};
+  for (const cell of cells.values()) {
+    let sell = 0;
+    let sellCity = "";
+    if (cell.sells.length) {
+      const sorted = cell.sells.map(([price]) => price).sort((a, b) => a - b);
+      const cap = sorted[Math.floor((sorted.length - 1) / 2)] * 1.5;
+      for (const [price, city] of cell.sells) if (price <= cap && price > sell) [sell, sellCity] = [price, city];
+    }
+    if (!cell.bm && !cell.buy && !sell) continue;
+    (out[cell.id] ||= []).push([cell.quality, cell.bm, cell.buy, cell.buyCity, sell, sellCity]);
+  }
+  for (const rows of Object.values(out)) rows.sort((a, b) => a[0] - b[0]);
+  return out;
+}
+
+export async function getPrices(regionInput, idsInput, now = new Date()) {
+  const region = normalizeRegion(regionInput);
+  if (!region) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
+  const ids = parseItemIds(idsInput);
+  if (!ids) return { status: 400, body: { error: `ids must be 1-${PRICE_MAX_IDS} item ids` }, maxAge: 0 };
+  const locations = encodeURIComponent(PRICE_CITIES.join(","));
+  try {
+    const rows = [];
+    for (let i = 0; i < ids.length; i += PRICE_CHUNK) {
+      const chunk = ids.slice(i, i + PRICE_CHUNK).map(encodeURIComponent).join(",");
+      const url = `https://${HOSTS[region]}.albion-online-data.com/api/v2/stats/prices/${chunk}.json?locations=${locations}&qualities=1,2,3,4,5`;
+      const { status, body } = await fetchJson(url);
+      if (status !== 200 || !Array.isArray(body)) return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
+      rows.push(...body);
+    }
+    return { status: 200, body: { region, fetchedAt: now.toISOString(), prices: parsePrices(rows, now) }, maxAge: 300 };
+  } catch {
+    return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
+  }
+}
+
 /** Shared response writer for Node's http.ServerResponse (Vercel and the Vite dev server). */
 export function sendResult(res, result) {
   res.statusCode = result.status;

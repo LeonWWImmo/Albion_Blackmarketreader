@@ -15,10 +15,15 @@ function aodpDevApi(): Plugin {
       server.middlewares.use("/api/aodp", async (req, res, next) => {
         const url = new URL(req.url || "/", "http://localhost");
         const handler = url.pathname.replace(/^\/+/, "");
-        if (handler !== "gold" && handler !== "festivities") return next();
+        if (handler !== "gold" && handler !== "festivities" && handler !== "prices") return next();
         const aodp = await import("./api/_lib/aodp.js");
         const region = url.searchParams.get("region");
-        const result = handler === "gold" ? await aodp.getGold(region) : await aodp.getFestivities(region);
+        const result =
+          handler === "gold"
+            ? await aodp.getGold(region)
+            : handler === "prices"
+              ? await aodp.getPrices(region, url.searchParams.get("ids"))
+              : await aodp.getFestivities(region);
         aodp.sendResult(res, result);
       });
     }

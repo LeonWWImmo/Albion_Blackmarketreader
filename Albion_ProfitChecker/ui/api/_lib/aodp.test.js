@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearMemory, getFestivities, getGold, normalizeRegion, parseFestivities, parseGoldHistory, sendResult } from "./aodp.js";
+import { clearMemory, getFestivities, getGold, getPrices, normalizeRegion, parseFestivities, parseGoldHistory, parseItemIds, parsePrices, sendResult } from "./aodp.js";
 
 // C# ticks for an ISO time, the format AODP uses for event times
 const ticks = (iso) => String(BigInt(Date.parse(iso)) * 10000n + 621355968000000000n);
@@ -153,5 +153,46 @@ describe("sendResult", () => {
     const bad = fakeRes();
     sendResult(bad, { status: 502, body: { error: "x" }, maxAge: 0 });
     expect(bad.headers["Cache-Control"]).toBe("no-store");
+  });
+});
+
+describe("loot split prices", () => {
+  const now = new Date("2026-11-05T20:00:00Z");
+  const row = (city, quality, buy, sell, stamp = "2026-11-05T19:00:00") => ({
+    item_id: "T5_2H_CROSSBOW@1", city, quality,
+    buy_price_max: buy, buy_price_max_date: buy ? stamp : "0001-01-01T00:00:00",
+    sell_price_min: sell, sell_price_min_date: sell ? stamp : "0001-01-01T00:00:00"
+  });
+
+  it("accepts only clean item ids, sorted and unique, at most 300", () => {
+    expect(parseItemIds("T5_2H_CROSSBOW@1,T4_BAG,T4_BAG")).toEqual(["T4_BAG", "T5_2H_CROSSBOW@1"]);
+    expect(parseItemIds("")).toBeNull();
+    expect(parseItemIds("T4_BAG,../x")).toBeNull();
+    expect(parseItemIds("T4_BAG@7")).toBeNull();
+    expect(parseItemIds(Array.from({ length: 301 }, (_, i) => "T4_X" + i).join(","))).toBeNull();
+  });
+
+  it("keeps the best Black Market order, best city order and a sane sell order per quality", () => {
+    const prices = parsePrices([
+      row("Black Market", 1, 39000, 0),
+      row("Black Market", 1, 41000, 0, "2026-10-20T10:00:00"), // stale: ignored
+      row("Caerleon", 1, 30000, 70000),
+      row("Lymhurst", 1, 32000, 60000),
+      row("Martlock", 1, 0, 400000), // a lone silly listing above 1.5x the median
+      row("Brecilien", 1, 90000, 90000), // not a city we value in
+      row("Thetford", 2, 0, 0)
+    ], now);
+    expect(prices).toEqual({ "T5_2H_CROSSBOW@1": [[1, 39000, 32000, "Lymhurst", 70000, "Caerleon"]] });
+  });
+
+  it("asks AODP for every city and quality, refuses bad input without calling it", async () => {
+    const fetchMock = stubFetch(200, [row("Black Market", 2, 49000, 0)]);
+    expect((await getPrices("eu", "bad id", now)).status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+    const result = await getPrices("eu", "T5_2H_CROSSBOW@1", now);
+    expect(result).toMatchObject({ status: 200, maxAge: 300, body: { prices: { "T5_2H_CROSSBOW@1": [[2, 49000, 0, "", 0, ""]] } } });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://europe.albion-online-data.com/api/v2/stats/prices/T5_2H_CROSSBOW%401.json?locations=Black%20Market%2CCaerleon%2CBridgewatch%2CFort%20Sterling%2CLymhurst%2CMartlock%2CThetford&qualities=1,2,3,4,5"
+    );
   });
 });

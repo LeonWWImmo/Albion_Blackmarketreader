@@ -1,0 +1,950 @@
+/* ===========================================================================
+   Loot Split
+
+   Empty: one big paste target. Loaded: trips + controls, the chest value with
+   the sell plan, then the loot grid and the split side by side.
+   Route colours: Black Market violet, quick sell (city buy order) sky, sell
+   order gold.
+   =========================================================================== */
+
+body.loot-split-body {
+  background:
+    radial-gradient(70% 50% at 50% -10%, rgba(245, 196, 81, 0.12), transparent 70%),
+    radial-gradient(50% 40% at 100% 100%, rgba(167, 139, 250, 0.08), transparent 70%),
+    #07090d;
+  background-attachment: fixed;
+}
+
+.ls-root {
+  --ls-gold: #f5c451;
+  --ls-gold-rgb: 245, 196, 81;
+  --ls-bm: #a78bfa;
+  --ls-buy: #7dd3fc;
+  --ls-sell: #f5c451;
+  --ls-text: #e9eef5;
+  --ls-muted: #8a97a8;
+  --ls-line: rgba(148, 163, 184, 0.14);
+  --ls-panel: linear-gradient(180deg, rgba(20, 26, 34, 0.92), rgba(10, 13, 18, 0.95));
+  min-height: 100vh;
+  color: var(--ls-text);
+  overflow-x: clip;
+}
+
+.ls {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 22px 24px 64px;
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+}
+
+.r-bm {
+  --r: var(--ls-bm);
+}
+
+.r-buy {
+  --r: var(--ls-buy);
+}
+
+.r-sell {
+  --r: var(--ls-sell);
+}
+
+/* ------------------------------------------------------------------ empty */
+
+.ls-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 7vh 0 4vh;
+}
+
+.ls-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  color: var(--ls-gold);
+}
+
+.ls-title {
+  margin: 14px 0 34px;
+  font-size: clamp(38px, 6.5vw, 72px);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: #fff7e3;
+}
+
+.ls-title span {
+  background: linear-gradient(180deg, #fff1cf 5%, #f5c451 55%, #b9822e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ls-drop {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(520px, 100%);
+  padding: 40px 24px 34px;
+  box-sizing: border-box;
+  border-radius: 24px;
+  cursor: pointer;
+  background: var(--ls-panel);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s ease;
+}
+
+/* a slowly turning gold edge */
+.ls-drop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--ls-angle, 0deg), rgba(var(--ls-gold-rgb), 0.9), rgba(var(--ls-gold-rgb), 0.05) 25%, rgba(167, 139, 250, 0.6) 50%, rgba(var(--ls-gold-rgb), 0.05) 75%, rgba(var(--ls-gold-rgb), 0.9));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ls-turn 6s linear infinite;
+  pointer-events: none;
+}
+
+@property --ls-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ls-turn {
+  to {
+    --ls-angle: 360deg;
+  }
+}
+
+.ls-drop:hover {
+  transform: translateY(-3px);
+}
+
+.ls-drop-icon {
+  font-size: 46px;
+  color: var(--ls-gold);
+  filter: drop-shadow(0 0 18px rgba(var(--ls-gold-rgb), 0.45));
+}
+
+.ls-drop b {
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.ls-keys {
+  font-size: 13px;
+  color: var(--ls-muted);
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font: 700 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--ls-text);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom-width: 2px;
+}
+
+.ls-empty-links {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 18px;
+  font-size: 13px;
+}
+
+.ls-how summary,
+.ls-link {
+  cursor: pointer;
+  color: var(--ls-muted);
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  list-style: none;
+}
+
+.ls-how summary::-webkit-details-marker {
+  display: none;
+}
+
+.ls-how summary:hover,
+.ls-link:hover {
+  color: var(--ls-gold);
+}
+
+.ls-how ol {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  text-align: left;
+  color: var(--ls-text);
+  line-height: 1.7;
+}
+
+/* ------------------------------------------------------------------ bar */
+
+.ls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ls-trips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  min-width: 0;
+  flex: 1 1 300px;
+  scrollbar-width: thin;
+}
+
+.ls-trip {
+  flex: none;
+  display: grid;
+  gap: 1px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  color: var(--ls-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--ls-line);
+  transition: all 0.15s ease;
+}
+
+.ls-trip.is-on {
+  color: var(--ls-text);
+  border: 1px solid rgba(var(--ls-gold-rgb), 0.45);
+  background: rgba(var(--ls-gold-rgb), 0.08);
+}
+
+.ls-trip-time {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ls-trip-meta {
+  font-size: 11px;
+  color: var(--ls-muted);
+}
+
+.ls-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ls-seg {
+  display: flex;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ls-line);
+}
+
+.ls-seg button,
+.ls-toggle,
+.ls-icon-btn {
+  font: 700 13px Inter, system-ui, sans-serif;
+  color: var(--ls-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.ls-seg button {
+  padding: 6px 11px;
+  border-radius: 9px;
+}
+
+.ls-seg button.is-on {
+  color: #1a1206;
+  background: linear-gradient(180deg, #ffe7a3, var(--ls-gold));
+}
+
+.ls-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--ls-line);
+}
+
+.ls-toggle span {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease;
+}
+
+.ls-toggle span::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+}
+
+.ls-toggle.is-on {
+  color: var(--ls-text);
+}
+
+.ls-toggle.is-on span {
+  background: var(--ls-gold);
+}
+
+.ls-toggle.is-on span::after {
+  transform: translateX(12px);
+}
+
+.ls-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--ls-line);
+}
+
+.ls-icon-btn:hover,
+.ls-seg button:not(.is-on):hover,
+.ls-toggle:hover {
+  color: var(--ls-text);
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.ls-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 26px 28px;
+  border-radius: 26px;
+  border: 1px solid rgba(var(--ls-gold-rgb), 0.22);
+  background:
+    radial-gradient(70% 120% at 0% 0%, rgba(var(--ls-gold-rgb), 0.18), transparent 60%),
+    linear-gradient(180deg, #11171d, #080b0f);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.ls-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ls-muted);
+}
+
+.ls-big {
+  margin: 4px 0 2px;
+  font-size: clamp(52px, 8vw, 88px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, #fff7e3 10%, var(--ls-gold) 60%, #b9822e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 30px rgba(var(--ls-gold-rgb), 0.25));
+}
+
+.ls-shimmer {
+  animation: ls-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ls-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.ls-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ls-muted);
+}
+
+.ls-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #fca5a5;
+}
+
+.ls-error button {
+  font: inherit;
+  color: var(--ls-gold);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.ls-meter {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ls-meter span {
+  background: var(--r);
+  box-shadow: 0 0 16px var(--r);
+  transition: flex-grow 0.6s ease;
+}
+
+.ls-plan ul {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ls-plan li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.ls-plan li i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--r, rgba(255, 255, 255, 0.2));
+}
+
+.ls-plan li b {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.ls-plan li.is-zero {
+  color: var(--ls-muted);
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.ls-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ls-card {
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--ls-line);
+  background: var(--ls-panel);
+}
+
+.ls-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ls-card-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.ls-card-head span {
+  font-size: 12px;
+  color: var(--ls-muted);
+}
+
+/* loot tiles */
+
+.ls-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 10px;
+}
+
+.ls-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  padding: 6px 4px 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 0 var(--r, transparent);
+  outline: none;
+  animation: ls-pop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  animation-delay: calc(var(--i) * 18ms);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.ls-tile:hover,
+.ls-tile:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--r, rgba(255, 255, 255, 0.2));
+  z-index: 2;
+}
+
+.ls-tile img,
+.ls-tile-missing,
+.ls-ph {
+  width: 62px;
+  height: 62px;
+}
+
+/* Albion's icon server can take a moment for an icon nobody asked for lately */
+.ls-tile img {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ls-tile img.is-loaded {
+  opacity: 1;
+}
+
+.ls-tile img.is-failed {
+  display: none;
+}
+
+.ls-ph {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.03) 30%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.03) 70%);
+  background-size: 250% 100%;
+  animation: ls-skeleton 1.4s linear infinite;
+}
+
+.ls-tile img.is-loaded + .ls-ph {
+  display: none;
+}
+
+.ls-tile img.is-failed + .ls-ph {
+  position: static;
+  animation: none;
+}
+
+@keyframes ls-skeleton {
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.ls-tile-missing {
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: var(--ls-muted);
+}
+
+.ls-tile.is-unpriced {
+  opacity: 0.5;
+}
+
+.ls-qty {
+  position: absolute;
+  top: 46px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px #000, 0 0 2px #000;
+}
+
+.ls-val {
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--r, var(--ls-muted));
+}
+
+/* display:none until hover, so tips at the edges never widen the page */
+.ls-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  display: none;
+  gap: 2px;
+  width: max-content;
+  max-width: 230px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  text-align: left;
+  color: var(--ls-muted);
+  background: #161c24;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ls-tip b {
+  color: var(--ls-text);
+}
+
+.ls-tile:hover .ls-tip,
+.ls-tile:focus-visible .ls-tip {
+  display: grid;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.ls-more {
+  display: block;
+  margin: 14px auto 0;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font: 700 13px Inter, system-ui, sans-serif;
+  color: var(--ls-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--ls-line);
+  cursor: pointer;
+}
+
+.ls-more:hover {
+  color: var(--ls-text);
+}
+
+@keyframes ls-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+/* split */
+
+.ls-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ls-inputs label {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ls-muted);
+}
+
+.ls-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--ls-muted);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--ls-line);
+}
+
+.ls-input:focus-within {
+  border-color: rgba(var(--ls-gold-rgb), 0.5);
+}
+
+.ls-input input,
+.ls-add input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0;
+  font: 700 14px Inter, system-ui, sans-serif;
+  color: var(--ls-text);
+  background: none;
+  border: 0;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.ls-input input::-webkit-inner-spin-button,
+.ls-input input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.ls-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ls-players li {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 64px auto 20px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ls-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 13px;
+  color: #0b0e13;
+  background: var(--c);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 45%, transparent);
+}
+
+.ls-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ls-share {
+  padding: 0 6px;
+}
+
+.ls-share input {
+  padding: 5px 0;
+  font-size: 13px;
+  text-align: right;
+}
+
+.ls-cut {
+  font-size: 17px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--c);
+  text-align: right;
+}
+
+.ls-x {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ls-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.ls-players li:hover .ls-x,
+.ls-x:focus-visible {
+  opacity: 1;
+}
+
+.ls-bar-fill {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--c);
+  transition: width 0.5s ease;
+}
+
+.ls-add {
+  margin-top: 6px;
+}
+
+.ls-add input {
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px dashed var(--ls-line);
+}
+
+.ls-add input:focus {
+  border-color: rgba(var(--ls-gold-rgb), 0.5);
+}
+
+.ls-guild {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: var(--ls-muted);
+}
+
+.ls-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ls-discord {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 13px;
+  font: 800 15px Inter, system-ui, sans-serif;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #6d79ff, #5865f2 55%, #4752c4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 28px rgba(88, 101, 242, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ls-discord svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ls-discord:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(88, 101, 242, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.ls-discord:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ overlays */
+
+.ls-dropzone {
+  position: fixed;
+  inset: 12px;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  border-radius: 28px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ls-gold);
+  background: rgba(7, 9, 13, 0.82);
+  border: 2px dashed rgba(var(--ls-gold-rgb), 0.7);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.ls-dropzone span {
+  font-size: 54px;
+}
+
+.ls-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 60;
+  padding: 11px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1206;
+  background: linear-gradient(180deg, #ffe7a3, var(--ls-gold));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  transform: translateX(-50%);
+  animation: ls-toast 0.25s ease both;
+}
+
+@keyframes ls-toast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+}
+
+/* ------------------------------------------------------------------ phones */
+
+@media (max-width: 860px) {
+  .ls {
+    padding: 16px 14px 48px;
+  }
+
+  .ls-hero,
+  .ls-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ls-hero {
+    padding: 20px 18px;
+    gap: 16px;
+  }
+
+  .ls-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+    gap: 8px;
+  }
+
+  .ls-tile img,
+  .ls-tile-missing {
+    width: 54px;
+    height: 54px;
+  }
+
+  .ls-qty {
+    top: 40px;
+  }
+
+  .ls-ph {
+    width: 54px;
+    height: 54px;
+  }
+
+  .ls-x {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-drop::before,
+  .ls-tile,
+  .ls-ph,
+  .ls-shimmer,
+  .ls-toast {
+    animation: none;
+  }
+}
