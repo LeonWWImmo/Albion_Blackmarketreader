@@ -169,7 +169,7 @@ body.community-page {
 }
 
 
-/* ---------------------------------------------------------------- hero: one big Discord button */
+/* ---------------------------------------------------------------- hero */
 
 .cm-hero {
   position: relative;
@@ -179,8 +179,6 @@ body.community-page {
   align-items: center;
   text-align: center;
   padding: 56px 16px 40px;
-  /* the breathing glow behind the button scales past a phone's width */
-  overflow-x: clip;
 }
 
 .cm-eyebrow {
@@ -215,26 +213,6 @@ body.community-page {
   color: rgba(226, 232, 240, 0.78);
 }
 
-.cm-orb {
-  position: relative;
-  margin-top: 44px;
-  display: grid;
-  place-items: center;
-}
-
-.cm-orb::before {
-  content: "";
-  position: absolute;
-  width: 420px;
-  height: 220px;
-  max-width: 100vw;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(88, 101, 242, 0.55), rgba(88, 101, 242, 0) 100%);
-  filter: blur(18px);
-  animation: cm-breathe 3.6s ease-in-out infinite;
-  pointer-events: none;
-}
-
 .cm-join {
   position: relative;
   display: inline-flex;
@@ -262,12 +240,6 @@ body.community-page {
   outline-offset: 4px;
 }
 
-.cm-join-big {
-  padding: 22px 44px;
-  border-radius: 18px;
-  font-size: 21px;
-}
-
 .cm-discord-logo {
   width: 1.45em;
   height: 1.45em;
@@ -277,43 +249,6 @@ body.community-page {
 .cm-join .material-symbols-outlined {
   font-size: 1.1em;
   opacity: 0.8;
-}
-
-.cm-perks {
-  list-style: none;
-  margin: 26px 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.cm-perks li {
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #e7d7b4;
-  background: rgba(217, 164, 65, 0.08);
-  border: 1px solid rgba(217, 164, 65, 0.25);
-}
-
-.cm-perks li::before {
-  content: "✓ ";
-  color: #d9a441;
-}
-
-@keyframes cm-breathe {
-  0%,
-  100% {
-    opacity: 0.65;
-    transform: scale(0.94);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
 }
 
 /* ---------------------------------------------------------------- interactive Discord preview */
@@ -656,11 +591,6 @@ body.community-page {
     font-size: 16px;
   }
 
-  .cm-join-big {
-    padding: 18px 30px;
-    font-size: 18px;
-  }
-
   .cm-window {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -716,7 +646,6 @@ body.community-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cm-orb::before,
   .cm-feed,
   .cm-progress span {
     animation: none;

@@ -27,9 +27,9 @@ function DiscordLogo() {
   );
 }
 
-function JoinButton({ big = false }: { big?: boolean }) {
+function JoinButton() {
   return (
-    <a className={`cm-join${big ? " cm-join-big" : ""}`} href={INVITE} target="_blank" rel="noopener noreferrer">
+    <a className="cm-join" href={INVITE} target="_blank" rel="noopener noreferrer">
       <DiscordLogo />
       <span>Join the Discord</span>
       <span className="material-symbols-outlined" aria-hidden="true">north_east</span>
@@ -195,14 +195,6 @@ export function CommunityPage() {
           <span>pinged every day.</span>
         </h1>
         <p className="cm-sub">Today's crafting bonus, the gold price and the best Black Market crafts, straight to your Discord after every reset.</p>
-        <div className="cm-orb">
-          <JoinButton big />
-        </div>
-        <ul className="cm-perks">
-          <li>Free</li>
-          <li>One ping a day</li>
-          <li>Europe &amp; America</li>
-        </ul>
       </main>
 
       <section className="cm-preview" aria-label="What you get on the Discord">
