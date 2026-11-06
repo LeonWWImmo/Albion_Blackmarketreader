@@ -1,15 +1,31 @@
 name: Discord Changelog
 
-# Posts new CHANGELOG entries to a Discord updates channel whenever real code is
-# pushed to main. The `paths` filter means data-refresh bot commits (which never
-# touch CHANGELOG.md) do not trigger this workflow at all. Started by hand it posts the newest
-# three bullets to the private tester channel, to try out the look.
+# New CHANGELOG entries never go straight to the public updates channel. A push to main that adds
+# bullets posts them to the private tester channel first, to check the text and the banner. Once
+# that looks right, start this workflow by hand with target "public" to post the same card there.
+#
+# The `paths` filter means data-refresh bot commits (which never touch CHANGELOG.md) do not
+# trigger this workflow at all.
 on:
   push:
     branches: [main]
     paths:
       - 'CHANGELOG.md'
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to post: tester (preview) or public (after the preview was approved)"
+        type: choice
+        options: [tester, public]
+        default: tester
+      since:
+        description: "Commit to diff CHANGELOG.md from (empty: the parent of the last commit that changed it)"
+        type: string
+        default: ""
+      image:
+        description: "Banner image path on blackmarketreader.com, e.g. picture/loot-split-preview.png (empty: picked from the notes)"
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -24,16 +40,21 @@ jobs:
 
       - name: Extract newly added changelog entries
         id: notes
+        env:
+          SINCE: ${{ inputs.since }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ADDED="$(grep -E '^- ' CHANGELOG.md | head -3)"
-            echo "has_notes=true" >> "$GITHUB_OUTPUT"
-            { echo 'notes<<__EOF__'; echo "$ADDED"; echo '__EOF__'; } >> "$GITHUB_OUTPUT"
-            exit 0
+            if [ -n "$SINCE" ]; then
+              BEFORE="$SINCE"
+            else
+              BEFORE="$(git log -1 --format=%H -- CHANGELOG.md)~1"
+            fi
+            AFTER="HEAD"
+          else
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.event.after }}"
           fi
-          BEFORE="${{ github.event.before }}"
-          AFTER="${{ github.event.after }}"
 
           # First push / new branch: `before` is all zeroes and not a real commit.
           if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
@@ -44,14 +65,14 @@ jobs:
             # No parent to diff against: take every bullet currently in the file.
             ADDED="$(git show "${AFTER}:CHANGELOG.md" 2>/dev/null | grep -E '^- ' || true)"
           else
-            # Only the bullet lines ADDED in this push (lines starting with "+- ").
+            # Only the bullet lines ADDED in this range (lines starting with "+- ").
             ADDED="$(git diff "${BEFORE}" "${AFTER}" -- CHANGELOG.md \
               | grep -E '^\+- ' | sed 's/^+//' || true)"
           fi
 
           if [ -z "$ADDED" ]; then
             echo "has_notes=false" >> "$GITHUB_OUTPUT"
-            echo "No new changelog bullets in this push; nothing to announce."
+            echo "No new changelog bullets in this range; nothing to announce."
             exit 0
           fi
 
@@ -66,21 +87,35 @@ jobs:
         if: steps.notes.outputs.has_notes == 'true'
         env:
           NOTES: ${{ steps.notes.outputs.notes }}
-          EVENT: ${{ github.event_name }}
+          TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'tester' }}
+          IMAGE: ${{ inputs.image }}
           PUBLIC_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TESTER_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_TESTER }}
         run: |
           set -euo pipefail
-          # a manual test run goes to the tester channel only, never to the public one
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            DISCORD_WEBHOOK_URL="$TESTER_WEBHOOK"
-            if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "DISCORD_WEBHOOK_TESTER is not set"; exit 1; fi
-          else
+          # public only when started by hand with target "public"; every push previews in the tester channel
+          if [ "$TARGET" = "public" ]; then
             DISCORD_WEBHOOK_URL="$PUBLIC_WEBHOOK"
-            if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "No Discord webhook configured; nothing posted."; exit 0; fi
+          else
+            DISCORD_WEBHOOK_URL="$TESTER_WEBHOOK"
           fi
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "No Discord webhook for target $TARGET; nothing posted."; exit 1; fi
+
+          # banner: the input if given (a path on the site only), else the tool the notes are about
+          if [ -n "$IMAGE" ]; then
+            if ! printf '%s' "$IMAGE" | grep -Eq '^[A-Za-z0-9/_.-]+\.(png|jpg|jpeg|webp|gif)$'; then echo "image must be a path like picture/x.png"; exit 1; fi
+            BANNER="https://blackmarketreader.com/${IMAGE#/}"
+          elif printf '%s' "$NOTES" | grep -q 'Loot Split'; then
+            BANNER="https://blackmarketreader.com/picture/loot-split-preview.png"
+          elif printf '%s' "$NOTES" | grep -q 'Gold Tracker'; then
+            BANNER="https://blackmarketreader.com/picture/gold-tracker-preview.png"
+          else
+            BANNER="https://blackmarketreader.com/picture/hero-forge-1280.jpg"
+          fi
+          echo "Posting to $TARGET with banner $BANNER"
+
           # one card (Discord components V2): banner, the new bullets, a button to the site
-          PAYLOAD="$(jq -n --arg notes "$NOTES" '{
+          PAYLOAD="$(jq -n --arg notes "$NOTES" --arg banner "$BANNER" '{
             username: "Blackmarket Reader",
             flags: 32768,
             allowed_mentions: { parse: [] },
@@ -88,7 +123,7 @@ jobs:
               type: 17,
               accent_color: 14263361,
               components: [
-                { type: 12, items: [ { media: { url: "https://blackmarketreader.com/picture/hero-forge-1280.jpg" } } ] },
+                { type: 12, items: [ { media: { url: $banner } } ] },
                 { type: 10, content: ("-# 🚀 NEW ON BLACKMARKETREADER.COM\n## What is new\n" + $notes) },
                 { type: 14, divider: true, spacing: 1 },
                 { type: 1, components: [
