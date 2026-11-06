@@ -93,17 +93,6 @@ body.guide-body {
   color: #9aa3b5;
 }
 
-.guide-tool-link {
-  display: inline-block;
-  padding: 9px 16px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #5cf0c8, #7dd3ff);
-  color: #071018;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
 /* ------------------------------------------------------------------ guide: quick layer */
 
 .guide-shell.is-wide {
@@ -366,6 +355,12 @@ body.guide-body {
   transform: rotate(45deg);
 }
 
+.guide-fold summary h3 {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
 .guide-fold summary:hover {
   color: #5cf0c8;
 }
@@ -405,8 +400,13 @@ body.guide-body {
 @media (prefers-reduced-motion: reduce) {
   .guide-step,
   .guide-cta,
-  .guide-fold summary::after {
+  .guide-fold summary::after,
+  .guide-index-thumb img {
     transition: none;
+  }
+
+  .guide-index-card:hover .guide-index-thumb img {
+    transform: none;
   }
 }
 
@@ -563,21 +563,6 @@ body.guide-body {
   }
 
   .guide-lede {
-    font-size: 15px;
-  }
-
-  .guide-section {
-    margin-top: 28px;
-  }
-
-  .guide-section h2 {
-    font-size: 19px;
-  }
-
-  .guide-section p,
-  .guide-section li,
-  .guide-faq dt,
-  .guide-faq dd {
     font-size: 15px;
   }
 }

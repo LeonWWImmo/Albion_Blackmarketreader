@@ -42,10 +42,13 @@ jobs:
         id: notes
         env:
           SINCE: ${{ inputs.since }}
+          TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'tester' }}
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             if [ -n "$SINCE" ]; then
+              # a mistyped commit must not quietly fall back to "the last commit" below
+              if ! git cat-file -e "${SINCE}^{commit}" 2>/dev/null; then echo "since: $SINCE is not a commit"; exit 1; fi
               BEFORE="$SINCE"
             else
               BEFORE="$(git log -1 --format=%H -- CHANGELOG.md)~1"
@@ -73,7 +76,16 @@ jobs:
           if [ -z "$ADDED" ]; then
             echo "has_notes=false" >> "$GITHUB_OUTPUT"
             echo "No new changelog bullets in this range; nothing to announce."
+            # a public post asked for by hand that finds nothing is a mistake, not a success
+            if [ "$TARGET" = "public" ]; then exit 1; fi
             exit 0
+          fi
+
+          # Discord shows about 4000 characters in one text block: keep whole bullets up to that
+          if [ "${#ADDED}" -gt 3400 ]; then
+            ADDED="$(printf '%s\n' "$ADDED" | awk '{ n += length($0) + 1; if (n > 3300) exit; print }')"
+            ADDED="${ADDED}
+          -# ...and more in the full changelog"
           fi
 
           echo "has_notes=true" >> "$GITHUB_OUTPUT"
@@ -99,11 +111,16 @@ jobs:
           else
             DISCORD_WEBHOOK_URL="$TESTER_WEBHOOK"
           fi
-          if [ -z "$DISCORD_WEBHOOK_URL" ]; then echo "No Discord webhook for target $TARGET; nothing posted."; exit 1; fi
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "No Discord webhook for target $TARGET; nothing posted."
+            # a public post asked for by hand must fail loudly; a push preview just skips
+            if [ "$TARGET" = "public" ]; then exit 1; fi
+            exit 0
+          fi
 
           # banner: the input if given (a path on the site only), else the tool the notes are about
           if [ -n "$IMAGE" ]; then
-            if ! printf '%s' "$IMAGE" | grep -Eq '^[A-Za-z0-9/_.-]+\.(png|jpg|jpeg|webp|gif)$'; then echo "image must be a path like picture/x.png"; exit 1; fi
+            if [[ ! "$IMAGE" =~ ^[A-Za-z0-9/_.-]+\.(png|jpg|jpeg|webp|gif)$ ]]; then echo "image must be a path like picture/x.png"; exit 1; fi
             BANNER="https://blackmarketreader.com/${IMAGE#/}"
           elif printf '%s' "$NOTES" | grep -q 'Loot Split'; then
             BANNER="https://blackmarketreader.com/picture/loot-split-preview.png"

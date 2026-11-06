@@ -25,6 +25,8 @@ export function reloadOnStaleBuild(doReload: () => void = () => window.location.
     }
     event.preventDefault();
     reload.pending = true;
+    // if the reload never happens (the visitor cancelled it), report errors again
+    setTimeout(() => (reload.pending = false), 5000);
     doReload();
   });
 }

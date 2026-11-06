@@ -48,7 +48,12 @@ export function GuidePage() {
 
   // a link to a folded section opens it
   useEffect(() => {
-    const id = decodeURIComponent(location.hash.slice(1));
+    let id = "";
+    try {
+      id = decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return; // a broken hash like "#100%" is not one of our anchors
+    }
     const target = id ? document.getElementById(id) : null;
     if (target instanceof HTMLDetailsElement) {
       target.open = true;
@@ -146,7 +151,9 @@ export function GuidePage() {
           <p className="guide-details-hint">The full explanation, with formulas and examples. Open what you need.</p>
           {sections.map((section) => (
             <details className="guide-fold" key={section.heading} id={anchorId(section.heading)}>
-              <summary>{section.heading}</summary>
+              <summary>
+                <h3>{section.heading}</h3>
+              </summary>
               <div className="guide-fold-body">
                 {section.paragraphs?.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
@@ -163,11 +170,13 @@ export function GuidePage() {
           ))}
 
           <h2 className="guide-faq-title" id="faq">
-            Questions
+            Frequently asked questions
           </h2>
           {faq.map((item) => (
             <details className="guide-fold is-faq" key={item.q}>
-              <summary>{item.q}</summary>
+              <summary>
+                <h3>{item.q}</h3>
+              </summary>
               <div className="guide-fold-body">
                 <p>{item.a}</p>
               </div>

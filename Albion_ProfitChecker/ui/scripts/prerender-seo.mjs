@@ -156,7 +156,7 @@ const GUIDE_ROUTES = [
     keywords: "Albion Online guides, Albion crafting guide, Albion refining guide, Albion black market guide",
     h1: "Albion Online guides",
     intro:
-      "The maths behind every calculator on this site, written out in full. Each guide covers how the game actually works, the formulas the tool uses, worked examples and the mistakes that quietly cost silver.",
+      "Every tool in a short clip and three steps. The full maths, formulas and examples are one click away in each guide.",
     guidesIndex: Object.values(toolContent).map((entry) => entry.guide),
   },
   ...Object.entries(toolContent).map(([toolSlug, entry]) => ({
@@ -166,7 +166,7 @@ const GUIDE_ROUTES = [
     description: entry.guide.description,
     keywords: entry.guide.keywords,
     h1: entry.guide.h1,
-    intro: entry.guide.description,
+    intro: entry.quick?.tagline || entry.guide.description,
     guideOf: entry,
   })),
 ];
