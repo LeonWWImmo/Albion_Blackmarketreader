@@ -28,13 +28,19 @@ const FAILURE_TTL_S = 60;
  * which keeps AODP to about one call per endpoint, region and cache period per instance.
  */
 const memory = new Map();
+/** Price lists vary per chest log, so the memory keeps at most this many answers (oldest go first). */
+const MEMORY_MAX = 300;
 
 async function remembered(key, load) {
   const hit = memory.get(key);
   if (hit && hit.until > Date.now()) return hit.result;
   const result = await load();
   const ttl = result.status === 200 ? result.maxAge : result.status >= 500 ? FAILURE_TTL_S : 0;
-  if (ttl > 0) memory.set(key, { until: Date.now() + ttl * 1000, result });
+  if (ttl > 0) {
+    memory.delete(key);
+    memory.set(key, { until: Date.now() + ttl * 1000, result });
+    while (memory.size > MEMORY_MAX) memory.delete(memory.keys().next().value);
+  }
   return result;
 }
 
@@ -235,19 +241,24 @@ export async function getPrices(regionInput, idsInput, now = new Date()) {
   const ids = parseItemIds(idsInput);
   if (!ids) return { status: 400, body: { error: `ids must be 1-${PRICE_MAX_IDS} item ids` }, maxAge: 0 };
   const locations = encodeURIComponent(PRICE_CITIES.join(","));
-  try {
-    const rows = [];
-    for (let i = 0; i < ids.length; i += PRICE_CHUNK) {
-      const chunk = ids.slice(i, i + PRICE_CHUNK).map(encodeURIComponent).join(",");
-      const url = `https://${HOSTS[region]}.albion-online-data.com/api/v2/stats/prices/${chunk}.json?locations=${locations}&qualities=1,2,3,4,5`;
-      const { status, body } = await fetchJson(url);
-      if (status !== 200 || !Array.isArray(body)) return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
-      rows.push(...body);
+  // the same list from another visitor is answered from memory, even when the CDN misses
+  return remembered(`prices:${region}:${ids.join(",")}`, async () => {
+    try {
+      // the chunks run side by side, so a full list takes one AODP round trip, not three
+      const chunks = [];
+      for (let i = 0; i < ids.length; i += PRICE_CHUNK) chunks.push(ids.slice(i, i + PRICE_CHUNK));
+      const answers = await Promise.all(
+        chunks.map((chunk) =>
+          fetchJson(`https://${HOSTS[region]}.albion-online-data.com/api/v2/stats/prices/${chunk.map(encodeURIComponent).join(",")}.json?locations=${locations}&qualities=1,2,3,4,5`)
+        )
+      );
+      if (answers.some(({ status, body }) => status !== 200 || !Array.isArray(body))) return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
+      const rows = answers.flatMap(({ body }) => body);
+      return { status: 200, body: { region, fetchedAt: now.toISOString(), prices: parsePrices(rows, now) }, maxAge: 300 };
+    } catch {
+      return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
     }
-    return { status: 200, body: { region, fetchedAt: now.toISOString(), prices: parsePrices(rows, now) }, maxAge: 300 };
-  } catch {
-    return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
-  }
+  });
 }
 
 /** Shared response writer for Node's http.ServerResponse (Vercel and the Vite dev server). */

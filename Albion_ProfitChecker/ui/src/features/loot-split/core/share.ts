@@ -32,6 +32,13 @@ const fromBase64Url = (value: string) => {
 const MAX_LINK = 20_000;
 const MAX_BYTES = 1_000_000;
 const MAX_STACKS = 2_000;
+export const MAX_PLAYERS = 50;
+
+/** A finite number between 0 and max; anything else is 0. */
+const bounded = (value: unknown, max: number) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(0, n)) : 0;
+};
 
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
   const reader = new Blob([bytes as Uint8Array<ArrayBuffer>]).stream().pipeThrough(stream).getReader();
@@ -56,7 +63,9 @@ async function pipe(bytes: Uint8Array, stream: CompressionStream | Decompression
   return out;
 }
 
-export async function encodeSplit(split: SharedSplit): Promise<string> {
+/** The link code, or null when the split is too big for a link the decoder would accept. */
+export async function encodeSplit(split: SharedSplit): Promise<string | null> {
+  if (split.players.length > MAX_PLAYERS || split.stacks.length > MAX_STACKS) return null;
   const packed: Packed = [
     1,
     split.stacks.map((s) => [s.name, s.enchant, s.quality, s.amount]),
@@ -66,7 +75,8 @@ export async function encodeSplit(split: SharedSplit): Promise<string> {
     split.mode === "max" ? 1 : 0,
     Math.max(0, MARKETS.indexOf(split.market))
   ];
-  return toBase64Url(await pipe(new TextEncoder().encode(JSON.stringify(packed)), new CompressionStream("deflate-raw")));
+  const code = toBase64Url(await pipe(new TextEncoder().encode(JSON.stringify(packed)), new CompressionStream("deflate-raw")));
+  return code.length > MAX_LINK ? null : code;
 }
 
 /** null for anything that is not a share link this page made. */
@@ -80,14 +90,14 @@ export async function decodeSplit(value: string): Promise<SharedSplit | null> {
         name: String(name).slice(0, 120),
         enchant: Math.min(4, Math.max(0, Number(enchant) || 0)),
         quality: Math.min(5, Math.max(1, Number(quality) || 1)),
-        amount: Math.max(0, Math.round(Number(amount) || 0))
+        amount: Math.round(bounded(amount, 10_000_000))
       })),
-      players: packed[2].slice(0, 50).map(([name, share, repair]) => ({
+      players: packed[2].slice(0, MAX_PLAYERS).map(([name, share, repair]) => ({
         name: String(name).slice(0, 32),
-        share: Math.max(0, Number(share) || 0),
-        repair: Math.max(0, Number(repair) || 0)
+        share: bounded(share, 1_000),
+        repair: bounded(repair, 1e12)
       })),
-      guildPct: Math.min(100, Math.max(0, Number(packed[3]) || 0)),
+      guildPct: bounded(packed[3], 100),
       premium: packed[4] === 1,
       mode: packed[5] === 1 ? "max" : "fast",
       market: MARKETS[Number(packed[6])] ?? "best"

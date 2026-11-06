@@ -186,6 +186,15 @@ describe("loot split prices", () => {
     expect(prices).toEqual({ "T5_2H_CROSSBOW@1": [[1, 39000, [30000, 0, 0, 32000, 0, 0], [70000, 0, 0, 60000, 0, 0]]] });
   });
 
+  it("answers the same list again from memory, and asks for big lists in parallel", async () => {
+    const fetchMock = stubFetch(200, []);
+    const many = Array.from({ length: 250 }, (_, i) => "T4_X" + i).join(",");
+    expect((await getPrices("eu", many, now)).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await getPrices("eu", many, now);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("asks AODP for every city and quality, refuses bad input without calling it", async () => {
     const fetchMock = stubFetch(200, [row("Black Market", 2, 49000, 0)]);
     expect((await getPrices("eu", "bad id", now)).status).toBe(400);

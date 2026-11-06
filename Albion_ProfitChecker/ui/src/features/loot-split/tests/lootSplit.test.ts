@@ -163,8 +163,17 @@ describe("share link", () => {
     };
     const code = await encodeSplit(split);
     expect(code).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(await decodeSplit(code)).toEqual(split);
+    expect(await decodeSplit(code ?? "")).toEqual(split);
     expect(await decodeSplit("not-a-split")).toBeNull();
     expect(await decodeSplit("A".repeat(20_001))).toBeNull();
+  });
+
+  it("makes no link the other side would cut short, and reads silly numbers as safe ones", async () => {
+    const base = { stacks: [], guildPct: 0, premium: true, mode: "fast" as const, market: "best" as const };
+    const crowd = Array.from({ length: 51 }, (_, i) => ({ name: `P${i}`, share: 100, repair: 0 }));
+    expect(await encodeSplit({ ...base, players: crowd })).toBeNull();
+    const code = await encodeSplit({ ...base, players: [{ name: "A", share: Infinity, repair: -5 }] });
+    const opened = await decodeSplit(code ?? "");
+    expect(opened?.players).toEqual([{ name: "A", share: 0, repair: 0 }]);
   });
 });

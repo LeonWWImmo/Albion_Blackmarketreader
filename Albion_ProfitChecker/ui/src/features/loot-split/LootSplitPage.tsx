@@ -176,6 +176,14 @@ export function LootSplitPage() {
   entriesRef.current = entries;
   const rangeRef = useRef(range);
   rangeRef.current = range;
+  // typed shares and repairs by name, and who was removed, so moving the range brings back neither
+  // a removed player nor a player without their numbers
+  const remembered = useRef(new Map<string, { share: number; repair: number }>());
+  const removed = useRef(new Set<string>());
+  const forgetPlayers = () => {
+    remembered.current.clear();
+    removed.current.clear();
+  };
 
   const flash = (text: string) => {
     setToast(text);
@@ -191,7 +199,9 @@ export function LootSplitPage() {
       return;
     }
     const current = entriesRef.current;
-    if (current.length) {
+    // a shared split has no times to match rows against, so a pasted log replaces it
+    const shared = current.length > 0 && current.every((e) => !Number.isFinite(e.time));
+    if (current.length && !shared) {
       const { entries: merged, added } = mergeLogs(current, parsed);
       if (!added.length) {
         flash("Already in the split");
@@ -209,6 +219,8 @@ export function LootSplitPage() {
       return;
     }
     const trips = timedTrips(parsed);
+    if (window.location.hash) history.replaceState(null, "", window.location.pathname);
+    forgetPlayers();
     setEntries(parsed);
     setRange(trips.length ? tripRange(trips[trips.length - 1]) : null);
     setPicking(trips.length > 0);
@@ -236,6 +248,7 @@ export function LootSplitPage() {
       if (!split) return;
       setEntries(split.stacks.map((s) => ({ time: NaN, player: "", name: s.name, enchant: s.enchant, quality: s.quality, amount: s.amount })));
       setRange(null);
+      forgetPlayers();
       setPlayers(split.players.map((p) => ({ ...p, added: true })));
       setGuildPct(split.guildPct);
       setPremium(split.premium);
@@ -272,16 +285,21 @@ export function LootSplitPage() {
   );
   const { stacks, takenOut } = useMemo(() => netStacks(used), [used]);
 
-  // everyone in the chosen range gets a full share; added players and anyone with an edited share
-  // or repairs stay, so moving the range never throws typed numbers away
+  // everyone in the chosen range is in the split, with the share and repairs typed for them before;
+  // players added by hand stay, players removed by hand stay out
   const logPlayers = useMemo(() => [...new Set(used.map((e) => e.player).filter(Boolean))], [used]);
   useEffect(() => {
     setPlayers((prev) => {
-      const kept = prev.filter((p) => p.added || p.share !== 100 || p.repair > 0 || logPlayers.includes(p.name));
-      const fresh = logPlayers.filter((name) => !kept.some((p) => p.name === name)).map((name) => ({ name, share: 100, repair: 0 }));
+      const kept = prev.filter((p) => p.added || logPlayers.includes(p.name));
+      const fresh = logPlayers
+        .filter((name) => !kept.some((p) => p.name === name) && !removed.current.has(name))
+        .map((name) => ({ name, share: 100, repair: 0, ...remembered.current.get(name) }));
       return [...kept, ...fresh];
     });
   }, [logPlayers]);
+  useEffect(() => {
+    for (const p of players) remembered.current.set(p.name, { share: p.share, repair: p.repair });
+  }, [players]);
 
   useEffect(() => {
     if (!entries.length || names) return;
@@ -332,8 +350,11 @@ export function LootSplitPage() {
   const colorOf = (name: string) => PLAYER_COLORS[Math.max(0, players.findIndex((p) => p.name === name)) % PLAYER_COLORS.length];
   const pricing = status === "loading" && !prices;
 
-  const shareUrl = async () =>
-    `${window.location.origin}/loot-split#s=${await encodeSplit({ stacks, players, guildPct, premium, mode, market })}`;
+  /** The share link, or null when the split is too big for one or the browser cannot pack it. */
+  const shareUrl = async () => {
+    const code = await encodeSplit({ stacks, players, guildPct, premium, mode, market }).catch(() => null);
+    return code ? `${window.location.origin}/loot-split#s=${code}` : null;
+  };
 
   const copy = async (text: string, done: string) => {
     try {
@@ -355,9 +376,10 @@ export function LootSplitPage() {
       ...(split.guild > 0 ? [`🛡️ Guild ${guildPct}% · ${shortSilver(split.guild)}`] : [])
     ];
     // Discord takes 2000 characters: a huge log leaves the link out rather than failing
-    const link = `[Open the split](<${await shareUrl()}>)`;
+    const url = await shareUrl();
+    const link = url ? `[Open the split](<${url}>)` : "";
     const text = lines.join("\n");
-    copy(text.length + link.length < 1990 ? `${text}\n${link}` : text, "Copied, paste it in Discord");
+    copy(link && text.length + link.length < 1990 ? `${text}\n${link}` : text, "Copied, paste it in Discord");
   };
 
   const editPlayer = (name: string, change: Partial<Player>) => setPlayers((all) => all.map((p) => (p.name === name ? { ...p, ...change } : p)));
@@ -365,11 +387,13 @@ export function LootSplitPage() {
   const addPlayer = () => {
     const name = newPlayer.trim().slice(0, 32);
     if (!name || players.some((p) => p.name.toLowerCase() === name.toLowerCase())) return;
+    removed.current.delete(name);
     setPlayers([...players, { name, share: 100, repair: 0, added: true }]);
     setNewPlayer("");
   };
 
   const reset = () => {
+    forgetPlayers();
     setEntries([]);
     setRange(null);
     setPriced(null);
@@ -641,7 +665,10 @@ export function LootSplitPage() {
                         />
                       </span>
                       <b className="ls-cut">{shortSilver(p.silver)}</b>
-                      <button type="button" className="ls-x" aria-label={`Remove ${p.name}`} onClick={() => setPlayers(players.filter((x) => x.name !== p.name))}>
+                      <button type="button" className="ls-x" aria-label={`Remove ${p.name}`} onClick={() => {
+                          removed.current.add(p.name);
+                          setPlayers(players.filter((x) => x.name !== p.name));
+                        }}>
                         ×
                       </button>
                       <span className="ls-bar-fill" style={{ width: `${total ? (p.silver / total) * 100 : 0}%` }} aria-hidden="true" />
@@ -681,7 +708,11 @@ export function LootSplitPage() {
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18a19.9 19.9 0 0 0 6 3l1.3-2a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2a19.8 19.8 0 0 0 6-3c.5-5.1-.8-9.6-3.6-13.6ZM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" /></svg>
                     Copy for Discord
                   </button>
-                  <button type="button" className="ls-icon-btn" onClick={async () => copy(await shareUrl(), "Link copied")} aria-label="Copy share link" title="Copy share link">
+                  <button type="button" className="ls-icon-btn" onClick={async () => {
+                      const url = await shareUrl();
+                      if (url) copy(url, "Link copied");
+                      else flash("This split is too big for a link");
+                    }} aria-label="Copy share link" title="Copy share link">
                     <span className="material-symbols-outlined">link</span>
                   </button>
                 </div>
