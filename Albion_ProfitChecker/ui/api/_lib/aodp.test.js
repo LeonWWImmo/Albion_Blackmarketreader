@@ -172,7 +172,7 @@ describe("loot split prices", () => {
     expect(parseItemIds(Array.from({ length: 301 }, (_, i) => "T4_X" + i).join(","))).toBeNull();
   });
 
-  it("keeps the best Black Market order, best city order and a sane sell order per quality", () => {
+  it("keeps the Black Market order and each city's buy and sane sell order per quality", () => {
     const prices = parsePrices([
       row("Black Market", 1, 39000, 0),
       row("Black Market", 1, 41000, 0, "2026-10-20T10:00:00"), // stale: ignored
@@ -182,7 +182,8 @@ describe("loot split prices", () => {
       row("Brecilien", 1, 90000, 90000), // not a city we value in
       row("Thetford", 2, 0, 0)
     ], now);
-    expect(prices).toEqual({ "T5_2H_CROSSBOW@1": [[1, 39000, 32000, "Lymhurst", 70000, "Caerleon"]] });
+    // cities: Caerleon, Bridgewatch, Fort Sterling, Lymhurst, Martlock, Thetford
+    expect(prices).toEqual({ "T5_2H_CROSSBOW@1": [[1, 39000, [30000, 0, 0, 32000, 0, 0], [70000, 0, 0, 60000, 0, 0]]] });
   });
 
   it("asks AODP for every city and quality, refuses bad input without calling it", async () => {
@@ -190,7 +191,7 @@ describe("loot split prices", () => {
     expect((await getPrices("eu", "bad id", now)).status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
     const result = await getPrices("eu", "T5_2H_CROSSBOW@1", now);
-    expect(result).toMatchObject({ status: 200, maxAge: 300, body: { prices: { "T5_2H_CROSSBOW@1": [[2, 49000, 0, "", 0, ""]] } } });
+    expect(result).toMatchObject({ status: 200, maxAge: 300, body: { prices: { "T5_2H_CROSSBOW@1": [[2, 49000, [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]] } } });
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://europe.albion-online-data.com/api/v2/stats/prices/T5_2H_CROSSBOW%401.json?locations=Black%20Market%2CCaerleon%2CBridgewatch%2CFort%20Sterling%2CLymhurst%2CMartlock%2CThetford&qualities=1,2,3,4,5"
     );

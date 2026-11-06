@@ -188,10 +188,14 @@ const fresh = (price, stamp, now) => {
   return price > 0 && Number.isFinite(ms) && now.getTime() - ms <= PRICE_FRESH_MS ? price : 0;
 };
 
+/** The royal cities, in the order the per-city price arrays use. */
+const MARKET_CITIES = PRICE_CITIES.slice(1);
+
 /**
- * AODP rows -> { [itemId]: [[quality, bm, buy, buyCity, sell, sellCity], ...] }.
- * bm: best Black Market buy order; buy: best city buy order (sell instantly); sell: best city
- * sell order to list against, capped at 1.5x the cities' median so one stale listing does not win.
+ * AODP rows -> { [itemId]: [[quality, bm, buys, sells], ...] }, buys and sells one price per city
+ * in MARKET_CITIES order (0 = none). bm: best Black Market buy order; buys: city buy orders (sell
+ * instantly); sells: city sell orders to list against, a listing above 1.5x the cities' median
+ * dropped so one stale listing does not win.
  */
 export function parsePrices(raw, now = new Date()) {
   const cells = new Map();
@@ -200,27 +204,26 @@ export function parsePrices(raw, now = new Date()) {
     const quality = Number(row?.quality);
     if (!ITEM_ID.test(id) || !(quality >= 1 && quality <= 5)) continue;
     const key = `${id}|${quality}`;
-    const cell = cells.get(key) || { id, quality, bm: 0, buy: 0, buyCity: "", sells: [] };
+    const cell = cells.get(key) || { id, quality, bm: 0, buys: MARKET_CITIES.map(() => 0), sells: MARKET_CITIES.map(() => 0) };
     const buy = fresh(Number(row.buy_price_max), row.buy_price_max_date, now);
     const sell = fresh(Number(row.sell_price_min), row.sell_price_min_date, now);
+    const city = MARKET_CITIES.indexOf(row.city);
     if (row.city === "Black Market") cell.bm = Math.max(cell.bm, buy);
-    else if (PRICE_CITIES.includes(row.city)) {
-      if (buy > cell.buy) Object.assign(cell, { buy, buyCity: row.city });
-      if (sell) cell.sells.push([sell, row.city]);
+    else if (city >= 0) {
+      cell.buys[city] = Math.max(cell.buys[city], buy);
+      if (sell) cell.sells[city] = cell.sells[city] ? Math.min(cell.sells[city], sell) : sell;
     }
     cells.set(key, cell);
   }
   const out = {};
   for (const cell of cells.values()) {
-    let sell = 0;
-    let sellCity = "";
-    if (cell.sells.length) {
-      const sorted = cell.sells.map(([price]) => price).sort((a, b) => a - b);
-      const cap = sorted[Math.floor((sorted.length - 1) / 2)] * 1.5;
-      for (const [price, city] of cell.sells) if (price <= cap && price > sell) [sell, sellCity] = [price, city];
+    const listed = cell.sells.filter(Boolean).sort((a, b) => a - b);
+    if (listed.length) {
+      const cap = listed[Math.floor((listed.length - 1) / 2)] * 1.5;
+      cell.sells = cell.sells.map((price) => (price <= cap ? price : 0));
     }
-    if (!cell.bm && !cell.buy && !sell) continue;
-    (out[cell.id] ||= []).push([cell.quality, cell.bm, cell.buy, cell.buyCity, sell, sellCity]);
+    if (!cell.bm && !cell.buys.some(Boolean) && !cell.sells.some(Boolean)) continue;
+    (out[cell.id] ||= []).push([cell.quality, cell.bm, cell.buys, cell.sells]);
   }
   for (const rows of Object.values(out)) rows.sort((a, b) => a[0] - b[0]);
   return out;

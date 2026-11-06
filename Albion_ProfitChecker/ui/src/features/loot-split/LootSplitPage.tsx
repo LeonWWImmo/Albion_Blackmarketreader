@@ -9,10 +9,25 @@ import "./lootSplit.css";
 import { groupTrips, netStacks, parseLootLog, type LogEntry } from "./core/lootLog";
 import { decodeSplit, encodeSplit } from "./core/share";
 import { EXAMPLE_LOG } from "./core/example";
-import { ROUTE_LABEL, bestSale, itemId, payouts, shortSilver, type PriceTable, type Route, type SellMode } from "./core/valuation";
+import { inRange, tripRange, type Range } from "./core/timeline";
+import {
+  MARKETS,
+  ROUTE_LABEL,
+  bestSale,
+  itemId,
+  parseSilver,
+  payouts,
+  shortSilver,
+  type Market,
+  type PriceTable,
+  type Route,
+  type SellMode
+} from "./core/valuation";
+import { RunPicker, rangeLabel } from "./RunPicker";
+import { CopyGuide } from "./CopyGuide";
 
 type Region = "eu" | "us";
-type Player = { name: string; share: number; added?: boolean };
+type Player = { name: string; share: number; repair: number; added?: boolean };
 
 const QUALITY = ["", "Normal", "Good", "Outstanding", "Excellent", "Masterpiece"];
 const ROUTES: Route[] = ["bm", "buy", "sell"];
@@ -21,10 +36,7 @@ const PRICE_CHUNK = 300;
 const PLAYER_COLORS = ["#f5c451", "#7dd3fc", "#a78bfa", "#4ade80", "#fb7185", "#fdba74", "#5eead4", "#f0abfc"];
 
 const fmt = (n: number) => Math.round(n).toLocaleString("de-DE");
-const tripLabel = (t: number) =>
-  Number.isFinite(t)
-    ? new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
-    : "Shared split";
+const timedTrips = (entries: LogEntry[]) => groupTrips(entries).filter((t) => Number.isFinite(t.start));
 
 function useRegion(): [Region, (next: Region) => void] {
   const [service] = useState(() => new RegionService("eu"));
@@ -85,6 +97,24 @@ async function loadPrices(region: Region, ids: string[]): Promise<PriceTable> {
   return table;
 }
 
+/** Repairs typed the way players say them: 50k, 1.2m or 75000. */
+function SilverInput({ value, label, onChange }: { value: number; label: string; onChange: (silver: number) => void }) {
+  const [text, setText] = useState(value ? shortSilver(value) : "");
+  return (
+    <input
+      value={text}
+      inputMode="decimal"
+      placeholder="0"
+      aria-label={label}
+      maxLength={12}
+      onChange={(e) => {
+        setText(e.target.value);
+        onChange(parseSilver(e.target.value));
+      }}
+    />
+  );
+}
+
 export function LootSplitPage() {
   useSeo({
     title: "Albion Online Loot Split Calculator | Blackmarket Reader",
@@ -106,10 +136,12 @@ export function LootSplitPage() {
   const [region, setRegion] = useRegion();
   const [premium, setPremium] = useSessionState<boolean>("ls:premium", true);
   const [mode, setMode] = useSessionState<SellMode>("ls:mode", "fast");
+  const [market, setMarket] = useSessionState<Market>("ls:market", "best");
   const [guildPct, setGuildPct] = useSessionState<number>("ls:guild", 0);
-  const [repair, setRepair] = useState(0);
   const [entries, setEntries] = useState<LogEntry[]>([]);
-  const [offTrips, setOffTrips] = useState<Set<string>>(new Set());
+  const [range, setRange] = useState<Range | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [guide, setGuide] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [names, setNames] = useState<Record<string, string> | null>(null);
   const [prices, setPrices] = useState<PriceTable | null>(null);
@@ -125,14 +157,18 @@ export function LootSplitPage() {
     window.setTimeout(() => setToast(""), 2200);
   };
 
+  // a fresh log asks which part counts, starting with the newest trip
   const openLog = useCallback((text: string) => {
     const parsed = parseLootLog(text);
     if (!parsed.length) {
       flash("That is not a chest log");
       return;
     }
+    const trips = timedTrips(parsed);
     setEntries(parsed);
-    setOffTrips(new Set());
+    setRange(trips.length ? tripRange(trips[trips.length - 1]) : null);
+    setPicking(trips.length > 0);
+    setGuide(false);
     setPlayers([]);
     setShowAll(false);
   }, []);
@@ -144,11 +180,12 @@ export function LootSplitPage() {
     decodeSplit(code).then((split) => {
       if (!split) return;
       setEntries(split.stacks.map((s) => ({ time: NaN, player: "", name: s.name, enchant: s.enchant, quality: s.quality, amount: s.amount })));
+      setRange(null);
       setPlayers(split.players.map((p) => ({ ...p, added: true })));
       setGuildPct(split.guildPct);
-      setRepair(split.repair);
       setPremium(split.premium);
       setMode(split.mode);
+      setMarket(split.market);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -173,16 +210,19 @@ export function LootSplitPage() {
     else openLog(event.dataTransfer.getData("text"));
   };
 
-  const trips = useMemo(() => groupTrips(entries), [entries]);
-  const used = useMemo(() => trips.filter((t) => !offTrips.has(t.id)).flatMap((t) => t.entries), [trips, offTrips]);
+  const trips = useMemo(() => timedTrips(entries), [entries]);
+  const used = useMemo(
+    () => (range ? entries.filter((e) => !Number.isFinite(e.time) || inRange(e.time, range)) : entries),
+    [entries, range]
+  );
   const { stacks, takenOut } = useMemo(() => netStacks(used), [used]);
 
-  // everyone in the chosen trips gets a full share; added players and edited shares stay
+  // everyone in the chosen range gets a full share; added players and edited shares stay
   const logPlayers = useMemo(() => [...new Set(used.map((e) => e.player).filter(Boolean))], [used]);
   useEffect(() => {
     setPlayers((prev) => {
       const kept = prev.filter((p) => p.added || logPlayers.includes(p.name));
-      const fresh = logPlayers.filter((name) => !kept.some((p) => p.name === name)).map((name) => ({ name, share: 100 }));
+      const fresh = logPlayers.filter((name) => !kept.some((p) => p.name === name)).map((name) => ({ name, share: 100, repair: 0 }));
       return [...kept, ...fresh];
     });
   }, [logPlayers]);
@@ -192,10 +232,12 @@ export function LootSplitPage() {
     loadNames().then(setNames).catch(() => setStatus("error"));
   }, [entries.length, names, retry]);
 
+  // prices for everything the log ever put in, so moving the range never waits for prices
   const ids = useMemo(() => {
     if (!names) return [];
-    return [...new Set(stacks.map((s) => itemId(names, s.name, s.enchant)).filter((id): id is string => !!id))].sort();
-  }, [names, stacks]);
+    const all = entries.filter((e) => e.amount > 0).map((e) => itemId(names, e.name, e.enchant));
+    return [...new Set(all.filter((id): id is string => !!id))].sort();
+  }, [names, entries]);
   const idsKey = ids.join(",");
 
   useEffect(() => {
@@ -219,22 +261,23 @@ export function LootSplitPage() {
     return stacks
       .map((s) => {
         const id = names ? itemId(names, s.name, s.enchant) : null;
-        const sale = id && prices ? bestSale(prices[id], s.quality, premium, mode) : null;
+        const sale = id && prices ? bestSale(prices[id], s.quality, premium, mode, market) : null;
         return { ...s, id, sale, value: sale ? sale.unit * s.amount : 0 };
       })
       .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
-  }, [stacks, names, prices, premium, mode]);
+  }, [stacks, names, prices, premium, mode, market]);
 
   const total = valued.reduce((sum, v) => sum + v.value, 0);
   const shown = useCountUp(total);
   const byRoute = ROUTES.map((route) => ({ route, value: valued.filter((v) => v.sale?.route === route).reduce((s, v) => s + v.value, 0) }));
   const unpriced = valued.filter((v) => !v.sale).length;
   const itemCount = valued.reduce((sum, v) => sum + v.amount, 0);
-  const split = payouts({ total, repair, guildPct, players });
+  const split = payouts({ total, guildPct, players });
   const colorOf = (name: string) => PLAYER_COLORS[Math.max(0, players.findIndex((p) => p.name === name)) % PLAYER_COLORS.length];
+  const pricing = status === "loading" && !prices;
 
   const shareUrl = async () =>
-    `${window.location.origin}/loot-split#s=${await encodeSplit({ stacks, players, guildPct, repair, premium, mode })}`;
+    `${window.location.origin}/loot-split#s=${await encodeSplit({ stacks, players, guildPct, premium, mode, market })}`;
 
   const copy = async (text: string, done: string) => {
     try {
@@ -246,10 +289,14 @@ export function LootSplitPage() {
   };
 
   const copyDiscord = async () => {
+    const how = mode === "fast" ? "sold instantly" : "best price incl. sell orders";
     const lines = [
       `## 💰 Loot split · ${shortSilver(total)} silver`,
-      `-# ${itemCount} items · ${mode === "fast" ? "sold instantly" : "best price incl. sell orders"} · ${region.toUpperCase()}${guildPct ? ` · guild ${guildPct}%` : ""}${repair ? ` · repairs ${shortSilver(repair)}` : ""}`,
-      ...split.players.map((p) => `**${p.name}** · ${shortSilver(p.silver)}${p.share !== 100 ? ` (${p.share}%)` : ""}`),
+      `-# ${[`${itemCount} items`, range && rangeLabel(range), market === "best" ? how : `${how} in ${market}`, region.toUpperCase()].filter(Boolean).join(" · ")}`,
+      ...split.players.map(
+        (p) => `**${p.name}** · ${shortSilver(p.silver)}${p.share !== 100 ? ` (${p.share}%)` : ""}${p.repair ? ` · incl. ${shortSilver(p.repair)} repairs` : ""}`
+      ),
+      ...(split.guild > 0 ? [`🛡️ Guild ${guildPct}% · ${shortSilver(split.guild)}`] : [])
     ];
     // Discord takes 2000 characters: a huge log leaves the link out rather than failing
     const link = `[Open the split](<${await shareUrl()}>)`;
@@ -257,15 +304,18 @@ export function LootSplitPage() {
     copy(text.length + link.length < 1990 ? `${text}\n${link}` : text, "Copied, paste it in Discord");
   };
 
+  const editPlayer = (name: string, change: Partial<Player>) => setPlayers((all) => all.map((p) => (p.name === name ? { ...p, ...change } : p)));
+
   const addPlayer = () => {
     const name = newPlayer.trim().slice(0, 32);
     if (!name || players.some((p) => p.name.toLowerCase() === name.toLowerCase())) return;
-    setPlayers([...players, { name, share: 100, added: true }]);
+    setPlayers([...players, { name, share: 100, repair: 0, added: true }]);
     setNewPlayer("");
   };
 
   const reset = () => {
     setEntries([]);
+    setRange(null);
     setPrices(null);
     if (window.location.hash) history.replaceState(null, "", window.location.pathname);
   };
@@ -319,14 +369,10 @@ export function LootSplitPage() {
               </span>
             </label>
             <div className="ls-empty-links">
-              <details className="ls-how">
-                <summary>How to copy it</summary>
-                <ol>
-                  <li>Open the guild chest</li>
-                  <li>Click <b>Log</b></li>
-                  <li>Click <b>Copy</b>, then paste here</li>
-                </ol>
-              </details>
+              <button type="button" className="ls-link ls-link-guide" onClick={() => setGuide(true)}>
+                <span className="material-symbols-outlined" aria-hidden="true">play_circle</span>
+                How to copy it
+              </button>
               <button type="button" className="ls-link" onClick={() => openLog(EXAMPLE_LOG)}>
                 Try an example
               </button>
@@ -335,30 +381,26 @@ export function LootSplitPage() {
         ) : (
           <>
             <div className="ls-bar">
-              <div className="ls-trips" role="group" aria-label="Trips">
-                {trips.map((t) => {
-                  const on = !offTrips.has(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`ls-trip${on ? " is-on" : ""}`}
-                      aria-pressed={on}
-                      onClick={() => {
-                        const next = new Set(offTrips);
-                        if (on) next.add(t.id);
-                        else next.delete(t.id);
-                        if (next.size < trips.length) setOffTrips(next);
-                      }}
-                    >
-                      <span className="ls-trip-time">{tripLabel(t.start)}</span>
-                      <span className="ls-trip-meta">
-                        {t.entries.length} rows · {t.players.length} {t.players.length === 1 ? "player" : "players"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              {range ? (
+                <button type="button" className="ls-range" onClick={() => setPicking(true)} title="Change which part of the log counts">
+                  <span className="material-symbols-outlined" aria-hidden="true">date_range</span>
+                  <span>
+                    <b>{rangeLabel(range)}</b>
+                    <small>
+                      {itemCount} items · {logPlayers.length} {logPlayers.length === 1 ? "player" : "players"}
+                    </small>
+                  </span>
+                  <span className="ls-range-edit material-symbols-outlined" aria-hidden="true">tune</span>
+                </button>
+              ) : (
+                <span className="ls-range is-static">
+                  <span className="material-symbols-outlined" aria-hidden="true">link</span>
+                  <span>
+                    <b>Shared split</b>
+                    <small>{itemCount} items</small>
+                  </span>
+                </span>
+              )}
               <div className="ls-controls">
                 <div className="ls-seg" role="group" aria-label="Server">
                   {(["eu", "us"] as const).map((r) => (
@@ -375,6 +417,17 @@ export function LootSplitPage() {
                     💰 Max
                   </button>
                 </div>
+                <label className={`ls-market${market !== "best" ? " is-set" : ""}`} title="Where to sell. Items this market does not take go to the best other one.">
+                  <span className="material-symbols-outlined" aria-hidden="true">storefront</span>
+                  <select value={market} onChange={(e) => setMarket(e.target.value as Market)} aria-label="Sell at">
+                    {MARKETS.map((m) => (
+                      <option key={m} value={m}>
+                        {m === "best" ? "Best market" : m}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="ls-market-caret material-symbols-outlined" aria-hidden="true">expand_more</span>
+                </label>
                 <button type="button" className={`ls-toggle${premium ? " is-on" : ""}`} aria-pressed={premium} onClick={() => setPremium(!premium)}>
                   <span aria-hidden="true" />
                   Premium
@@ -388,9 +441,7 @@ export function LootSplitPage() {
             <section className="ls-hero" aria-live="polite">
               <div className="ls-total">
                 <p className="ls-label">Chest value</p>
-                <p className="ls-big">
-                  {status === "loading" && !prices ? <span className="ls-shimmer">Pricing…</span> : shortSilver(shown)}
-                </p>
+                <p className="ls-big">{pricing ? <span className="ls-shimmer">Pricing…</span> : shortSilver(shown)}</p>
                 <p className="ls-sub">
                   {fmt(total)} silver · {itemCount} items · {players.length} {players.length === 1 ? "player" : "players"}
                   {takenOut > 0 && <> · {takenOut} taken out</>}
@@ -476,22 +527,15 @@ export function LootSplitPage() {
               <section className="ls-card ls-split" aria-label="Split">
                 <div className="ls-card-head">
                   <h3>Split</h3>
-                  <span>{shortSilver(split.pool)} to share</span>
+                  <span>
+                    {shortSilver(split.pool)} to share{split.repairs > 0 && <> · {shortSilver(split.repairs)} repairs back</>}
+                  </span>
                 </div>
-                <div className="ls-inputs">
-                  <label>
-                    Guild tax
-                    <span className="ls-input">
-                      <input type="number" min={0} max={100} value={guildPct} onChange={(e) => setGuildPct(Math.min(100, Math.max(0, Number(e.target.value) || 0)))} />
-                      %
-                    </span>
-                  </label>
-                  <label>
-                    Repairs
-                    <span className="ls-input">
-                      <input type="number" min={0} step={10000} value={repair || ""} placeholder="0" onChange={(e) => setRepair(Math.max(0, Number(e.target.value) || 0))} />
-                    </span>
-                  </label>
+                <div className="ls-cols" aria-hidden="true">
+                  <span>Player</span>
+                  <span>Share</span>
+                  <span>Repairs</span>
+                  <span>Gets</span>
                 </div>
                 <ul className="ls-players">
                   {split.players.map((p) => (
@@ -506,17 +550,43 @@ export function LootSplitPage() {
                           step={25}
                           value={p.share}
                           aria-label={`${p.name} share`}
-                          onChange={(e) => setPlayers(players.map((x) => (x.name === p.name ? { ...x, share: Math.max(0, Number(e.target.value) || 0) } : x)))}
+                          onChange={(e) => editPlayer(p.name, { share: Math.max(0, Number(e.target.value) || 0) })}
                         />
                         %
+                      </span>
+                      <span className="ls-input ls-repair" title="What this player paid for repairs, paid back first">
+                        <SilverInput
+                          value={players.find((x) => x.name === p.name)?.repair ?? 0}
+                          label={`${p.name} repairs`}
+                          onChange={(repair) => editPlayer(p.name, { repair })}
+                        />
                       </span>
                       <b className="ls-cut">{shortSilver(p.silver)}</b>
                       <button type="button" className="ls-x" aria-label={`Remove ${p.name}`} onClick={() => setPlayers(players.filter((x) => x.name !== p.name))}>
                         ×
                       </button>
-                      <span className="ls-bar-fill" style={{ width: `${split.pool ? (p.silver / split.pool) * 100 : 0}%` }} aria-hidden="true" />
+                      <span className="ls-bar-fill" style={{ width: `${total ? (p.silver / total) * 100 : 0}%` }} aria-hidden="true" />
                     </li>
                   ))}
+                  <li className="ls-guild" style={{ "--c": "#cbd5e1" } as CSSProperties}>
+                    <span className="ls-avatar material-symbols-outlined" aria-hidden="true">shield</span>
+                    <span className="ls-name">Guild</span>
+                    <span className="ls-input ls-share" title="Guild tax, taken after repairs">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={guildPct}
+                        aria-label="Guild tax"
+                        onChange={(e) => setGuildPct(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                      />
+                      %
+                    </span>
+                    <span />
+                    <b className="ls-cut">{split.guild > 0 ? shortSilver(split.guild) : "–"}</b>
+                    <span />
+                    <span className="ls-bar-fill" style={{ width: `${total ? (split.guild / total) * 100 : 0}%` }} aria-hidden="true" />
+                  </li>
                 </ul>
                 <form
                   className="ls-add"
@@ -527,7 +597,6 @@ export function LootSplitPage() {
                 >
                   <input value={newPlayer} onChange={(e) => setNewPlayer(e.target.value)} placeholder="+ Add player" maxLength={32} />
                 </form>
-                {split.guild > 0 && <p className="ls-guild">Guild gets {shortSilver(split.guild)}</p>}
                 <div className="ls-actions">
                   <button type="button" className="ls-discord" onClick={copyDiscord} disabled={!total}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18a19.9 19.9 0 0 0 6 3l1.3-2a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2a19.8 19.8 0 0 0 6-3c.5-5.1-.8-9.6-3.6-13.6ZM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" /></svg>
@@ -543,6 +612,18 @@ export function LootSplitPage() {
         )}
       </main>
 
+      {picking && range && trips.length > 0 && (
+        <RunPicker
+          trips={trips}
+          range={range}
+          onRange={setRange}
+          items={itemCount}
+          players={logPlayers.length}
+          value={pricing ? "Pricing…" : `${shortSilver(total)} silver`}
+          onClose={() => setPicking(false)}
+        />
+      )}
+      {guide && <CopyGuide onClose={() => setGuide(false)} />}
       {dragging && (
         <div className="ls-dropzone" aria-hidden="true">
           <span className="material-symbols-outlined">download</span>

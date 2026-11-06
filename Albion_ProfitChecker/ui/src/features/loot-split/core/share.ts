@@ -1,4 +1,5 @@
 import type { Stack } from "./lootLog";
+import { MARKETS, type Market } from "./valuation";
 
 /**
  * Everything a share link carries: the items left in the chest plus the split settings.
@@ -7,14 +8,14 @@ import type { Stack } from "./lootLog";
 export type SharedStack = Omit<Stack, "key">;
 export type SharedSplit = {
   stacks: SharedStack[];
-  players: { name: string; share: number }[];
+  players: { name: string; share: number; repair: number }[];
   guildPct: number;
-  repair: number;
   premium: boolean;
   mode: "fast" | "max";
+  market: Market;
 };
 
-type Packed = [number, [string, number, number, number][], [string, number][], number, number, number, number];
+type Packed = [number, [string, number, number, number][], [string, number, number][], number, number, number, number];
 
 const toBase64Url = (bytes: Uint8Array) => {
   let text = "";
@@ -36,11 +37,11 @@ export async function encodeSplit(split: SharedSplit): Promise<string> {
   const packed: Packed = [
     1,
     split.stacks.map((s) => [s.name, s.enchant, s.quality, s.amount]),
-    split.players.map((p) => [p.name, p.share]),
+    split.players.map((p) => [p.name, p.share, Math.round(p.repair)]),
     split.guildPct,
-    split.repair,
     split.premium ? 1 : 0,
-    split.mode === "max" ? 1 : 0
+    split.mode === "max" ? 1 : 0,
+    Math.max(0, MARKETS.indexOf(split.market))
   ];
   return toBase64Url(await pipe(new TextEncoder().encode(JSON.stringify(packed)), new CompressionStream("deflate-raw")));
 }
@@ -57,11 +58,15 @@ export async function decodeSplit(value: string): Promise<SharedSplit | null> {
         quality: Math.min(5, Math.max(1, Number(quality) || 1)),
         amount: Math.max(0, Math.round(Number(amount) || 0))
       })),
-      players: packed[2].slice(0, 50).map(([name, share]) => ({ name: String(name).slice(0, 32), share: Math.max(0, Number(share) || 0) })),
+      players: packed[2].slice(0, 50).map(([name, share, repair]) => ({
+        name: String(name).slice(0, 32),
+        share: Math.max(0, Number(share) || 0),
+        repair: Math.max(0, Number(repair) || 0)
+      })),
       guildPct: Math.min(100, Math.max(0, Number(packed[3]) || 0)),
-      repair: Math.max(0, Number(packed[4]) || 0),
-      premium: packed[5] === 1,
-      mode: packed[6] === 1 ? "max" : "fast"
+      premium: packed[4] === 1,
+      mode: packed[5] === 1 ? "max" : "fast",
+      market: MARKETS[Number(packed[6])] ?? "best"
     };
   } catch {
     return null;
