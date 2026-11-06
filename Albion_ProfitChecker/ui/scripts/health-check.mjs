@@ -28,8 +28,8 @@ const SITE_PATH = "Albion_ProfitChecker/ui";
 // the website check stops retrying after this, so the report is always written in time
 const WEBSITE_BUDGET_MS = 10 * 60000;
 
-const PAGES = ["/", "/dashboard", "/bm-crafter", "/crafting-calculator", "/refining-calculator", "/food-potion-crafter", "/gold-tracker", "/guides", "/guides/albion-online-gold-price", "/community", "/legal", "/login"];
-const PAGE_NAMES = { "/": "Home", "/dashboard": "Dash", "/bm-crafter": "BM", "/crafting-calculator": "Craft", "/refining-calculator": "Refine", "/food-potion-crafter": "Food", "/gold-tracker": "Gold", "/guides": "Guides", "/guides/albion-online-gold-price": "Guide", "/community": "Comm.", "/legal": "Legal", "/login": "Login" };
+const PAGES = ["/", "/dashboard", "/bm-crafter", "/crafting-calculator", "/refining-calculator", "/food-potion-crafter", "/gold-tracker", "/loot-split", "/guides", "/guides/albion-online-gold-price", "/community", "/legal", "/login"];
+const PAGE_NAMES = { "/": "Home", "/dashboard": "Dash", "/bm-crafter": "BM", "/crafting-calculator": "Craft", "/refining-calculator": "Refine", "/food-potion-crafter": "Food", "/gold-tracker": "Gold", "/loot-split": "Loot", "/guides": "Guides", "/guides/albion-online-gold-price": "Guide", "/community": "Comm.", "/legal": "Legal", "/login": "Login" };
 const VIEWPORTS = [{ name: "desktop", width: 1440, height: 900 }, { name: "phone", width: 390, height: 844, mobile: true }];
 // overflow that is already there and known; only report it when it gets worse
 const KNOWN_OVERFLOW = { "/dashboard@desktop": 48 };

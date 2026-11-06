@@ -1,4 +1,4 @@
-/** The royal cities, in the order PriceRow's per-city arrays use. */
+/** Caerleon and the royal cities, in the order PriceRow's per-city arrays use. */
 export const MARKET_CITIES = ["Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford"] as const;
 
 /** [quality, blackMarketOrder, cityBuyOrders, citySellOrders] from /api/aodp/prices, one price per city (0 = none). */
@@ -20,8 +20,9 @@ export const salesTax = (premium: boolean) => (premium ? 0.04 : 0.08);
 
 /** The item id the market knows: the name's id plus "@n" for the enchantment. */
 export function itemId(names: Record<string, string>, name: string, enchant: number): string | null {
-  const base = names[name];
-  if (!base) return null;
+  // own keys only: a name like "constructor" from a share link must not reach Object.prototype
+  const base = Object.prototype.hasOwnProperty.call(names, name) ? names[name] : undefined;
+  if (typeof base !== "string") return null;
   return base.includes("@") || enchant === 0 ? base : `${base}@${enchant}`;
 }
 
@@ -90,12 +91,13 @@ export function payouts({ total, guildPct, players }: PayoutInput) {
   };
 }
 
-/** "50k" -> 50000, "1.2m" -> 1200000, "75.000" -> 75000; 0 for anything else. */
+/** "50k" -> 50000, "1.2m" -> 1200000, "75.000" -> 75000 (groups of three are thousands); 0 for anything else. */
 export function parseSilver(text: string): number {
   const match = text.trim().toLowerCase().replace(/\s/g, "").match(/^([\d.,']+)([kmb]?)$/);
   if (!match) return 0;
   const [, digits, unit] = match;
-  const value = unit ? Number(digits.replace(",", ".")) * { k: 1e3, m: 1e6, b: 1e9 }[unit as "k" | "m" | "b"] : Number(digits.replace(/[.,']/g, ""));
+  const plain = /^\d{1,3}([.,']\d{3})+$/.test(digits) ? digits.replace(/[.,']/g, "") : digits.replace(",", ".");
+  const value = unit ? Number(digits.replace(",", ".")) * { k: 1e3, m: 1e6, b: 1e9 }[unit as "k" | "m" | "b"] : Number(plain);
   return Number.isFinite(value) ? Math.round(value) : 0;
 }
 

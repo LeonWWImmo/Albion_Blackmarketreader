@@ -430,6 +430,7 @@ export function GoldTrackerPage() {
               <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
               <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
               <span className="nav-tab active">Gold Tracker</span>
+              <Link className="nav-tab" to="/loot-split">Loot Split</Link>
             </div>
           </div>
           <div className="bm-meta">

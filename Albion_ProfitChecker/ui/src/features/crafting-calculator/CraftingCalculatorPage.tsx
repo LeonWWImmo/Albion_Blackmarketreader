@@ -1541,6 +1541,7 @@ export function CraftingCalculatorPage() {
               <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
               <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
               <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
+              <Link className="nav-tab" to="/loot-split">Loot Split</Link>
             </div>
           </div>
           <div className="bm-meta">

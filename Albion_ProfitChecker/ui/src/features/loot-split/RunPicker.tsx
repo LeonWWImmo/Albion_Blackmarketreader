@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Trip } from "./core/lootLog";
 import { MINUTE, SCALE, buildTimeline, floorMinute, fromInput, lastHours, toInput, toPos, toTime, tripRange, tripSpan, type Range } from "./core/timeline";
 import { Sheet } from "./Sheet";
@@ -13,6 +13,27 @@ const clock = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-
 export function rangeLabel({ from, to }: Range) {
   const sameDay = dayLabel(from) === dayLabel(to);
   return `${dayLabel(from)} ${clock(from)} → ${sameDay ? "" : `${dayLabel(to)} `}${clock(to)}`;
+}
+
+/** A date and time field that lets you type freely and only passes on complete, valid times. */
+function WhenInput({ value, label, onCommit }: { value: number; label: string; onCommit: (t: number) => void }) {
+  const [draft, setDraft] = useState(toInput(value));
+  useEffect(() => setDraft(toInput(value)), [value]);
+  return (
+    <label>
+      <span>{label}</span>
+      <input
+        type="datetime-local"
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          const t = fromInput(e.target.value);
+          if (Number.isFinite(t)) onCommit(t);
+        }}
+        onBlur={() => setDraft(toInput(value))}
+      />
+    </label>
+  );
 }
 
 type Props = {
@@ -135,15 +156,9 @@ export function RunPicker({ trips, range, onRange, items, players, value, onClos
       </div>
 
       <div className="ls-when">
-        <label>
-          <span>From</span>
-          <input type="datetime-local" value={toInput(range.from)} onChange={(e) => setFrom(fromInput(e.target.value))} />
-        </label>
+        <WhenInput label="From" value={range.from} onCommit={setFrom} />
         <span className="ls-when-arrow material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-        <label>
-          <span>To</span>
-          <input type="datetime-local" value={toInput(range.to)} onChange={(e) => setTo(fromInput(e.target.value))} />
-        </label>
+        <WhenInput label="To" value={range.to} onCommit={setTo} />
       </div>
 
       <div className="ls-picker-foot">

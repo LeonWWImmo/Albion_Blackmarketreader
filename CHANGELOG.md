@@ -38,6 +38,9 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Today's crafting bonus is now built in: every tool knows the daily production bonuses and adds them to the return rate of the items they cover, marked with a "+10% today" tag. The Black Market Crafter can show only today's bonus items, and the Crafting Calculator still lets you set the bonus by hand.
 - Dashboard: see today's crafting bonuses and this week's event (with when the next one starts) right under the header, each bonus linking to the tool that crafts it.
 - New guide: the Albion Online gold price explained - what moves it, how much silver 30 days of Premium cost (3,750 gold), fees on the Gold Market and when it is a good moment to buy.
+- New tool: Loot Split. Paste your guild chest log, pick the run that counts and every item is priced at live Black Market and city prices. Repairs are paid back first, then the guild's cut, then everyone's share - ready to copy into Discord with a link to the same split.
+- Loot Split: sell everything at the Black Market or one city, add a second chest log on top, and follow the step by step guide if you have never copied a chest log before.
+- The home page now shows the Gold Tracker and the Loot Split in action, with a short clip of each.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

@@ -1192,6 +1192,14 @@ export function DashboardPage() {
           </span>
           <span className="tool-rail-label">Gold Tracker</span>
         </a>
+        <a className="tool-rail-link" href="/loot-split" title="Loot Split">
+          <span className="tool-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2Zm-5 12H9v-2h6v2Zm5-7H4V4l16-.02V7Z" />
+            </svg>
+          </span>
+          <span className="tool-rail-label">Loot Split</span>
+        </a>
       </aside>
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
@@ -1212,6 +1220,7 @@ export function DashboardPage() {
           <a className="nav-link active" href="/dashboard">Markets</a>
           <a className="nav-link" href="/#bm-crafter-access">Crafting-Tools</a>
           <a className="nav-link" href="/gold-tracker">Gold Tracker</a>
+          <a className="nav-link" href="/loot-split">Loot Split</a>
           <a className="nav-link" href="/community">Community</a>
         </nav>
         <div className="topbar-right">

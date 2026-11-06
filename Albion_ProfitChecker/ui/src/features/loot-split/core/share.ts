@@ -28,9 +28,32 @@ const fromBase64Url = (value: string) => {
   return Uint8Array.from(text, (c) => c.charCodeAt(0));
 };
 
+/** Links longer than this, or that unpack to more than MAX_BYTES, are not ours: a tiny link must not unpack into megabytes. */
+const MAX_LINK = 20_000;
+const MAX_BYTES = 1_000_000;
+const MAX_STACKS = 2_000;
+
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream): Promise<Uint8Array> {
-  const out = new Response(new Blob([bytes as Uint8Array<ArrayBuffer>]).stream().pipeThrough(stream));
-  return new Uint8Array(await out.arrayBuffer());
+  const reader = new Blob([bytes as Uint8Array<ArrayBuffer>]).stream().pipeThrough(stream).getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > MAX_BYTES) {
+      await reader.cancel();
+      throw new Error("too big");
+    }
+    parts.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
 }
 
 export async function encodeSplit(split: SharedSplit): Promise<string> {
@@ -48,11 +71,12 @@ export async function encodeSplit(split: SharedSplit): Promise<string> {
 
 /** null for anything that is not a share link this page made. */
 export async function decodeSplit(value: string): Promise<SharedSplit | null> {
+  if (value.length > MAX_LINK) return null;
   try {
     const packed = JSON.parse(new TextDecoder().decode(await pipe(fromBase64Url(value), new DecompressionStream("deflate-raw")))) as Packed;
     if (packed[0] !== 1 || !Array.isArray(packed[1]) || !Array.isArray(packed[2])) return null;
     return {
-      stacks: packed[1].map(([name, enchant, quality, amount]) => ({
+      stacks: packed[1].slice(0, MAX_STACKS).map(([name, enchant, quality, amount]) => ({
         name: String(name).slice(0, 120),
         enchant: Math.min(4, Math.max(0, Number(enchant) || 0)),
         quality: Math.min(5, Math.max(1, Number(quality) || 1)),

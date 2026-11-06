@@ -188,7 +188,7 @@ const fresh = (price, stamp, now) => {
   return price > 0 && Number.isFinite(ms) && now.getTime() - ms <= PRICE_FRESH_MS ? price : 0;
 };
 
-/** The royal cities, in the order the per-city price arrays use. */
+/** Caerleon and the royal cities, in the order the per-city price arrays use. */
 const MARKET_CITIES = PRICE_CITIES.slice(1);
 
 /**

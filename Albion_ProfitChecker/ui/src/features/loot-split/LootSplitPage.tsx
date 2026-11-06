@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../shared/seo/useSeo";
+import { SeoHeading } from "../../shared/seo/SeoHeading";
 import { MobileNavBurger, useSessionState } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./lootSplit.css";
-import { groupTrips, netStacks, parseLootLog, type LogEntry } from "./core/lootLog";
+import { groupTrips, mergeLogs, netStacks, parseLootLog, type LogEntry } from "./core/lootLog";
 import { decodeSplit, encodeSplit } from "./core/share";
 import { EXAMPLE_LOG } from "./core/example";
 import { inRange, tripRange, type Range } from "./core/timeline";
@@ -25,6 +26,7 @@ import {
 } from "./core/valuation";
 import { RunPicker, rangeLabel } from "./RunPicker";
 import { CopyGuide } from "./CopyGuide";
+import { useToolAccount } from "./useToolAccount";
 
 type Region = "eu" | "us";
 type Player = { name: string; share: number; repair: number; added?: boolean };
@@ -124,7 +126,22 @@ export function LootSplitPage() {
     canonical: "https://blackmarketreader.com/loot-split",
     ogTitle: "Albion Online Loot Split Calculator | Blackmarket Reader",
     ogDescription: "Chest log in, silver out: live loot value, the best way to sell and each player's cut.",
-    ogUrl: "https://blackmarketreader.com/loot-split"
+    ogUrl: "https://blackmarketreader.com/loot-split",
+    ogImage: "https://blackmarketreader.com/picture/loot-split-preview.png",
+    twitterTitle: "Albion Online Loot Split Calculator | Blackmarket Reader",
+    twitterDescription: "Chest log in, silver out: live loot value, the best way to sell and each player's cut.",
+    twitterImage: "https://blackmarketreader.com/picture/loot-split-preview.png",
+    structuredData: {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Loot Split",
+      applicationCategory: "GameApplication",
+      operatingSystem: "Web",
+      url: "https://blackmarketreader.com/loot-split",
+      description: "Albion Online loot split calculator: guild chest log in, loot value at live market prices and each player's cut out.",
+      image: "https://blackmarketreader.com/picture/loot-split-preview.png",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
+    }
   });
 
   useEffect(() => {
@@ -134,6 +151,7 @@ export function LootSplitPage() {
   }, []);
 
   const [region, setRegion] = useRegion();
+  const { meta, layers } = useToolAccount(region, setRegion);
   const [premium, setPremium] = useSessionState<boolean>("ls:premium", true);
   const [mode, setMode] = useSessionState<SellMode>("ls:mode", "fast");
   const [market, setMarket] = useSessionState<Market>("ls:market", "best");
@@ -144,24 +162,50 @@ export function LootSplitPage() {
   const [guide, setGuide] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [names, setNames] = useState<Record<string, string> | null>(null);
-  const [prices, setPrices] = useState<PriceTable | null>(null);
+  // prices remember their server, so a switch shows "Pricing…" instead of the other server's numbers
+  const [priced, setPriced] = useState<{ region: Region; table: PriceTable } | null>(null);
+  const prices = priced?.region === region ? priced.table : null;
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [showAll, setShowAll] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [toast, setToast] = useState("");
   const [newPlayer, setNewPlayer] = useState("");
   const [retry, setRetry] = useState(0);
+  const addFile = useRef<HTMLInputElement>(null);
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
+  const rangeRef = useRef(range);
+  rangeRef.current = range;
 
   const flash = (text: string) => {
     setToast(text);
     window.setTimeout(() => setToast(""), 2200);
   };
 
-  // a fresh log asks which part counts, starting with the newest trip
+  // a fresh log asks which part counts, starting with the newest trip; once a split is open,
+  // another log is counted on top (rows it already has are skipped)
   const openLog = useCallback((text: string) => {
     const parsed = parseLootLog(text);
     if (!parsed.length) {
       flash("That is not a chest log");
+      return;
+    }
+    const current = entriesRef.current;
+    if (current.length) {
+      const { entries: merged, added } = mergeLogs(current, parsed);
+      if (!added.length) {
+        flash("Already in the split");
+        return;
+      }
+      const newest = timedTrips(added).pop();
+      const before = rangeRef.current;
+      if (newest) {
+        const run = tripRange(newest);
+        setRange(before ? { from: Math.min(before.from, run.from), to: Math.max(before.to, run.to) } : run);
+        setPicking(true);
+      }
+      setEntries(merged);
+      flash(`Added ${added.length} ${added.length === 1 ? "row" : "rows"}`);
       return;
     }
     const trips = timedTrips(parsed);
@@ -172,6 +216,17 @@ export function LootSplitPage() {
     setPlayers([]);
     setShowAll(false);
   }, []);
+
+  /** The add button: the clipboard if the browser lets us read it, the file picker otherwise. */
+  const addFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (parseLootLog(text).length) openLog(text);
+      else flash("Copy the chest log first, then click again");
+    } catch {
+      addFile.current?.click();
+    }
+  };
 
   // a share link opens the split it carries
   useEffect(() => {
@@ -217,11 +272,12 @@ export function LootSplitPage() {
   );
   const { stacks, takenOut } = useMemo(() => netStacks(used), [used]);
 
-  // everyone in the chosen range gets a full share; added players and edited shares stay
+  // everyone in the chosen range gets a full share; added players and anyone with an edited share
+  // or repairs stay, so moving the range never throws typed numbers away
   const logPlayers = useMemo(() => [...new Set(used.map((e) => e.player).filter(Boolean))], [used]);
   useEffect(() => {
     setPlayers((prev) => {
-      const kept = prev.filter((p) => p.added || logPlayers.includes(p.name));
+      const kept = prev.filter((p) => p.added || p.share !== 100 || p.repair > 0 || logPlayers.includes(p.name));
       const fresh = logPlayers.filter((name) => !kept.some((p) => p.name === name)).map((name) => ({ name, share: 100, repair: 0 }));
       return [...kept, ...fresh];
     });
@@ -247,7 +303,7 @@ export function LootSplitPage() {
     loadPrices(region, ids)
       .then((table) => {
         if (!alive) return;
-        setPrices(table);
+        setPriced({ region, table });
         setStatus("idle");
       })
       .catch(() => alive && setStatus("error"));
@@ -316,7 +372,7 @@ export function LootSplitPage() {
   const reset = () => {
     setEntries([]);
     setRange(null);
-    setPrices(null);
+    setPriced(null);
     if (window.location.hash) history.replaceState(null, "", window.location.pathname);
   };
 
@@ -330,6 +386,11 @@ export function LootSplitPage() {
       onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
       onDrop={onDrop}
     >
+      <SeoHeading title="Albion Online Loot Split Calculator">
+        Paste your Albion Online guild chest log, pick the run that counts and get the loot&apos;s value at live Black Market and
+        market prices, with repairs paid back, the guild&apos;s cut and each player&apos;s share, ready for Discord.
+      </SeoHeading>
+
       <header className="bm-header">
         <MobileNavBurger accent="#f5c451" />
         <div className="bm-header-row">
@@ -342,12 +403,16 @@ export function LootSplitPage() {
             </div>
             <div className="bm-nav bm-nav-switch">
               <Link className="nav-tab" to="/">Home</Link>
+              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
               <Link className="nav-tab" to="/bm-crafter">Blackmarket Crafter</Link>
               <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
+              <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
+              <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
               <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
               <span className="nav-tab active">Loot Split</span>
             </div>
           </div>
+          {meta}
         </div>
       </header>
 
@@ -360,7 +425,17 @@ export function LootSplitPage() {
               <br />
               <span>Silver out.</span>
             </h2>
-            <label className="ls-drop">
+            <label
+              className="ls-drop"
+              tabIndex={0}
+              role="button"
+              aria-label="Choose a chest log file, or paste it with Ctrl + V"
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                e.currentTarget.querySelector("input")?.click();
+              }}
+            >
               <input type="file" accept=".txt,.csv,text/plain" hidden onChange={(e) => e.target.files?.[0]?.text().then(openLog)} />
               <span className="ls-drop-icon material-symbols-outlined" aria-hidden="true">inventory_2</span>
               <b>Paste your chest log</b>
@@ -438,7 +513,8 @@ export function LootSplitPage() {
               </div>
             </div>
 
-            <section className="ls-hero" aria-live="polite">
+            <p className="sr-only" aria-live="polite">{pricing ? "" : `Chest value ${fmt(total)} silver`}</p>
+            <section className="ls-hero">
               <div className="ls-total">
                 <p className="ls-label">Chest value</p>
                 <p className="ls-big">{pricing ? <span className="ls-shimmer">Pricing…</span> : shortSilver(shown)}</p>
@@ -486,6 +562,9 @@ export function LootSplitPage() {
                       className={`ls-tile ${v.sale ? `r-${v.sale.route}` : "is-unpriced"}`}
                       style={{ "--i": i } as CSSProperties}
                       tabIndex={0}
+                      aria-label={`${v.name}${v.enchant ? ` .${v.enchant}` : ""}, ${QUALITY[v.quality]}, ${v.amount}×, ${
+                        v.sale ? `${fmt(v.value)} silver, ${ROUTE_LABEL[v.sale.route]}${v.sale.route !== "bm" ? ` in ${v.sale.city}` : ""}` : "no market price"
+                      }`}
                     >
                       {v.id ? (
                         <>
@@ -502,7 +581,7 @@ export function LootSplitPage() {
                       )}
                       {v.amount > 1 && <span className="ls-qty">{v.amount}</span>}
                       <span className="ls-val">{v.sale ? shortSilver(v.value) : "?"}</span>
-                      <span className="ls-tip" role="tooltip">
+                      <span className="ls-tip" aria-hidden="true">
                         <b>{v.name}{v.enchant ? ` .${v.enchant}` : ""}</b>
                         <span>{QUALITY[v.quality]}{v.amount > 1 ? ` · ${v.amount}×` : ""}</span>
                         {v.sale ? (
@@ -608,6 +687,23 @@ export function LootSplitPage() {
                 </div>
               </section>
             </div>
+
+            <div className="ls-add-log">
+              <button type="button" onClick={addFromClipboard}>
+                <span className="material-symbols-outlined" aria-hidden="true">add</span>
+                <span>
+                  <b>Add another log</b>
+                  <small>
+                    <kbd>Ctrl</kbd> + <kbd>V</kbd> or drop it · counted on top, nothing twice
+                  </small>
+                </span>
+              </button>
+              <input ref={addFile} type="file" accept=".txt,.csv,text/plain" hidden onChange={(e) => {
+                  e.target.files?.[0]?.text().then(openLog);
+                  e.target.value = "";
+                }}
+              />
+            </div>
           </>
         )}
       </main>
@@ -624,6 +720,7 @@ export function LootSplitPage() {
         />
       )}
       {guide && <CopyGuide onClose={() => setGuide(false)} />}
+      {layers}
       {dragging && (
         <div className="ls-dropzone" aria-hidden="true">
           <span className="material-symbols-outlined">download</span>

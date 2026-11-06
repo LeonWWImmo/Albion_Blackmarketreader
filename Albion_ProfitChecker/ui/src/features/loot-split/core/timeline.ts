@@ -26,7 +26,8 @@ export function buildTimeline(trips: Trip[]): Segment[] {
   // a little air on both sides, so a trip's own minutes fill most of its segment
   const spans = timed.map((trip) => {
     const { t0, t1 } = tripSpan(trip);
-    const pad = Math.max(MINUTE / 4, (t1 - t0) * 0.08);
+    // at most 10 minutes a side: trips are 45+ minutes apart, so padded spans never overlap
+    const pad = Math.min(10 * MINUTE, Math.max(MINUTE / 4, (t1 - t0) * 0.08));
     return { trip, t0: t0 - pad, t1: t1 + pad };
   });
   const parts: { t0: number; t1: number; weight: number; trip: Trip | null }[] = [];

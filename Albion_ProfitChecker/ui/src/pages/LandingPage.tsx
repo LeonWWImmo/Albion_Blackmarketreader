@@ -34,6 +34,12 @@ const LAUNCH_TOOLS = [
     name: "Gold Tracker",
     hint: "Live gold price and the best time to buy",
     icon: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 4V8.5C5.7 9.6 8.7 10 12 10s6.3-.4 8-1.5V10c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V14c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V18c0 1.7-3.6 3-8 3s-8-1.3-8-3Z"
+  },
+  {
+    href: "/loot-split",
+    name: "Loot Split",
+    hint: "Chest log in, each player's cut out",
+    icon: "M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2Zm-5 12H9v-2h6v2Zm5-7H4V4l16-.02V7Z"
   }
 ] as const;
 
@@ -47,6 +53,67 @@ type ToolSlide = {
 };
 
 const CAROUSEL_DURATION_MS = 6000;
+
+/**
+ * A recorded tool demo in a browser frame. Nothing loads until it scrolls into view; it then plays
+ * muted on a loop and pauses again off screen. Reduced motion gets the poster and controls instead.
+ */
+function DemoVideo({ src, poster, url, label }: { src: string; poster: string; url: string; label: string }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [still] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  // a visitor's pause sticks: scrolling back does not start the clip again
+  const [stopped, setStopped] = useState(still);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video || stopped || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void video.play().catch(() => undefined);
+        else video.pause();
+      },
+      { threshold: 0.35 }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [stopped]);
+  const toggle = () => {
+    const video = ref.current;
+    if (!video) return;
+    if (video.paused) {
+      setStopped(false);
+      void video.play().catch(() => undefined);
+    } else {
+      setStopped(true);
+      video.pause();
+    }
+  };
+  return (
+    <figure className="demo-frame">
+      <div className="demo-bar" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <span>{url}</span>
+        <button type="button" className="demo-toggle" onClick={toggle} aria-label={playing ? "Pause clip" : "Play clip"}>
+          <span className="material-symbols-outlined" aria-hidden="true">{playing ? "pause" : "play_arrow"}</span>
+        </button>
+      </div>
+      <video
+        ref={ref}
+        src={src}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload="none"
+        aria-label={label}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
+    </figure>
+  );
+}
 
 export function LandingPage() {
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -229,6 +296,9 @@ export function LandingPage() {
               <a className="hero-cta" href="/gold-tracker">
                 Gold Tracker
               </a>
+              <a className="hero-cta" href="/loot-split">
+                Loot Split
+              </a>
             </div>
             {/* Phone only (landing.css): one main action, then the crafting tools as tiles,
                 instead of five identical buttons stacked down the screen. */}
@@ -290,6 +360,56 @@ export function LandingPage() {
                 <img className="mockup-preview" src={assets.bmCrafterPreview} alt="Blackmarket Crafter full tool preview" />
               </button>
             </div>
+          </div>
+        </section>
+
+        <section className="section demo-section" id="gold-tracker-demo">
+          <div className="container demo-grid">
+            <div className="demo-copy">
+              <span className="section-eyebrow">Gold Tracker</span>
+              <h2>Gold, live</h2>
+              <p>
+                The gold price for Europe and America, every hour. A 90-day chart, whether now is a good moment to buy,
+                and a calculator that turns gold into silver and back.
+              </p>
+              <ul className="demo-points">
+                <li>Hourly price, 24h and 7-day change</li>
+                <li>Buy or wait, from the last 30 days</li>
+                <li>Premium in silver: type 3750</li>
+              </ul>
+              <a className="premium-plus-cta" href="/gold-tracker">Open Gold Tracker</a>
+            </div>
+            <DemoVideo
+              src={assetUrl("video/gold-tracker-demo.mp4")}
+              poster={assetUrl("video/gold-tracker-demo.jpg")}
+              url="blackmarketreader.com/gold-tracker"
+              label="Gold Tracker demo: the gold price chart, ranges and the gold calculator"
+            />
+          </div>
+        </section>
+
+        <section className="section demo-section is-flipped" id="loot-split-demo">
+          <div className="container demo-grid">
+            <div className="demo-copy">
+              <span className="section-eyebrow">Loot Split</span>
+              <h2>Chest log in. Silver out.</h2>
+              <p>
+                Paste the guild chest log, pick the run that counts, and every item is priced at live Black Market and
+                city prices. Repairs back first, then the guild&apos;s cut, then everyone&apos;s share, ready for Discord.
+              </p>
+              <ul className="demo-points">
+                <li>Pick the run, down to the minute</li>
+                <li>Black Market, any city or the best of all</li>
+                <li>Repairs, guild tax and shares in one view</li>
+              </ul>
+              <a className="premium-plus-cta" href="/loot-split">Open Loot Split</a>
+            </div>
+            <DemoVideo
+              src={assetUrl("video/loot-split-demo.mp4")}
+              poster={assetUrl("video/loot-split-demo.jpg")}
+              url="blackmarketreader.com/loot-split"
+              label="Loot Split demo: a chest log priced and split between players"
+            />
           </div>
         </section>
 
@@ -533,6 +653,14 @@ export function LandingPage() {
                   In the <a href="/gold-tracker">Gold Tracker</a>: the live gold price for Europe and America, updated
                   hourly, with a 90-day chart, a buy-or-wait signal and a gold to silver calculator. It also shows what
                   30 days of Premium (3,750 gold) cost in silver.
+                </p>
+              </details>
+              <details>
+                <summary>How do I split loot with my guild?</summary>
+                <p>
+                  Paste the chest log into the <a href="/loot-split">Loot Split</a>, pick the run you want to count and it
+                  prices every item at live Black Market and city prices. Repairs are paid back first, then the guild's
+                  cut, then the rest by share, ready to copy into Discord.
                 </p>
               </details>
               <details>

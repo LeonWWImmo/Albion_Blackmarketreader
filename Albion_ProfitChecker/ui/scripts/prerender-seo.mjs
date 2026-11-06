@@ -31,6 +31,7 @@ const toolContent = JSON.parse(
 /** Tool pages with their own share image; the rest use OG_IMAGE. Guides use their tool's. */
 const TOOL_OG_IMAGE = {
   "gold-tracker": `${SITE}/picture/gold-tracker-preview.png`,
+  "loot-split": `${SITE}/picture/loot-split-preview.png`,
 };
 
 const TOOL_LINKS = [
@@ -40,6 +41,7 @@ const TOOL_LINKS = [
   { href: "/refining-calculator", label: "Refining Calculator" },
   { href: "/food-potion-crafter", label: "Food & Potion Crafter" },
   { href: "/gold-tracker", label: "Gold Tracker" },
+  { href: "/loot-split", label: "Loot Split" },
 ];
 
 /** Indexable routes. Home (/) keeps the as-built dist/index.html. */
@@ -104,6 +106,17 @@ const ROUTES = [
     ogImage: `${SITE}/picture/gold-tracker-preview.png`,
     intro:
       "Track the Albion Online gold price on the Europe and America servers. See silver per gold right now, the 24-hour and 7-day change, a 90-day gold chart, whether gold is cheap or expensive compared with the last 30 days, the hours and weekdays when gold has been cheapest, and convert gold to silver and back with the gold calculator, including what 30 days of Premium (3,750 gold) cost in silver.",
+  },
+  {
+    path: "loot-split",
+    title: "Albion Online Loot Split Calculator | Blackmarket Reader",
+    description:
+      "Paste your Albion Online guild chest log and get the loot's value at live Black Market and market prices, the best way to sell each item and a fair split per player, ready for Discord.",
+    keywords: "Albion Online loot split, Albion loot split calculator, Albion chest log, Albion guild loot, Albion Black Market prices",
+    h1: "Albion Online Loot Split Calculator",
+    ogImage: `${SITE}/picture/loot-split-preview.png`,
+    intro:
+      "Split guild loot in Albion Online from the chest log. Paste the log, pick the run that counts, and every item is valued at live Black Market, city buy order or sell order prices after tax. Repairs are paid back to the players who paid them, the guild takes its cut, the rest is shared by share, and the result is ready to paste into Discord with a link to the same split.",
   },
   {
     path: "community",

@@ -32,6 +32,8 @@ export function parseLogDate(text: string): number {
   const eu = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (us) return Date.UTC(+us[3], +us[1] - 1, +us[2], +us[4], +us[5], +(us[6] ?? 0));
   if (eu) return Date.UTC(+eu[3], +eu[2] - 1, +eu[1], +eu[4], +eu[5], +(eu[6] ?? 0));
+  // ISO without an offset is the game's wall clock too, so read it as UTC like the rows above
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(text)) return Date.parse(`${text.replace(" ", "T")}Z`);
   return Date.parse(text);
 }
 
@@ -55,19 +57,43 @@ export function parseLootLog(text: string): LogEntry[] {
   return entries;
 }
 
-/** Entries grouped into trips by the pauses between them, oldest trip first. */
+const rowKey = (e: LogEntry) => `${e.time}|${e.player}|${e.name}|${e.enchant}|${e.quality}|${e.amount}`;
+
+/**
+ * A second log on top of the first. Rows the first already has are skipped once each, so pasting
+ * the same chest again (or a later copy that overlaps) counts nothing twice.
+ */
+export function mergeLogs(current: LogEntry[], extra: LogEntry[]): { entries: LogEntry[]; added: LogEntry[] } {
+  const seen = new Map<string, number>();
+  for (const e of current) seen.set(rowKey(e), (seen.get(rowKey(e)) ?? 0) + 1);
+  const added = extra.filter((e) => {
+    const left = seen.get(rowKey(e)) ?? 0;
+    if (left) seen.set(rowKey(e), left - 1);
+    return !left;
+  });
+  return { entries: [...current, ...added], added };
+}
+
+/**
+ * Entries grouped into trips by the pauses between them, oldest trip first. Rows without a readable
+ * time (a shared link, an unknown date format) form one last trip of their own with a NaN start.
+ */
 export function groupTrips(entries: LogEntry[]): Trip[] {
-  const sorted = [...entries].sort((a, b) => (a.time || 0) - (b.time || 0));
+  const timed = entries.filter((e) => Number.isFinite(e.time)).sort((a, b) => a.time - b.time);
+  const untimed = entries.filter((e) => !Number.isFinite(e.time));
   const trips: Trip[] = [];
-  for (const entry of sorted) {
+  for (const entry of timed) {
     const last = trips[trips.length - 1];
-    if (last && (!Number.isFinite(entry.time) || !Number.isFinite(last.end) || entry.time - last.end <= TRIP_GAP_MS)) {
+    if (last && entry.time - last.end <= TRIP_GAP_MS) {
       last.entries.push(entry);
-      if (Number.isFinite(entry.time)) last.end = entry.time;
+      last.end = entry.time;
       if (!last.players.includes(entry.player)) last.players.push(entry.player);
     } else {
       trips.push({ id: `t${trips.length}`, start: entry.time, end: entry.time, players: [entry.player], entries: [entry] });
     }
+  }
+  if (untimed.length) {
+    trips.push({ id: `t${trips.length}`, start: NaN, end: NaN, players: [...new Set(untimed.map((e) => e.player))], entries: untimed });
   }
   return trips;
 }

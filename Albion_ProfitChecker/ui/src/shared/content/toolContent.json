@@ -632,5 +632,106 @@
         "Buying Premium directly avoids the Purchase Fee that direct gold purchases pay."
       ]
     }
+  },
+  "loot-split": {
+    "title": "How to split loot in Albion Online",
+    "sections": [
+      {
+        "heading": "The chest log",
+        "paragraphs": [
+          "Every guild and island chest keeps a log of who put what in and who took what out: the time, the player, the item with its enchantment and quality, and the amount. Albion can copy the whole log as text. Open the chest, click Log, then Copy, and paste it into the Loot Split with Ctrl + V.",
+          "The Loot Split nets each item: what was put in minus what was taken out. A potion stack that went in and came back out again counts for nothing, and the hero line shows how many items were taken out."
+        ]
+      },
+      {
+        "heading": "Picking the part that counts",
+        "paragraphs": [
+          "A chest log goes back a long way, so after you paste it the Loot Split asks which part to count. It splits the log into runs wherever nobody touched the chest for 45 minutes, and offers the last run, the last 24 hours, the last 7 days or everything. You can also drag the two handles on the timeline or type the exact start and end, down to the minute.",
+          "Several chests or a second copy of the same chest? Add another log: rows that are already in the split are skipped, so nothing is counted twice."
+        ]
+      },
+      {
+        "heading": "How the loot is valued",
+        "paragraphs": [
+          "Prices come from the Albion Online Data Project, the same community market data the other tools use, for the Black Market, Caerleon and the five royal cities. Every price is what you keep after the sales tax: 4% with Premium, 8% without. A sell order also pays the 2.5% setup fee."
+        ],
+        "list": [
+          "Fast: sell instantly, to a Black Market buy order or a city buy order, whichever pays more.",
+          "Max: a sell order in a city counts too, when it pays more after the setup fee.",
+          "Sell at: one market for everything it takes. Items it does not take go to the best other market.",
+          "A buy order takes an item of its quality or better, so the best order an item can fill is used. A sell order is listed at the item's own quality.",
+          "Orders older than three days are ignored, and so is a sell order far above the other cities, so one stale listing cannot inflate the total."
+        ]
+      },
+      {
+        "heading": "How the split works",
+        "paragraphs": [
+          "Each player first gets back what they paid for repairs. The guild then takes its tax from what is left, and the rest is shared by share: 100% is a full cut, 50% half a cut, 0% nothing.",
+          "An example: 2,000,000 silver of loot, one player paid 100,000 for repairs, the guild takes 10%. The repairs come off first, leaving 1,900,000. The guild gets 190,000, and the 1,710,000 left are split between two players: 855,000 each, plus the 100,000 back for the one who paid the repairs."
+        ]
+      },
+      {
+        "heading": "Sharing the split",
+        "paragraphs": [
+          "Copy for Discord writes the total and every player's cut as a ready message, with a link that opens the same split. The link carries the items and the settings, not the prices: whoever opens it sees today's prices."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "How do I copy the chest log in Albion Online?",
+        "a": "Open the chest, click Log, then Copy. The whole log is now in your clipboard; press Ctrl + V on the Loot Split page."
+      },
+      {
+        "q": "Are items that were taken out counted?",
+        "a": "No. The Loot Split counts what is left: deposits minus withdrawals for each item in the part of the log you picked."
+      },
+      {
+        "q": "Why does an item have no price?",
+        "a": "There is no recent order for it in the market data, or it cannot be traded at all, like a partly filled journal. It stays in the list but adds nothing to the total."
+      },
+      {
+        "q": "Are repairs paid before the guild tax?",
+        "a": "Yes. Repairs come off the top and go back to the players who paid them, then the guild takes its share of the rest."
+      },
+      {
+        "q": "Can I split loot from two chests?",
+        "a": "Yes. Open the first log, then add the second one. Rows that are already in the split are skipped, so a log pasted twice counts once."
+      }
+    ],
+    "guide": {
+      "slug": "albion-online-loot-split",
+      "h1": "How to split loot in Albion Online",
+      "title": "Albion Online Loot Split Guide: Chest Log, Loot Value and Fair Splits | Blackmarket Reader",
+      "description": "How to split loot in Albion Online: copy the chest log, count only your run, value the loot at Black Market and city prices after tax, and pay back repairs before the guild cut.",
+      "keywords": "Albion Online loot split, Albion loot split calculator, Albion chest log, Albion guild loot split, Albion repair costs split",
+      "toolLabel": "Loot Split"
+    },
+    "summary": {
+      "intro": "Paste the chest log, pick the run, and the Loot Split prices every item at live market prices and splits the silver: repairs back first, then the guild's cut, then the rest by share.",
+      "cards": [
+        {
+          "label": "Loot value",
+          "formula": "items left x best price after tax",
+          "text": "Black Market, city buy orders and, in Max mode, sell orders. Tax is 4% with Premium, 8% without."
+        },
+        {
+          "label": "The split",
+          "formula": "(loot - repairs - guild tax) x share",
+          "text": "Repairs go back to whoever paid them; 100% is a full cut, 50% half."
+        },
+        {
+          "label": "The run",
+          "formula": "from - to, down to the minute",
+          "text": "Count only the part of the log you are splitting, not last week's deposits."
+        }
+      ],
+      "tipsHeading": "Quick tips",
+      "tips": [
+        "Pick only the run you split: older deposits stay in the log.",
+        "Use Fast when the loot is sold right away, Max when someone lists it.",
+        "Send the link with the split, so everyone sees the same numbers."
+      ]
+    }
   }
 }

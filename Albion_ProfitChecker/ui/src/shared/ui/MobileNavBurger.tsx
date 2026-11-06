@@ -11,6 +11,7 @@ const TOOLS: ReadonlyArray<{ to: string; label: string }> = [
   { to: "/refining-calculator", label: "Refining Calculator" },
   { to: "/food-potion-crafter", label: "Food & Potion Crafter" },
   { to: "/gold-tracker", label: "Gold Tracker" },
+  { to: "/loot-split", label: "Loot Split" },
 ];
 
 /**

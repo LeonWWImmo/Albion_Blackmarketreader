@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupTrips, netStacks, parseLogDate, parseLootLog } from "../core/lootLog";
+import { groupTrips, mergeLogs, netStacks, parseLogDate, parseLootLog } from "../core/lootLog";
 import { decodeSplit, encodeSplit } from "../core/share";
 import { SCALE, buildTimeline, inRange, lastHours, toPos, toTime, tripRange } from "../core/timeline";
 import { bestSale, itemId, parseSilver, payouts, shortSilver, type PriceRow } from "../core/valuation";
@@ -27,10 +27,28 @@ describe("chest log", () => {
     expect(parseLogDate("2026-11-01T20:25:57Z")).toBe(Date.UTC(2026, 10, 1, 20, 25, 57));
   });
 
+  it("keeps rows without a readable time out of the timed trips", () => {
+    const odd = parseLootLog(["someday", "Zed", "Expert's Rune", "0", "1", "2"].map((cell) => `"${cell}"`).join("\t"));
+    const trips = groupTrips([...odd, ...parseLootLog(LOG)]);
+    expect(trips.map((t) => t.entries.length)).toEqual([1, 2, 1, 1]);
+    expect(Number.isNaN(trips[3].start)).toBe(true);
+    expect(parseLogDate("2026-11-01 20:25:57")).toBe(Date.UTC(2026, 10, 1, 20, 25, 57));
+  });
+
   it("splits trips at long pauses", () => {
     const trips = groupTrips(parseLootLog(LOG));
     expect(trips.map((t) => t.entries.length)).toEqual([1, 2, 1]);
     expect(trips[2].players).toEqual(["Ann"]);
+  });
+
+  it("adds a second log without counting a row twice", () => {
+    const first = parseLootLog(LOG);
+    const again = mergeLogs(first, parseLootLog(LOG));
+    expect(again.added).toHaveLength(0);
+    const second = parseLootLog(["11/02/2026 10:00:00", "Cid", "Expert's Rune", "0", "1", "3"].map((cell) => `"${cell}"`).join("\t"));
+    const both = mergeLogs(first, [...parseLootLog(LOG).slice(2), ...second]);
+    expect(both.added.map((e) => e.player)).toEqual(["Cid"]);
+    expect(both.entries).toHaveLength(5);
   });
 
   it("nets deposits against withdrawals and drops what was only taken out", () => {
@@ -52,6 +70,14 @@ describe("run picker", () => {
     expect(toTime(segments, toPos(segments, t))).toBeCloseTo(t, -2);
     // a day long pause takes less room than a single short trip
     expect(segments[3].x1 - segments[3].x0).toBeLessThan(segments[4].x1 - segments[4].x0);
+  });
+
+  it("never lets two long trips overlap on the axis", () => {
+    const at = (h: number, m = 0) => Date.UTC(2026, 10, 1, h, m);
+    const long = (from: number, to: number, id: string) => ({ id, start: from, end: to, players: ["A"], entries: [] });
+    const segments = buildTimeline([long(at(0), at(5), "a"), long(at(5, 50), at(11), "b")]);
+    for (const s of segments) expect(s.t1).toBeGreaterThan(s.t0);
+    expect(toPos(segments, at(5, 20))).toBeLessThan(toPos(segments, at(5, 40)));
   });
 
   it("counts whole minutes, the last one included", () => {
@@ -81,6 +107,8 @@ describe("valuation", () => {
     expect(itemId(names, "Expert's Crossbow", 0)).toBe("T5_2H_CROSSBOW");
     expect(itemId(names, "Swiftclaw", 1)).toBe("T5_MOUNT_COUGAR_KEEPER@1");
     expect(itemId(names, "Nope", 0)).toBeNull();
+    expect(itemId(names, "constructor", 0)).toBeNull();
+    expect(itemId(names, "__proto__", 1)).toBeNull();
   });
 
   it("fast sells instantly at the best order an item of this quality can fill", () => {
@@ -115,7 +143,7 @@ describe("valuation", () => {
   });
 
   it("reads silver the way players type it", () => {
-    expect(["50k", "1.2m", "1,5m", "75.000", "75000", " 2 k ", "abc", ""].map(parseSilver)).toEqual([50_000, 1_200_000, 1_500_000, 75_000, 75_000, 2_000, 0, 0]);
+    expect(["50k", "1.2m", "1,5m", "75.000", "1.200.000", "75000", " 2 k ", "1.5", "abc", ""].map(parseSilver)).toEqual([50_000, 1_200_000, 1_500_000, 75_000, 1_200_000, 75_000, 2_000, 2, 0, 0]);
   });
 
   it("writes silver short", () => {
@@ -137,5 +165,6 @@ describe("share link", () => {
     expect(code).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(await decodeSplit(code)).toEqual(split);
     expect(await decodeSplit("not-a-split")).toBeNull();
+    expect(await decodeSplit("A".repeat(20_001))).toBeNull();
   });
 });

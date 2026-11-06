@@ -497,6 +497,7 @@ export function BmCrafterPage() {
               <a className="nav-tab" href="/refining-calculator">Refining Calculator</a>
               <a className="nav-tab" href="/food-potion-crafter">Food & Potion Crafter</a>
               <a className="nav-tab" href="/gold-tracker">Gold Tracker</a>
+              <a className="nav-tab" href="/loot-split">Loot Split</a>
             </div>
           </div>
           <div className="bm-meta">
