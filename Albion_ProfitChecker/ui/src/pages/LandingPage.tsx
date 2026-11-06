@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSeo } from "../shared/seo/useSeo";
-import { assetUrl, assets, CommunityTile } from "@shared/index";
+import { assetUrl, assets, CommunityTile, DemoVideo } from "@shared/index";
 import "./landing.css";
 
 /** Phone hero: the crafting tools as tiles under the one main action. Icons match the dashboard's tool rail. */
@@ -53,67 +53,6 @@ type ToolSlide = {
 };
 
 const CAROUSEL_DURATION_MS = 6000;
-
-/**
- * A recorded tool demo in a browser frame. Nothing loads until it scrolls into view; it then plays
- * muted on a loop and pauses again off screen. Reduced motion gets the poster and controls instead.
- */
-function DemoVideo({ src, poster, url, label }: { src: string; poster: string; url: string; label: string }) {
-  const ref = useRef<HTMLVideoElement | null>(null);
-  const [still] = useState(() => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
-  // a visitor's pause sticks: scrolling back does not start the clip again
-  const [stopped, setStopped] = useState(still);
-  const [playing, setPlaying] = useState(false);
-  useEffect(() => {
-    const video = ref.current;
-    if (!video || stopped || !("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) void video.play().catch(() => undefined);
-        else video.pause();
-      },
-      { threshold: 0.35 }
-    );
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, [stopped]);
-  const toggle = () => {
-    const video = ref.current;
-    if (!video) return;
-    if (video.paused) {
-      setStopped(false);
-      void video.play().catch(() => undefined);
-    } else {
-      setStopped(true);
-      video.pause();
-    }
-  };
-  return (
-    <figure className="demo-frame">
-      <div className="demo-bar" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span>{url}</span>
-        <button type="button" className="demo-toggle" onClick={toggle} aria-label={playing ? "Pause clip" : "Play clip"}>
-          <span className="material-symbols-outlined" aria-hidden="true">{playing ? "pause" : "play_arrow"}</span>
-        </button>
-      </div>
-      <video
-        ref={ref}
-        src={src}
-        poster={poster}
-        muted
-        loop
-        playsInline
-        preload="none"
-        aria-label={label}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-      />
-    </figure>
-  );
-}
 
 export function LandingPage() {
   const previewRef = useRef<HTMLDivElement | null>(null);

@@ -1,6 +1,28 @@
 {
   "bm-crafter": {
     "title": "How Black Market crafting actually works",
+    "quick": {
+      "tagline": "Craft what the Black Market pays well for. The table shows which items are worth it.",
+      "video": "video/bm-crafter-demo.mp4",
+      "poster": "video/bm-crafter-demo.jpg",
+      "steps": [
+        {
+          "title": "Set your tiers and city",
+          "text": "Pick the tiers you craft and your craft city.",
+          "image": "picture/guides/bm-crafter-1.jpg"
+        },
+        {
+          "title": "Find the best item",
+          "text": "Profit per item and how many sell a day, best first.",
+          "image": "picture/guides/bm-crafter-2.jpg"
+        },
+        {
+          "title": "Check the recipe",
+          "text": "Click a row to open it in the Crafting Calculator.",
+          "image": "picture/guides/bm-crafter-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "The Black Market is not a normal buyer",
@@ -104,6 +126,28 @@
   },
   "crafting-calculator": {
     "title": "How to calculate Albion crafting profit properly",
+    "quick": {
+      "tagline": "Pick an item and see what crafting it costs and what you keep, for every tier.",
+      "video": "video/crafting-calculator-demo.mp4",
+      "poster": "video/crafting-calculator-demo.jpg",
+      "steps": [
+        {
+          "title": "Pick an item",
+          "text": "Any weapon, armour, tool or bag.",
+          "image": "picture/guides/crafting-calculator-1.jpg"
+        },
+        {
+          "title": "Set where you craft",
+          "text": "City, focus and bonuses change how much material comes back.",
+          "image": "picture/guides/crafting-calculator-2.jpg"
+        },
+        {
+          "title": "Read the profit",
+          "text": "Green rows make silver, red rows lose it.",
+          "image": "picture/guides/crafting-calculator-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "Where the cost actually comes from",
@@ -221,6 +265,28 @@
   },
   "refining-calculator": {
     "title": "How refining profit is calculated in Albion Online",
+    "quick": {
+      "tagline": "Turn ore, wood, fiber, hide and stone into silver, and see which tier pays.",
+      "video": "video/refining-calculator-demo.mp4",
+      "poster": "video/refining-calculator-demo.jpg",
+      "steps": [
+        {
+          "title": "Pick a material",
+          "text": "Ore, wood, fiber, hide or stone.",
+          "image": "picture/guides/refining-calculator-1.jpg"
+        },
+        {
+          "title": "Check the prices",
+          "text": "Live raw and refined prices. Change any you know better.",
+          "image": "picture/guides/refining-calculator-2.jpg"
+        },
+        {
+          "title": "See what pays",
+          "text": "Profit per tier, and when refining the lower tiers yourself is cheaper.",
+          "image": "picture/guides/refining-calculator-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "What refining actually involves",
@@ -336,6 +402,28 @@
   },
   "food-potion-crafter": {
     "title": "Cooking and alchemy profit, explained",
+    "quick": {
+      "tagline": "Cook food and brew potions for profit. The scanner lists what pays today.",
+      "video": "video/food-potion-crafter-demo.mp4",
+      "poster": "video/food-potion-crafter-demo.jpg",
+      "steps": [
+        {
+          "title": "Food or potions",
+          "text": "Switch between the cooking and the potion scanner.",
+          "image": "picture/guides/food-potion-crafter-1.jpg"
+        },
+        {
+          "title": "Pick your tiers",
+          "text": "Filter by tier and enchant, hide what loses silver.",
+          "image": "picture/guides/food-potion-crafter-2.jpg"
+        },
+        {
+          "title": "Craft the top row",
+          "text": "Profit, profit per focus and daily sales, best first.",
+          "image": "picture/guides/food-potion-crafter-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "Consumables do not work like gear",
@@ -431,6 +519,28 @@
   },
   "dashboard": {
     "title": "Finding profitable Black Market flips",
+    "quick": {
+      "tagline": "Buy cheap in a city, sell to the Black Market. The dashboard finds the deals for you.",
+      "video": "video/dashboard-demo.mp4",
+      "poster": "video/dashboard-demo.jpg",
+      "steps": [
+        {
+          "title": "Open the deals",
+          "text": "Every day it lists items the Black Market pays far more for than a city sells them.",
+          "image": "picture/guides/dashboard-1.jpg"
+        },
+        {
+          "title": "Filter what you want",
+          "text": "Pick a tier, a city and a minimum profit.",
+          "image": "picture/guides/dashboard-2.jpg"
+        },
+        {
+          "title": "Buy, carry, sell",
+          "text": "Each card says where to buy, what the Black Market pays and how many sell a day.",
+          "image": "picture/guides/dashboard-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "What a flip actually is",
@@ -535,6 +645,28 @@
   },
   "gold-tracker": {
     "title": "How the Albion Online gold price works",
+    "quick": {
+      "tagline": "The live gold price for Europe and America, and when it is a good moment to buy.",
+      "video": "video/gold-tracker-demo.mp4",
+      "poster": "video/gold-tracker-demo.jpg",
+      "steps": [
+        {
+          "title": "Check the price",
+          "text": "Silver per gold right now, updated every hour.",
+          "image": "picture/guides/gold-tracker-1.jpg"
+        },
+        {
+          "title": "Look back",
+          "text": "From 24 hours up to 90 days, with low, high and average.",
+          "image": "picture/guides/gold-tracker-2.jpg"
+        },
+        {
+          "title": "Convert",
+          "text": "Type 3750 to see what 30 days of Premium cost in silver.",
+          "image": "picture/guides/gold-tracker-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "What gold is, and what it buys",
@@ -635,6 +767,28 @@
   },
   "loot-split": {
     "title": "How to split loot in Albion Online",
+    "quick": {
+      "tagline": "Paste the guild chest log and get each player's cut in silver.",
+      "video": "video/loot-split-demo.mp4",
+      "poster": "video/loot-split-demo.jpg",
+      "steps": [
+        {
+          "title": "Paste the chest log",
+          "text": "In the chest: Log, then Copy. Here: Ctrl + V.",
+          "image": "picture/guides/loot-split-1.jpg"
+        },
+        {
+          "title": "Pick your run",
+          "text": "Count only the part of the log you are splitting.",
+          "image": "picture/guides/loot-split-2.jpg"
+        },
+        {
+          "title": "Split and share",
+          "text": "Repairs back, the guild's cut, then everyone's share, ready for Discord.",
+          "image": "picture/guides/loot-split-3.jpg"
+        }
+      ]
+    },
     "sections": [
       {
         "heading": "The chest log",

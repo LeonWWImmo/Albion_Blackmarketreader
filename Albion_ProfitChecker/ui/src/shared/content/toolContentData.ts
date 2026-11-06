@@ -35,8 +35,24 @@ export type GuideMeta = {
   toolLabel: string;
 };
 
+/** One picture step of a guide's quick start. Paths are relative to the site root. */
+export type QuickStep = {
+  title: string;
+  text: string;
+  image: string;
+};
+
+/** The short, visual part at the top of a guide: a sentence, a recorded clip and three steps. */
+export type QuickStart = {
+  tagline: string;
+  video: string;
+  poster: string;
+  steps: QuickStep[];
+};
+
 export type ToolContentEntry = {
   title: string;
+  quick: QuickStart;
   guide: GuideMeta;
   summary: {
     intro: string;

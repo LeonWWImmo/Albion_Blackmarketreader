@@ -1,0 +1,79 @@
+/* A recorded tool demo in a browser frame (DemoVideo.tsx), used on the home page and the guides. */
+
+.demo-frame {
+  position: relative;
+  margin: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #07090d;
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  box-shadow: 0 0 22px rgba(217, 164, 65, 0.28), 0 40px 100px rgba(0, 0, 0, 0.6);
+}
+
+.demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #171c24, #10141a);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.demo-bar i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.demo-bar i:first-child {
+  background: #f87171;
+}
+
+.demo-bar i:nth-child(2) {
+  background: #fbbf24;
+}
+
+.demo-bar i:nth-child(3) {
+  background: #4ade80;
+}
+
+.demo-bar span {
+  flex: 1;
+  margin-left: 10px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font: 500 12px "JetBrains Mono", monospace;
+  color: rgba(240, 227, 200, 0.6);
+  background: rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demo-toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  color: rgba(240, 227, 200, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.demo-toggle:hover {
+  color: #fff;
+  border-color: rgba(217, 164, 65, 0.6);
+}
+
+.demo-frame video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #07090d;
+}

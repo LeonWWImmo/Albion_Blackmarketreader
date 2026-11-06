@@ -225,6 +225,12 @@ function guideLinkHtml(route) {
 
 /** The full article body a guide page shows (mirrors GuidePage), including the formula cards. */
 function guideHtml(entry) {
+  // the quick layer the page opens with: the sentence and the three picture steps
+  const quick = entry.quick
+    ? `        <p>${escText(entry.quick.tagline)}</p>\n        <h2>How it works</h2>\n        <ol>\n${entry.quick.steps
+        .map((step) => `          <li><strong>${escText(step.title)}</strong>: ${escText(step.text)}</li>`)
+        .join("\n")}\n        </ol>\n`
+    : "";
   const cards = entry.summary.cards
     .map(
       (card) =>
@@ -246,7 +252,7 @@ function guideHtml(entry) {
     .map((item) => `        <dt>${escText(item.q)}</dt>\n        <dd>${escText(item.a)}</dd>`)
     .join("\n");
 
-  return `${cards}
+  return `${quick}${cards}
 ${sections}
         <h2>Frequently asked questions</h2>
         <dl>

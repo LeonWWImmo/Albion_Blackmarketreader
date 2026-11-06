@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { GUIDES } from "@shared/content/toolContentData";
+import { GUIDES, TOOL_CONTENT } from "@shared/content/toolContentData";
+import { assetUrl } from "@shared/assets/assets";
 import { useSeo } from "../shared/seo/useSeo";
 import "./guides.css";
 
@@ -31,8 +32,8 @@ export function GuidesIndexPage() {
         <header className="guide-header">
           <h1>Albion Online guides</h1>
           <p className="guide-lede">
-            The maths behind every calculator on this site, written out in full. Each guide covers how the game
-            actually works, the formulas the tool uses, worked examples and the mistakes that quietly cost silver.
+            Every tool in a short clip and three steps. The full maths, formulas and examples are one click away in
+            each guide.
           </p>
         </header>
 
@@ -40,9 +41,13 @@ export function GuidesIndexPage() {
           {GUIDES.map((guide) => (
             <li key={guide.slug}>
               <Link to={`/guides/${guide.slug}`} className="guide-index-card">
-                <h2>{guide.h1}</h2>
-                <p>{guide.description}</p>
+                <span className="guide-index-thumb">
+                  <img src={assetUrl(TOOL_CONTENT[guide.toolSlug].quick.poster)} alt="" loading="lazy" width={640} height={360} />
+                  <span className="guide-index-play" aria-hidden="true">&#9654;</span>
+                </span>
                 <span className="guide-index-tool">{guide.toolLabel}</span>
+                <h2>{guide.h1}</h2>
+                <p>{TOOL_CONTENT[guide.toolSlug].quick.tagline}</p>
               </Link>
             </li>
           ))}
