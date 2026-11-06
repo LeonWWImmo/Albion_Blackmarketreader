@@ -43,4 +43,23 @@ describe("AuthService Supabase request efficiency", () => {
     await Promise.all([svc.isAuthenticated(), svc.getUserProfile(), svc.getCurrentUser()]);
     expect(getSession).toHaveBeenCalledTimes(1);
   });
+
+  it("tries once more when the browser lock timed out, and leaves no unhandled rejection", async () => {
+    const lockTimeout = Object.assign(new Error("Acquiring an exclusive Navigator LockManager lock timed out"), { isAcquireTimeout: true });
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      getSession.mockRejectedValueOnce(lockTimeout).mockResolvedValueOnce(sessionWith(null));
+      const svc = new AuthService({ supabaseUrl: "u", supabaseAnonKey: "k" });
+      expect(await svc.getSession()).toBeNull();
+      expect(getSession).toHaveBeenCalledTimes(2);
+
+      getSession.mockRejectedValue(new Error("offline"));
+      await expect(svc.getSession()).rejects.toThrow("offline");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
+  });
 });

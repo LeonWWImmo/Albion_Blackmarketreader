@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import type { Region, UserProfile } from "../types";
 
 export interface AuthServiceConfig {
@@ -22,19 +22,37 @@ export class AuthService {
   // is a network round-trip to /auth/v1/user. We coalesce concurrent reads with a
   // single-flight promise so a page mount (AuthGuard + page + specs hook firing together)
   // resolves from ONE getSession instead of several redundant calls.
-  private sessionInFlight: ReturnType<SupabaseClient["auth"]["getSession"]> | null = null;
+  private sessionInFlight: Promise<Session | null> | null = null;
 
   async getSession() {
     if (!this.sessionInFlight) {
-      this.sessionInFlight = this.supabase.auth.getSession();
-      // Clear the latch on the next microtask tick so a later mount re-reads fresh state.
-      this.sessionInFlight.finally(() => {
-        this.sessionInFlight = null;
-      });
+      const read = this.readSession();
+      this.sessionInFlight = read;
+      // Clear the latch once it settles so a later mount re-reads fresh state. Both outcomes are
+      // handled here: a bare .finally() would leave a second, unhandled rejection behind.
+      const clear = () => {
+        if (this.sessionInFlight === read) this.sessionInFlight = null;
+      };
+      read.then(clear, clear);
     }
-    const { data, error } = await this.sessionInFlight;
-    if (error) throw error;
-    return data.session;
+    return this.sessionInFlight;
+  }
+
+  /**
+   * GoTrue guards the session with a browser-wide lock. A tab that sleeps in the background (often
+   * on Android) can hold it past the 10 s timeout; one more try usually gets it.
+   */
+  private async readSession(): Promise<Session | null> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const { data, error } = await this.supabase.auth.getSession();
+        if (error) throw error;
+        return data.session;
+      } catch (error) {
+        const lockTimeout = (error as { isAcquireTimeout?: boolean } | null)?.isAcquireTimeout === true;
+        if (!lockTimeout || attempt > 0) throw error;
+      }
+    }
   }
 
   /** Current user straight from the cached session — no network call. */

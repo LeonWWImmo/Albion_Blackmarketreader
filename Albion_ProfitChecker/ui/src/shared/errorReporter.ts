@@ -1,6 +1,8 @@
 // Reports the JavaScript errors real visitors hit to /api/client-error, which posts each new one to
 // the private Discord #errors channel. Only on the live site, each error once per visit and at most
 // a few per visit; reporting itself can never break the page.
+import { reload } from "./browserGuards";
+
 const ENDPOINT = "/api/client-error";
 const LIVE_HOST = "blackmarketreader.com";
 const MAX_REPORTS = 5;
@@ -9,6 +11,9 @@ const IGNORED = /ResizeObserver loop|^Script error\.?$|Non-Error promise rejecti
 const FOREIGN = /chrome-extension:|moz-extension:|safari-(web-)?extension:|googlesyndication|doubleclick|googletagmanager|fundingchoices|adsbygoogle|_vercel\/(insights|speed-insights)/;
 
 type Report = { message: string; stack: string; source: string };
+
+/** Chrome's page translation marks <html>; worth knowing for errors that only translated pages hit. */
+const translated = () => /\btranslated-(ltr|rtl)\b/.test(document.documentElement.className);
 
 export function shouldReport({ message, stack, source }: Report): boolean {
   return !!message && !IGNORED.test(message) && !FOREIGN.test(`${stack}\n${source}`);
@@ -20,7 +25,7 @@ function send(report: Report): void {
     stack: report.stack.slice(0, 1500),
     source: report.source.slice(0, 300),
     page: location.pathname,
-    browser: navigator.userAgent.slice(0, 200)
+    browser: `${translated() ? "[translated page] " : ""}${navigator.userAgent}`.slice(0, 200)
   });
   try {
     if (!navigator.sendBeacon?.(ENDPOINT, new Blob([body], { type: "application/json" }))) {
@@ -39,6 +44,8 @@ export function installErrorReporter(): void {
     // a thrown object can carry anything in these fields
     const r = { message: String(raw.message ?? ""), stack: String(raw.stack ?? ""), source: String(raw.source ?? "") };
     const key = `${r.message}|${r.stack.split("\n")[1] ?? ""}`;
+    // the page is reloading onto the new build: errors from the old one are expected
+    if (reload.pending) return;
     if (seen.size >= MAX_REPORTS || seen.has(key) || !shouldReport(r)) return;
     seen.add(key);
     send(r);
