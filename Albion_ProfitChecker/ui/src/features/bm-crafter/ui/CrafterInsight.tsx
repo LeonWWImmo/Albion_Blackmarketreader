@@ -49,6 +49,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
         <div data-metric="sold"><span>Sold / Day</span><strong className="primary">{row ? formatNumber(row.item.sold) : "--"}</strong></div>
         <div data-metric="cost"><span>Craft Cost</span><strong>{row ? formatNumber(row.economics.craftCost) : "--"}</strong></div>
         <div data-metric="fee"><span>Station Fee</span><strong>{row ? formatNumber(row.economics.stationFee) : "--"}</strong></div>
+        <div data-metric="tax"><span>Sales Tax</span><strong>{row ? formatNumber(row.economics.salesTax) : "--"}</strong></div>
         {row && (row.journalProfit ?? 0) > 0 ? (
           <div data-metric="journal"><span>Journal Profit</span><strong className="profit">+{formatNumber(row.journalProfit)}</strong></div>
         ) : null}

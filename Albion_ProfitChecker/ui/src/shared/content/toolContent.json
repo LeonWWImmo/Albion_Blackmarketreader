@@ -35,9 +35,9 @@
       {
         "heading": "What the tool calculates for every row",
         "paragraphs": [
-          "For each craftable item the calculator pulls your material prices, applies your return rate, adds the station fee and any artefact cost, and compares the result against the latest synced Black Market buy order.",
+          "For each craftable item the calculator pulls your material prices, applies your return rate, adds the station fee and any artefact cost, and compares the result against the latest synced Black Market buy order, minus the sales tax you pay on the sale: 4% with Premium, 8% without. Selling to the Black Market fills its buy order straight away, so there is no setup fee.",
           "craftCost = materials x (1 - returnRate) + artefact + stationFee",
-          "profit = blackMarketPrice - craftCost",
+          "profit = blackMarketPrice x (1 - salesTax) - craftCost",
           "Return rate is where most spreadsheets go wrong. Albion does not simply hand back a flat percentage of your materials. Every bonus you stack runs through a diminishing returns curve:",
           "returnRate = 1 - 1 / (1 + bonus / 100)",
           "So crafting in a royal city (18 points of bonus) with focus active (59 points) gives you 77 points, which turns into a 43.5% return rate. Not 77%. Piling on more bonus always helps, but each additional point gives back less than the one before it. Anyone quoting you a flat return number is rounding away real silver."

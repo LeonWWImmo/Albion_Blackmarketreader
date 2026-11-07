@@ -770,6 +770,21 @@ export function BmCrafterPage() {
           </div>
         </div>
 
+        <div className="filter-block">
+          <div className="filter-head">
+            <p>Market Tax</p>
+            <span className="filter-value">{filters.usePremium ? "4%" : "8%"}</span>
+          </div>
+          <label className="daily-top-toggle">
+            <input
+              type="checkbox"
+              checked={filters.usePremium}
+              onChange={(e) => filters.setUsePremium(e.target.checked)}
+            />
+            <span>Premium</span>
+          </label>
+        </div>
+
         <div className="filter-block bm-bonus-block">
           <div className="filter-head">
             <p>Daily Bonus</p>

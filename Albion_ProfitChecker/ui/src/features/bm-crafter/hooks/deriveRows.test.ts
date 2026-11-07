@@ -74,7 +74,9 @@ describe("deriveBmCrafterRows", () => {
       showOnlyProfitable: true,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     });
 
     expect(rows).toHaveLength(3);
@@ -97,7 +99,9 @@ describe("deriveBmCrafterRows", () => {
       showOnlyProfitable: true,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     });
 
     expect(rows).toHaveLength(1);
@@ -117,7 +121,9 @@ describe("deriveBmCrafterRows", () => {
       showOnlyProfitable: true,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     };
 
     // Only T4 items (both enchants allowed) -> the two T4 rows, not the T5 one.
@@ -147,7 +153,9 @@ describe("deriveBmCrafterRows", () => {
       showOnlyProfitable: false,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     };
     const swordBonus = [{ name: "COMMON_SWORD", category: "sword", percent: 10, label: "Swords", end: "2026-10-19T10:00:00.000Z" }];
 

@@ -25,7 +25,7 @@ const POLL_MINUTES = 30;
 const DEADLINE_UTC_HOUR = 16;
 const TOP_CRAFTS = 3;
 // BM Crafter defaults, as a new visitor sees them.
-const BM_SETTINGS = { craftCity: "Lymhurst", returnRatePercent: 15.25, usageFeePer100: 1500, minSold: 1 };
+const BM_SETTINGS = { craftCity: "Lymhurst", returnRatePercent: 15.25, usageFeePer100: 1500, minSold: 1, premium: true };
 
 const REGIONS = {
   eu: { name: "Europe", flag: "🇪🇺", webhook: process.env.DISCORD_WEBHOOK_EU, role: process.env.DISCORD_ROLE_EU, color: 0x3b82f6 },
@@ -62,6 +62,7 @@ const fmt = await load("/src/features/gold-tracker/format.ts");
 const bmData = await load("/src/features/bm-crafter/data/normalizers.ts");
 const bmRows = await load("/src/features/bm-crafter/hooks/deriveRows.ts");
 const bmDomain = await load("/src/features/bm-crafter/domain/calculations.ts");
+const marketTax = await load("/src/shared/albion/marketTax.ts");
 
 async function getJson(url) {
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
@@ -121,6 +122,7 @@ function bestCrafts(region, bonuses) {
       nonArtefactOnly: false,
       craftCity: BM_SETTINGS.craftCity,
       usageFeePer100: BM_SETTINGS.usageFeePer100,
+      salesTaxRate: marketTax.salesTaxRate(BM_SETTINGS.premium),
       dailyBonus: { bonuses, onlyBonusItems: true }
     })
     .slice(0, TOP_CRAFTS);
@@ -239,7 +241,7 @@ function buildMessage(region, now, bonusInfo, goldInfo, crafts) {
           )
         );
       });
-      card.push(text(`-# Crafted in ${BM_SETTINGS.craftCity} · ${BM_SETTINGS.returnRatePercent}% return rate + today's bonus · sold to the Black Market`));
+      card.push(text(`-# Crafted in ${BM_SETTINGS.craftCity} · ${BM_SETTINGS.returnRatePercent}% return rate + today's bonus · sold to the Black Market after ${BM_SETTINGS.premium ? "4% Premium" : "8%"} tax`));
     } else {
       card.push(text(`No Black Market craft over 20% profit with today's bonus.\n-# [Browse all crafts in the BM Crafter](${SITE}/bm-crafter)`));
     }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSessionState } from "../../../shared";
+import { salesTaxRate } from "../../../shared/albion/marketTax";
 import type { CraftBonus, JournalData, OwnedJournals } from "../../../shared";
 import { returnRatePercentToDecimal } from "../domain";
 import type { BmCrafterDataBundle } from "../data";
@@ -33,6 +34,8 @@ export function useBmCrafterState(
   const [returnRatePercent, setReturnRatePercent] = useSessionState("bm-crafter:returnRatePercent", 15.25);
   const [craftCity, setCraftCity] = useSessionState<string>("bm-crafter:craftCity", "Lymhurst");
   const [usageFeePer100, setUsageFeePer100] = useSessionState<number>("bm-crafter:usageFeePer100", 1500);
+  const [usePremium, setUsePremium] = useSessionState("bm-crafter:usePremium", true);
+  const taxRate = salesTaxRate(usePremium);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
 
   const setBonusCityPreset = (enabled: boolean) => {
@@ -60,10 +63,11 @@ export function useBmCrafterState(
         nonArtefactOnly,
         craftCity,
         usageFeePer100,
+        salesTaxRate: taxRate,
         journal,
         dailyBonus
       }),
-    [bundle, selectedTiers, selectedEnchants, minSold, searchTerm, returnRate, sortByDailyTop, showOnlyProfitable, nonArtefactOnly, craftCity, usageFeePer100, journal, dailyBonus]
+    [bundle, selectedTiers, selectedEnchants, minSold, searchTerm, returnRate, sortByDailyTop, showOnlyProfitable, nonArtefactOnly, craftCity, usageFeePer100, taxRate, journal, dailyBonus]
   );
 
   useEffect(() => {
@@ -128,6 +132,8 @@ export function useBmCrafterState(
       setCraftCity,
       usageFeePer100,
       setUsageFeePer100,
+      usePremium,
+      setUsePremium,
       toggleTier,
       toggleEnchant,
       resetFilters

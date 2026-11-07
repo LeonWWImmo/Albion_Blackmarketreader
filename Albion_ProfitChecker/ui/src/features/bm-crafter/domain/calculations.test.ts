@@ -10,6 +10,7 @@ import {
   returnRatePercentToDecimal
 } from "./calculations";
 import type { BmRecipe } from "./types";
+import { salesTaxRate } from "../../../shared/albion/marketTax";
 
 describe("bm crafter id helpers", () => {
   it("parses tier and enchant from item ids", () => {
@@ -57,6 +58,8 @@ describe("calculateItemEconomics", () => {
       recipe,
       returnRate: 0.1525,
       usageFeePer100: 0,
+
+      salesTaxRate: 0,
       getMaterialPrice: (materialId, tier, enchant) =>
         materialMap.get(buildMaterialId(materialId, tier, enchant) ?? "") ?? null,
       getArtefactPrice: (artefactId, tier) => artefactMap.get(buildArtefactId(artefactId, tier) ?? "") ?? null
@@ -84,6 +87,8 @@ describe("calculateItemEconomics", () => {
       recipe,
       returnRate: 0.1525,
       usageFeePer100: 1500,
+
+      salesTaxRate: 0,
       getMaterialPrice: (materialId, tier, enchant) =>
         materialMap.get(buildMaterialId(materialId, tier, enchant) ?? "") ?? null,
       getArtefactPrice: (artefactId, tier) => artefactMap.get(buildArtefactId(artefactId, tier) ?? "") ?? null
@@ -96,12 +101,42 @@ describe("calculateItemEconomics", () => {
     expect(result!.profit).toBeCloseTo(42880 - 4860, 6);
   });
 
+  it("takes the sales tax off the Black Market price, without a setup fee", () => {
+    const materialMap = new Map<string, number>([
+      ["T6_PLANKS_LEVEL1@1", 1000],
+      ["T6_METALBAR_LEVEL1@1", 2000]
+    ]);
+    const artefactMap = new Map<string, number>([["T6_ARTEFACT_2H_AXE_AVALON", 50000]]);
+    const economics = (salesTaxRate: number) =>
+      calculateItemEconomics({
+        item: { id: "T6_2H_AXE_AVALON@1", bm: 120000, sold: 10 },
+        recipe,
+        returnRate: 0.1525,
+        usageFeePer100: 0,
+        salesTaxRate,
+        getMaterialPrice: (materialId, tier, enchant) =>
+          materialMap.get(buildMaterialId(materialId, tier, enchant) ?? "") ?? null,
+        getArtefactPrice: (artefactId, tier) => artefactMap.get(buildArtefactId(artefactId, tier) ?? "") ?? null
+      });
+
+    // Premium 4%: 120000 * 0.04 = 4800 tax; profit = 120000 - 4800 - 77120 = 38080
+    const premium = economics(salesTaxRate(true))!;
+    expect(premium.salesTax).toBeCloseTo(4800, 6);
+    expect(premium.profit).toBeCloseTo(38080, 6);
+    expect(premium.dailyPotential).toBeCloseTo(380800, 6);
+    expect(premium.profitPct).toBeCloseTo((38080 / 77120) * 100, 6);
+    // no Premium 8%: 9600 tax
+    expect(economics(salesTaxRate(false))!.profit).toBeCloseTo(33280, 6);
+  });
+
   it("returns null when artifact price is required but missing", () => {
     const result = calculateItemEconomics({
       item: { id: "T6_2H_AXE_AVALON@1", bm: 120000, sold: 10 },
       recipe,
       returnRate: 0.1525,
       usageFeePer100: 0,
+
+      salesTaxRate: 0,
       getMaterialPrice: () => 1000,
       getArtefactPrice: () => null
     });
@@ -114,6 +149,8 @@ describe("calculateItemEconomics", () => {
       recipe,
       returnRate: 0.1525,
       usageFeePer100: 0,
+
+      salesTaxRate: 0,
       getMaterialPrice: () => 1000,
       getArtefactPrice: () => 0
     });
@@ -131,6 +168,8 @@ describe("calculateItemEconomics", () => {
       recipe: noMaterialRecipe,
       returnRate: 0.1525,
       usageFeePer100: 0,
+
+      salesTaxRate: 0,
       getMaterialPrice: () => null,
       getArtefactPrice: () => null
     });

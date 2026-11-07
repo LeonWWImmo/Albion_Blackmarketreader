@@ -40,7 +40,9 @@ describe("bm crafter parity integration", () => {
       showOnlyProfitable: false,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     };
     const all = deriveBmCrafterRows(bundle, options);
     const rows = deriveBmCrafterRows(bundle, { ...options, showOnlyProfitable: true });
@@ -59,6 +61,8 @@ describe("bm crafter parity integration", () => {
         recipe,
         returnRate: 0.1525,
         usageFeePer100: 0,
+
+        salesTaxRate: 0,
         getMaterialPrice: (materialId, t, e) => getMaterialPriceFromMap(cityPrices, materialId, t, e),
         getArtefactPrice: (artefactId, t) => getArtefactPriceFromMap(bundle.artefacts.byItemId, artefactId, t)
       });
@@ -95,7 +99,9 @@ describe("bm crafter parity integration", () => {
       showOnlyProfitable: false,
       nonArtefactOnly: false,
       craftCity: "Caerleon",
-      usageFeePer100: 0
+      usageFeePer100: 0,
+
+      salesTaxRate: 0
     });
 
     const sample = rows.find((row) => {

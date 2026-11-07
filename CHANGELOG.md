@@ -43,6 +43,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - New tool: Loot Split. Paste your guild chest log, pick the run that counts and every item is priced at live Black Market and city prices. Repairs are paid back first, then the guild's cut, then everyone's share - ready to copy into Discord with a link to the same split.
 - Loot Split: sell everything at the Black Market or one city, add a second chest log on top, and follow the step by step guide if you have never copied a chest log before.
 - The home page now shows the Gold Tracker and the Loot Split in action, with a short clip of each.
+- Black Market Crafter: profits now take off the sales tax you pay when selling to the Black Market (4% with Premium, 8% without), with a new Premium switch. The daily Discord post counts it too, so the numbers match what you actually keep.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

@@ -29,6 +29,9 @@ export interface MaterialCostResult {
 export interface ItemEconomics {
   craftCost: number;
   stationFee: number;
+  /** Sales tax paid when selling to the Black Market. */
+  salesTax: number;
+  /** What one item brings in after the sales tax, minus what it costs to craft. */
   profit: number;
   dailyPotential: number | null;
   profitPct: number | null;
@@ -41,6 +44,8 @@ export interface CalculateItemEconomicsInput {
   recipe: BmRecipe | null;
   returnRate: number;
   usageFeePer100: number;
+  /** Share of the Black Market price lost to the sales tax, e.g. 0.04 with Premium. */
+  salesTaxRate: number;
   getMaterialPrice: (materialId: string, tier: number, enchant: number) => number | null;
   getArtefactPrice: (artefactId: string, tier: number) => number | null;
 }

@@ -1,3 +1,5 @@
+import { SETUP_FEE_RATE, salesTaxRate } from "../../../shared/albion/marketTax";
+
 /** Caerleon and the royal cities, in the order PriceRow's per-city arrays use. */
 export const MARKET_CITIES = ["Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford"] as const;
 
@@ -15,9 +17,6 @@ export type Sale = { route: Route; unit: number; city: string };
 
 export const ROUTE_LABEL: Record<Route, string> = { bm: "Black Market", buy: "Quick sell", sell: "Sell order" };
 
-export const SETUP_FEE = 0.025;
-export const salesTax = (premium: boolean) => (premium ? 0.04 : 0.08);
-
 /** The item id the market knows: the name's id plus "@n" for the enchantment. */
 export function itemId(names: Record<string, string>, name: string, enchant: number): string | null {
   // own keys only: a name like "constructor" from a share link must not reach Object.prototype
@@ -32,7 +31,7 @@ export function itemId(names: Record<string, string>, name: string, enchant: num
  * (or the next lower one with a price, to stay on the safe side).
  */
 function saleOptions(rows: PriceRow[], quality: number, premium: boolean, mode: SellMode): Sale[] {
-  const keep = 1 - salesTax(premium);
+  const keep = 1 - salesTaxRate(premium);
   const options: Sale[] = [];
   let bm = 0;
   const buys = MARKET_CITIES.map(() => 0);
@@ -46,7 +45,7 @@ function saleOptions(rows: PriceRow[], quality: number, premium: boolean, mode: 
     if (buys[i]) options.push({ route: "buy", unit: buys[i] * keep, city });
     if (mode !== "max") return;
     const listed = [...rows].reverse().find(([q, , , sells]) => q <= quality && sells[i] > 0);
-    if (listed) options.push({ route: "sell", unit: listed[3][i] * (keep - SETUP_FEE), city });
+    if (listed) options.push({ route: "sell", unit: listed[3][i] * (keep - SETUP_FEE_RATE), city });
   });
   return options;
 }

@@ -28,6 +28,8 @@ export interface BmCrafterFilters {
   nonArtefactOnly: boolean;
   craftCity: string;
   usageFeePer100: number;
+  /** Sales tax on the Black Market sale, e.g. 0.04 with Premium. */
+  salesTaxRate: number;
   /** When enabled, crafting-journal profit is folded into each row's profit before filtering. */
   journal?: {
     enabled: boolean;

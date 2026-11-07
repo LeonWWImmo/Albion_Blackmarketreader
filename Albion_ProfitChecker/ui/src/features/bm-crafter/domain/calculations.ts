@@ -137,7 +137,7 @@ export function calculateMaterialCost(
 }
 
 export function calculateItemEconomics(input: CalculateItemEconomicsInput): ItemEconomics | null {
-  const { item, recipe, returnRate, usageFeePer100, getMaterialPrice, getArtefactPrice } = input;
+  const { item, recipe, returnRate, usageFeePer100, salesTaxRate, getMaterialPrice, getArtefactPrice } = input;
   if (!recipe || !Array.isArray(recipe.materials)) return null;
   const bmPrice = item.bm;
   if (typeof bmPrice !== "number" || !Number.isFinite(bmPrice)) return null;
@@ -160,7 +160,9 @@ export function calculateItemEconomics(input: CalculateItemEconomicsInput): Item
   const stationFee = stationItemValue ? computeStationFee(stationItemValue, usageFeePer100) : 0;
   craftCost += stationFee;
 
-  const profit = bmPrice - craftCost;
+  // selling to the Black Market fills its buy order: only the sales tax applies, no setup fee
+  const salesTax = bmPrice * salesTaxRate;
+  const profit = bmPrice - salesTax - craftCost;
   if (!Number.isFinite(profit)) return null;
 
   const dailyPotential = Number.isFinite(item.sold) ? profit * Number(item.sold) : null;
@@ -171,6 +173,7 @@ export function calculateItemEconomics(input: CalculateItemEconomicsInput): Item
   return {
     craftCost,
     stationFee,
+    salesTax,
     profit,
     dailyPotential,
     profitPct: Number.isFinite(profitPct) ? profitPct : null,

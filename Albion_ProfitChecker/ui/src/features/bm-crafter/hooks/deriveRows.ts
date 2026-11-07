@@ -71,6 +71,7 @@ export function deriveBmCrafterRows(bundle: BmCrafterDataBundle | null, filters:
       recipe,
       returnRate: addBonusToReturnRate(filters.returnRate, dailyBonusPercent),
       usageFeePer100: filters.usageFeePer100,
+      salesTaxRate: filters.salesTaxRate,
       getMaterialPrice: (materialId, t, e) => getMaterialPriceFromMap(materialMap, materialId, t, e),
       getArtefactPrice: (artefactId, t) => getArtefactPriceFromMap(bundle.artefacts.byItemId, artefactId, t)
     });
