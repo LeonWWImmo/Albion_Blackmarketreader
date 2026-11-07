@@ -1,18 +1,8 @@
 import { useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
+import { TOOL_TABS, isActiveTab } from "./ToolNav";
 import "./mobileNavBurger.css";
-
-const TOOLS: ReadonlyArray<{ to: string; label: string }> = [
-  { to: "/", label: "Home" },
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/bm-crafter", label: "Blackmarket Crafter" },
-  { to: "/crafting-calculator", label: "Crafting Calculator" },
-  { to: "/refining-calculator", label: "Refining Calculator" },
-  { to: "/food-potion-crafter", label: "Food & Potion Crafter" },
-  { to: "/gold-tracker", label: "Gold Tracker" },
-  { to: "/loot-split", label: "Loot Split" },
-];
 
 /**
  * Phone-only burger menu (top-left) that opens a drawer to switch between tools. Hidden on desktop
@@ -42,11 +32,11 @@ export function MobileNavBurger({ accent }: { accent?: string }) {
                     ×
                   </button>
                 </div>
-                {TOOLS.map((tool) => (
+                {TOOL_TABS.map((tool) => (
                   <Link
                     key={tool.to}
                     to={tool.to}
-                    className={`mnav-item ${pathname === tool.to ? "active" : ""}`}
+                    className={`mnav-item ${isActiveTab(tool.to, pathname) ? "active" : ""}`}
                     onClick={() => setOpen(false)}
                   >
                     {tool.label}

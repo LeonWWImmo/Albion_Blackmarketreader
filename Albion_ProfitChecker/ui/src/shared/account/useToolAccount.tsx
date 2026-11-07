@@ -3,6 +3,7 @@ import { assetUrl } from "@shared/assets/assets";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import type { ToolSlug } from "@shared/content/toolContentData";
 import {
   CommunityTile,
   GuestSignInLink,
@@ -13,12 +14,11 @@ import {
   markFactionChosen,
   needsRegionChoice,
   useFactionTheme
-} from "../../shared";
+} from "../index";
 
 type Region = "eu" | "us";
 type UserState = { id: string; email: string | null; avatar: string; region: Region | null };
 
-const NEXT = "%2Floot-split";
 
 const allowedAvatars = [
   "/picture/Bridgewatch.png",
@@ -55,7 +55,15 @@ function readStoredRegion(): Region | null {
  * account panel in the header, the community tile and the guide link.
  * Returns the header's right side (`meta`) and the overlays to render once (`layers`).
  */
-export function useToolAccount(region: Region, setRegion: (next: Region) => void): { meta: ReactNode; layers: ReactNode } {
+export function useToolAccount(
+  /** this tool's path, where login sends the visitor back to, e.g. "/loot-split" */
+  path: string,
+  /** the tool's guide for the guide link, or null while it has none */
+  guide: ToolSlug | null,
+  region: Region,
+  setRegion: (next: Region) => void
+): { meta: ReactNode; layers: ReactNode } {
+  const NEXT = encodeURIComponent(path);
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
   useFactionTheme(user?.avatar ?? null);
@@ -341,7 +349,7 @@ export function useToolAccount(region: Region, setRegion: (next: Region) => void
         />
       ) : null}
       <CommunityTile />
-      <ToolGuideLink slug="loot-split" authService={authService} />
+      {guide ? <ToolGuideLink slug={guide} authService={authService} /> : null}
     </>
   );
 

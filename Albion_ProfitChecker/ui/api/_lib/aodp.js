@@ -261,6 +261,122 @@ export async function getPrices(regionInput, idsInput, now = new Date()) {
   });
 }
 
+/** Every market the Price Checker shows, Brecilien included. */
+const QUOTE_CITIES = [...PRICE_CITIES, "Brecilien"];
+/** One item's enchantment levels, .0 to .4. */
+const QUOTE_MAX_IDS = 5;
+/** AODP history resolutions in hours: daily points over a month, or four a day for the last weeks. */
+const HISTORY_SCALES = new Set([6, 24]);
+
+const unixSeconds = (stamp) => {
+  const ms = Date.parse(/[zZ]$/.test(String(stamp)) ? stamp : `${stamp}Z`);
+  return Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 1000) : 0;
+};
+
+const cityOrder = (city) => QUOTE_CITIES.indexOf(city);
+
+/**
+ * AODP current prices -> [[id, city, quality, sell, sellAt, buy, buyAt], ...]: the lowest sell order
+ * and the highest buy order per market and quality, each with the unix time a player last saw it
+ * (0 = none). Old prices stay in on purpose: the Price Checker shows how old each one is.
+ */
+export function parseQuotes(raw) {
+  const out = [];
+  for (const row of Array.isArray(raw) ? raw : []) {
+    const id = String(row?.item_id || "");
+    const city = String(row?.city || "");
+    const quality = Number(row?.quality);
+    if (!ITEM_ID.test(id) || cityOrder(city) < 0 || !(quality >= 1 && quality <= 5)) continue;
+    const sellAt = unixSeconds(row.sell_price_min_date);
+    const buyAt = unixSeconds(row.buy_price_max_date);
+    const sell = sellAt ? Math.max(0, Math.round(Number(row.sell_price_min) || 0)) : 0;
+    const buy = buyAt ? Math.max(0, Math.round(Number(row.buy_price_max) || 0)) : 0;
+    if (!sell && !buy) continue;
+    out.push([id, city, quality, sell, sell ? sellAt : 0, buy, buy ? buyAt : 0]);
+  }
+  return out.sort((a, b) => a[0].localeCompare(b[0]) || cityOrder(a[1]) - cityOrder(b[1]) || a[2] - b[2]);
+}
+
+/** AODP history -> [[city, quality, [[unixSeconds, averagePrice, itemsSold], ...]], ...], oldest point first. */
+export function parseHistory(raw) {
+  const out = [];
+  for (const series of Array.isArray(raw) ? raw : []) {
+    const city = String(series?.location || "");
+    const quality = Number(series?.quality);
+    if (cityOrder(city) < 0 || !(quality >= 1 && quality <= 5) || !Array.isArray(series.data)) continue;
+    const points = [];
+    for (const point of series.data) {
+      const t = unixSeconds(point?.timestamp);
+      const price = Math.round(Number(point?.avg_price) || 0);
+      if (t && price > 0) points.push([t, price, Math.max(0, Math.round(Number(point.item_count) || 0))]);
+    }
+    if (points.length) out.push([city, quality, points.sort((a, b) => a[0] - b[0])]);
+  }
+  return out.sort((a, b) => cityOrder(a[0]) - cityOrder(b[0]) || a[1] - b[1]);
+}
+
+export async function getQuotes(regionInput, idsInput, now = new Date()) {
+  const region = normalizeRegion(regionInput);
+  if (!region) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
+  const ids = parseItemIds(idsInput);
+  if (!ids || ids.length > QUOTE_MAX_IDS) return { status: 400, body: { error: `ids must be 1-${QUOTE_MAX_IDS} item ids` }, maxAge: 0 };
+  const locations = encodeURIComponent(QUOTE_CITIES.join(","));
+  return remembered(`quotes:${region}:${ids.join(",")}`, async () => {
+    try {
+      const url = `https://${HOSTS[region]}.albion-online-data.com/api/v2/stats/prices/${ids.map(encodeURIComponent).join(",")}.json?locations=${locations}&qualities=1,2,3,4,5`;
+      const { status, body } = await fetchJson(url);
+      if (status !== 200 || !Array.isArray(body)) return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
+      return { status: 200, body: { region, fetchedAt: now.toISOString(), quotes: parseQuotes(body) }, maxAge: 300 };
+    } catch {
+      return { status: 502, body: { error: "prices unavailable" }, maxAge: 0 };
+    }
+  });
+}
+
+export async function getHistory(regionInput, idInput, scaleInput, now = new Date()) {
+  const region = normalizeRegion(regionInput);
+  if (!region) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
+  const ids = parseItemIds(idInput);
+  if (!ids || ids.length !== 1) return { status: 400, body: { error: "id must be one item id" }, maxAge: 0 };
+  const scale = Number(scaleInput);
+  if (!HISTORY_SCALES.has(scale)) return { status: 400, body: { error: "scale must be 6 or 24" }, maxAge: 0 };
+  const locations = encodeURIComponent(QUOTE_CITIES.join(","));
+  return remembered(`history:${region}:${ids[0]}:${scale}`, async () => {
+    try {
+      const url = `https://${HOSTS[region]}.albion-online-data.com/api/v2/stats/history/${encodeURIComponent(ids[0])}.json?locations=${locations}&qualities=1,2,3,4,5&time-scale=${scale}`;
+      const { status, body } = await fetchJson(url);
+      if (status !== 200 || !Array.isArray(body)) return { status: 502, body: { error: "history unavailable" }, maxAge: 0 };
+      return { status: 200, body: { region, fetchedAt: now.toISOString(), id: ids[0], scale, series: parseHistory(body) }, maxAge: 3600 };
+    } catch {
+      return { status: 502, body: { error: "history unavailable" }, maxAge: 0 };
+    }
+  });
+}
+
+/**
+ * GET /api/aodp/<endpoint>?... — one Vercel function (api/aodp/[endpoint].js) and the Vite dev
+ * server both answer through this table, so every endpoint is wired in exactly one place.
+ *   gold         ?region                  hourly gold price, 90 days
+ *   festivities  ?region                  daily crafting bonuses and weekly events
+ *   prices       ?region&ids (<= 300)     Loot Split: best order per city and quality
+ *   quotes       ?region&ids (<= 5)       Price Checker: every market's orders with their age
+ *   history      ?region&id&scale (6|24)  Price Checker: average price and items sold over time
+ */
+export const AODP_ENDPOINTS = {
+  gold: (query) => getGold(query.region),
+  festivities: (query) => getFestivities(query.region),
+  prices: (query) => getPrices(query.region, query.ids),
+  quotes: (query) => getQuotes(query.region, query.ids),
+  history: (query) => getHistory(query.region, query.id, query.scale)
+};
+
+/** Answers one /api/aodp/<endpoint> request; unknown endpoints get a 404. */
+export async function handleAodp(endpoint, query) {
+  const route = Object.prototype.hasOwnProperty.call(AODP_ENDPOINTS, endpoint) ? AODP_ENDPOINTS[endpoint] : null;
+  if (!route) return { status: 404, body: { error: "unknown endpoint" }, maxAge: 0 };
+  return route(query ?? {});
+}
+
 /** Shared response writer for Node's http.ServerResponse (Vercel and the Vite dev server). */
 export function sendResult(res, result) {
   res.statusCode = result.status;

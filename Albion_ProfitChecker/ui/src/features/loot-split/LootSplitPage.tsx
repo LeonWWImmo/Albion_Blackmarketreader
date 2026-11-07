@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
-import { Link } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
-import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { MobileNavBurger, useSessionState } from "../../shared";
+import { MobileNavBurger, ToolNav, useSessionState } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./lootSplit.css";
 import { groupTrips, mergeLogs, netStacks, parseLootLog, type LogEntry } from "./core/lootLog";
@@ -26,7 +24,8 @@ import {
 } from "./core/valuation";
 import { RunPicker, rangeLabel } from "./RunPicker";
 import { CopyGuide } from "./CopyGuide";
-import { useToolAccount } from "./useToolAccount";
+import { useToolAccount } from "@shared/account/useToolAccount";
+import { useRegion } from "@shared/region/useRegion";
 
 type Region = "eu" | "us";
 type Player = { name: string; share: number; repair: number; added?: boolean };
@@ -39,19 +38,6 @@ const PLAYER_COLORS = ["#f5c451", "#7dd3fc", "#a78bfa", "#4ade80", "#fb7185", "#
 
 const fmt = (n: number) => Math.round(n).toLocaleString("de-DE");
 const timedTrips = (entries: LogEntry[]) => groupTrips(entries).filter((t) => Number.isFinite(t.start));
-
-function useRegion(): [Region, (next: Region) => void] {
-  const [service] = useState(() => new RegionService("eu"));
-  const [region, setRegion] = useState<Region>(service.getRegion());
-  useEffect(() => {
-    const off = service.subscribe((next) => setRegion(next));
-    return () => {
-      off();
-      service.destroy();
-    };
-  }, [service]);
-  return [region, useCallback((next: Region) => service.setRegion(next), [service])];
-}
 
 /** Counts up to the target once it changes; reduced motion jumps straight there. */
 function useCountUp(target: number) {
@@ -151,7 +137,7 @@ export function LootSplitPage() {
   }, []);
 
   const [region, setRegion] = useRegion();
-  const { meta, layers } = useToolAccount(region, setRegion);
+  const { meta, layers } = useToolAccount("/loot-split", "loot-split", region, setRegion);
   const [premium, setPremium] = useSessionState<boolean>("ls:premium", true);
   const [mode, setMode] = useSessionState<SellMode>("ls:mode", "fast");
   const [market, setMarket] = useSessionState<Market>("ls:market", "best");
@@ -425,16 +411,7 @@ export function LootSplitPage() {
               </div>
               <h1>RomulusKings Crafting Tools</h1>
             </div>
-            <div className="bm-nav bm-nav-switch">
-              <Link className="nav-tab" to="/">Home</Link>
-              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
-              <Link className="nav-tab" to="/bm-crafter">Blackmarket Crafter</Link>
-              <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
-              <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
-              <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
-              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
-              <span className="nav-tab active">Loot Split</span>
-            </div>
+            <ToolNav />
           </div>
           {meta}
         </div>

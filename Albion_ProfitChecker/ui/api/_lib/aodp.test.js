@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearMemory, getFestivities, getGold, getPrices, normalizeRegion, parseFestivities, parseGoldHistory, parseItemIds, parsePrices, sendResult } from "./aodp.js";
+import { clearMemory, getFestivities, getGold, getHistory, getPrices, getQuotes, handleAodp, normalizeRegion, parseFestivities, parseGoldHistory, parseHistory, parseItemIds, parsePrices, parseQuotes, sendResult } from "./aodp.js";
 
 // C# ticks for an ISO time, the format AODP uses for event times
 const ticks = (iso) => String(BigInt(Date.parse(iso)) * 10000n + 621355968000000000n);
@@ -204,5 +204,71 @@ describe("loot split prices", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://europe.albion-online-data.com/api/v2/stats/prices/T5_2H_CROSSBOW%401.json?locations=Black%20Market%2CCaerleon%2CBridgewatch%2CFort%20Sterling%2CLymhurst%2CMartlock%2CThetford&qualities=1,2,3,4,5"
     );
+  });
+});
+
+describe("price checker", () => {
+  const now = new Date("2026-11-07T20:00:00Z");
+  const never = "0001-01-01T00:00:00";
+  const quote = (id, city, quality, sell, sellAt, buy, buyAt) => ({
+    item_id: id, city, quality,
+    sell_price_min: sell, sell_price_min_date: sellAt ?? never,
+    buy_price_max: buy, buy_price_max_date: buyAt ?? never
+  });
+  const at = (iso) => Date.parse(`${iso}Z`) / 1000;
+
+  it("keeps each market's best orders with the time they were seen, old ones included", () => {
+    expect(parseQuotes([
+      quote("T4_BAG", "Martlock", 1, 3234, "2026-11-07T18:00:00", 2900, "2026-10-01T10:00:00"),
+      quote("T4_BAG", "Black Market", 2, 0, null, 4700, "2026-11-07T19:20:00"),
+      quote("T4_BAG", "Brecilien", 1, 5000, "2026-11-06T09:00:00", 0, null),
+      quote("T4_BAG", "Lymhurst", 1, 0, null, 0, null), // nothing seen: dropped
+      quote("T4_BAG", "Atlantis", 1, 1, "2026-11-07T18:00:00", 1, "2026-11-07T18:00:00"), // not a market
+      quote("T4_BAG", "Martlock", 9, 1, "2026-11-07T18:00:00", 0, null) // not a quality
+    ])).toEqual([
+      ["T4_BAG", "Black Market", 2, 0, 0, 4700, at("2026-11-07T19:20:00")],
+      ["T4_BAG", "Martlock", 1, 3234, at("2026-11-07T18:00:00"), 2900, at("2026-10-01T10:00:00")],
+      ["T4_BAG", "Brecilien", 1, 5000, at("2026-11-06T09:00:00"), 0, 0]
+    ]);
+  });
+
+  it("turns history into points per market and quality, oldest first", () => {
+    expect(parseHistory([
+      { location: "Lymhurst", quality: 1, data: [
+        { item_count: 210, avg_price: 3234, timestamp: "2026-11-07T00:00:00" },
+        { item_count: 145, avg_price: 3554, timestamp: "2026-11-06T00:00:00" },
+        { item_count: 3, avg_price: 0, timestamp: "2026-11-05T00:00:00" }
+      ] },
+      { location: "Nowhere", quality: 1, data: [{ item_count: 1, avg_price: 1, timestamp: "2026-11-07T00:00:00" }] }
+    ])).toEqual([["Lymhurst", 1, [[at("2026-11-06T00:00:00"), 3554, 145], [at("2026-11-07T00:00:00"), 3234, 210]]]]);
+  });
+
+  it("asks AODP for one item's enchant levels in every market, and refuses more", async () => {
+    const fetchMock = stubFetch(200, [quote("T4_BAG@1", "Martlock", 1, 9000, "2026-11-07T18:00:00", 0, null)]);
+    expect((await getQuotes("eu", "A1,A2,A3,A4,A5,A6", now)).status).toBe(400);
+    const result = await getQuotes("eu", "T4_BAG,T4_BAG@1", now);
+    expect(result).toMatchObject({ status: 200, maxAge: 300, body: { quotes: [["T4_BAG@1", "Martlock", 1, 9000, at("2026-11-07T18:00:00"), 0, 0]] } });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://europe.albion-online-data.com/api/v2/stats/prices/T4_BAG,T4_BAG%401.json?locations=Black%20Market%2CCaerleon%2CBridgewatch%2CFort%20Sterling%2CLymhurst%2CMartlock%2CThetford%2CBrecilien&qualities=1,2,3,4,5"
+    );
+  });
+
+  it("asks AODP for one item's history at a known resolution only", async () => {
+    const fetchMock = stubFetch(200, []);
+    expect((await getHistory("eu", "T4_BAG", 12, now)).status).toBe(400);
+    expect((await getHistory("eu", "T4_BAG,T5_BAG", 24, now)).status).toBe(400);
+    expect(await getHistory("us", "T4_BAG", "24", now)).toMatchObject({ status: 200, maxAge: 3600, body: { id: "T4_BAG", scale: 24, series: [] } });
+    expect(fetchMock.mock.calls[0][0]).toContain("https://west.albion-online-data.com/api/v2/stats/history/T4_BAG.json?locations=");
+    expect(fetchMock.mock.calls[0][0]).toContain("&time-scale=24");
+  });
+});
+
+describe("handleAodp", () => {
+  it("routes each endpoint to its handler and refuses unknown ones", async () => {
+    stubFetch(200, []);
+    expect((await handleAodp("constructor", {})).status).toBe(404);
+    expect((await handleAodp("nope", { region: "eu" })).status).toBe(404);
+    expect((await handleAodp("quotes", { region: "eu" })).status).toBe(400);
+    expect((await handleAodp("history", { region: "eu", id: "T4_BAG", scale: "6" })).status).toBe(200);
   });
 });

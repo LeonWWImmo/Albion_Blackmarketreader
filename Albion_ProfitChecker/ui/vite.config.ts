@@ -14,17 +14,10 @@ function aodpDevApi(): Plugin {
     configureServer(server) {
       server.middlewares.use("/api/aodp", async (req, res, next) => {
         const url = new URL(req.url || "/", "http://localhost");
-        const handler = url.pathname.replace(/^\/+/, "");
-        if (handler !== "gold" && handler !== "festivities" && handler !== "prices") return next();
+        const endpoint = url.pathname.replace(/^\/+/, "");
         const aodp = await import("./api/_lib/aodp.js");
-        const region = url.searchParams.get("region");
-        const result =
-          handler === "gold"
-            ? await aodp.getGold(region)
-            : handler === "prices"
-              ? await aodp.getPrices(region, url.searchParams.get("ids"))
-              : await aodp.getFestivities(region);
-        aodp.sendResult(res, result);
+        if (!Object.prototype.hasOwnProperty.call(aodp.AODP_ENDPOINTS, endpoint)) return next();
+        aodp.sendResult(res, await aodp.handleAodp(endpoint, Object.fromEntries(url.searchParams)));
       });
     }
   };

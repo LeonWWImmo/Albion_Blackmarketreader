@@ -20,6 +20,8 @@ const FoodPotionCrafterPage = lazy(() =>
 );
 const GoldTrackerPage = lazy(() => import("./features/gold-tracker").then((m) => ({ default: m.GoldTrackerPage })));
 const LootSplitPage = lazy(() => import("./features/loot-split").then((m) => ({ default: m.LootSplitPage })));
+const PriceCheckerPage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.PriceCheckerPage })));
+const ItemPricePage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.ItemPricePage })));
 
 export function App() {
   return (
@@ -38,6 +40,8 @@ export function App() {
         <Route path="/food-potion-crafter" element={<FoodPotionCrafterPage />} />
         <Route path="/gold-tracker" element={<GoldTrackerPage />} />
         <Route path="/loot-split" element={<LootSplitPage />} />
+        <Route path="/prices" element={<PriceCheckerPage />} />
+        <Route path="/prices/:slug" element={<ItemPricePage />} />
         <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />
         <Route path="/Blackmarket-Crafter/index.html" element={<Navigate to="/bm-crafter" replace />} />
         <Route path="/crafting-calculator/index.html" element={<Navigate to="/crafting-calculator" replace />} />
