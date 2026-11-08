@@ -96,6 +96,23 @@ describe("quotes", () => {
     expect(bestFlip(marketQuotes(rows, "T4_BAG", 2), now, true)).toBeNull();
   });
 
+  it("finds a flip between two markets when a third has both the cheapest order and the best buy order", () => {
+    const flip = bestFlip(
+      marketQuotes(
+        [
+          ["T4_BAG", "Martlock", 1, 1000, now - h, 1300, now - h],
+          ["T4_BAG", "Thetford", 1, 1050, now - h, 0, 0]
+        ],
+        "T4_BAG",
+        1
+      ),
+      now,
+      true
+    )!;
+    expect(flip).toMatchObject({ from: "Thetford", to: "Martlock", buy: 1050, sell: 1300 });
+    expect(flip.profit).toBeCloseTo(1300 * 0.96 - 1050, 6);
+  });
+
   it("says how old a price is", () => {
     expect([freshness(now - 600, now), freshness(now - 3 * h, now), freshness(now - 30 * h, now), freshness(now - 50 * h, now)]).toEqual([
       "fresh",

@@ -11,6 +11,8 @@ type Props = {
   onPremium: (premium: boolean) => void;
   now: number;
   loading: boolean;
+  /** the prices could not load: the cards say so instead of "no order" */
+  failed: boolean;
 };
 
 function Where({ market, seenAt, now }: { market: string; seenAt: number; now: number }) {
@@ -24,7 +26,8 @@ function Where({ market, seenAt, now }: { market: string; seenAt: number; now: n
 }
 
 /** The three answers people come for: where to buy cheapest, where to sell fastest, and whether a flip pays. */
-export function StatCards({ cheapest, bestSell, flip, premium, onPremium, now, loading }: Props) {
+export function StatCards({ cheapest, bestSell, flip, premium, onPremium, now, loading, failed }: Props) {
+  const none = (text: string) => (loading ? "Loading…" : failed ? "Could not load" : text);
   return (
     <div className="pc-stats" aria-live="polite">
       <article className="pc-stat is-buy">
@@ -35,7 +38,7 @@ export function StatCards({ cheapest, bestSell, flip, premium, onPremium, now, l
             <Where market={cheapest.market} seenAt={cheapest.seenAt} now={now} />
           </>
         ) : (
-          <p className="pc-stat-none">{loading ? "Loading…" : "No recent sell order"}</p>
+          <p className="pc-stat-none">{none("No recent sell order")}</p>
         )}
       </article>
       <article className="pc-stat is-sell">
@@ -46,7 +49,7 @@ export function StatCards({ cheapest, bestSell, flip, premium, onPremium, now, l
             <Where market={bestSell.market} seenAt={bestSell.seenAt} now={now} />
           </>
         ) : (
-          <p className="pc-stat-none">{loading ? "Loading…" : "No recent buy order"}</p>
+          <p className="pc-stat-none">{none("No recent buy order")}</p>
         )}
       </article>
       <article className={`pc-stat is-flip${flip ? " has-flip" : ""}`}>
@@ -61,7 +64,7 @@ export function StatCards({ cheapest, bestSell, flip, premium, onPremium, now, l
             </span>
           </>
         ) : (
-          <p className="pc-stat-none">{loading ? "Loading…" : "No flip pays right now"}</p>
+          <p className="pc-stat-none">{none("No flip pays right now")}</p>
         )}
         <label className="pc-premium">
           <input type="checkbox" checked={premium} onChange={(e) => onPremium(e.target.checked)} />

@@ -7,13 +7,16 @@ import { renderItemPage } from "../_lib/itemPage.js";
 /** Our own hosts only: the page and the item list are read back from the deployment that serves. */
 const OWN_HOST = /^(blackmarketreader\.com|www\.blackmarketreader\.com|[a-z0-9-]+\.vercel\.app)$/;
 
+/** Long enough for our own CDN, short enough to answer with the 503 below instead of a platform timeout. */
+const FETCH_TIMEOUT_MS = 4000;
+
 let assets = null;
 
 /** index.html and the item list, read once per function instance. */
 function loadAssets(origin) {
   assets ??= Promise.all([
-    fetch(`${origin}/index.html`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`index.html ${r.status}`)))),
-    fetch(`${origin}/data/items-index.json`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`items-index ${r.status}`))))
+    fetch(`${origin}/index.html`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`index.html ${r.status}`)))),
+    fetch(`${origin}/data/items-index.json`, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`items-index ${r.status}`))))
   ])
     .then(([template, rows]) => ({ template, rows }))
     .catch((error) => {

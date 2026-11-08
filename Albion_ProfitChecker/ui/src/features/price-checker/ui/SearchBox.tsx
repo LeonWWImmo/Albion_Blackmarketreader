@@ -41,21 +41,24 @@ export function SearchBox({ index, size }: Props) {
     navigate(itemPath(hit.item, hit.enchant));
   };
 
+  // only a tier so far ("t6") is not a search yet: no list, rather than "no item"
+  const showList = open && parseQuery(query).words.length > 0;
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      setOpen(true);
-      if (hits.length) setActive((i) => (i + (event.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length);
-    } else if (event.key === "Enter" && hits[active]) {
+      // the first arrow press only reopens a closed list, on its first hit
+      if (!showList) {
+        setOpen(true);
+        setActive(0);
+      } else if (hits.length) setActive((i) => (i + (event.key === "ArrowDown" ? 1 : hits.length - 1)) % hits.length);
+    } else if (event.key === "Enter" && showList && hits[active]) {
       event.preventDefault();
       pick(hits[active]);
     } else if (event.key === "Escape") {
       setOpen(false);
     }
   };
-
-  // only a tier so far ("t6") is not a search yet: no list, rather than "no item"
-  const showList = open && parseQuery(query).words.length > 0;
 
   return (
     <div className={`pc-search is-${size}`}>

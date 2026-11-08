@@ -70,12 +70,23 @@ export function bestInstantSell(quotes: MarketQuote[], now: number): Best {
 
 export type Flip = { from: MarketName; to: MarketName; buy: number; sell: number; profit: number; margin: number };
 
-/** Buy the cheapest sell order, sell straight into the best buy order elsewhere: what is left after tax. */
+/**
+ * Buy a sell order in one market, sell straight into a buy order in another: the pair that leaves the
+ * most after tax. Every pair counts, so a market with both the cheapest order and the best buy order
+ * does not hide a flip between two others.
+ */
 export function bestFlip(quotes: MarketQuote[], now: number, premium: boolean): Flip | null {
-  const buy = cheapestBuy(quotes, now);
-  const sell = bestInstantSell(quotes, now);
-  if (!buy || !sell || buy.market === sell.market) return null;
-  const profit = sell.price * (1 - salesTaxRate(premium)) - buy.price;
-  if (profit <= 0) return null;
-  return { from: buy.market, to: sell.market, buy: buy.price, sell: sell.price, profit, margin: profit / buy.price };
+  const keep = 1 - salesTaxRate(premium);
+  let best: Flip | null = null;
+  for (const from of quotes) {
+    if (!counts(from.market) || !usable(from.sell, now)) continue;
+    for (const to of quotes) {
+      if (to.market === from.market || !counts(to.market) || !usable(to.buy, now)) continue;
+      const profit = to.buy.price * keep - from.sell.price;
+      if (profit > 0 && (!best || profit > best.profit)) {
+        best = { from: from.market, to: to.market, buy: from.sell.price, sell: to.buy.price, profit, margin: profit / from.sell.price };
+      }
+    }
+  }
+  return best;
 }

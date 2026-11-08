@@ -62,7 +62,14 @@ export function PriceChart({ lines, hourly }: { lines: ChartLine[]; hourly: bool
     return { drawn, times, x, y, volume, maxVolume, barW, ticks, labelEvery };
   }, [lines, width]);
 
-  if (!model) return <div className="pc-chart-empty">No sales reported for this item yet.</div>;
+  // the wrapper (and its width observer) stays even with nothing to draw, so a chart that starts
+  // empty still fits the screen once lines arrive
+  if (!model)
+    return (
+      <div className="pc-chart" ref={box}>
+        <div className="pc-chart-empty">{lines.length ? "No sales reported for this item yet." : "Every market is hidden. Pick one above to see its prices."}</div>
+      </div>
+    );
   const { drawn, times, x, y, volume, maxVolume, barW, ticks, labelEvery } = model;
   const bandTop = HEIGHT - PAD.bottom - VOLUME_BAND;
 

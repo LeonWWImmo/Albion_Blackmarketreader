@@ -50,12 +50,19 @@ function CraftingMenu({ pathname }: { pathname: string }) {
   }, [open]);
 
   return (
-    <div className="tool-nav-menu" ref={box}>
+    <div
+      className="tool-nav-menu"
+      ref={box}
+      onBlur={(event) => {
+        // tabbing out of the menu closes it, so it does not stay open over the page
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <button
         type="button"
         className={`nav-tab${current ? " active" : ""}`}
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
       >
         {current ? current.label : "Crafting"}

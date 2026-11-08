@@ -199,7 +199,7 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
         </p>
       ) : null}
 
-      <StatCards cheapest={cheapest} bestSell={bestSell} flip={flip} premium={premium} onPremium={setPremium} now={now} loading={loading} />
+      <StatCards cheapest={cheapest} bestSell={bestSell} flip={flip} premium={premium} onPremium={setPremium} now={now} loading={loading} failed={failed} />
 
       <section className="pc-card" aria-labelledby="pc-markets-title">
         <div className="pc-card-head">
@@ -307,8 +307,22 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
   );
 }
 
-/** Loading, a failed item list, or an address with no item behind it. */
-function NoItem({ index, failed }: { index: ItemIndex | null; failed: boolean }) {
+/**
+ * While the item list loads, or when it failed: no head tags of its own, so the item's title and
+ * description (set by the server for /prices/<slug>) stay until the page knows whether the item exists.
+ */
+function LoadingItem({ failed }: { failed: boolean }) {
+  return (
+    <main className="pc pc-item">
+      <div className="pc-missing">
+        <h2>{failed ? "The item list could not load. Reload the page to try again." : "Loading…"}</h2>
+      </div>
+    </main>
+  );
+}
+
+/** An address with no item behind it. */
+function NoItem({ index }: { index: ItemIndex }) {
   useSeo({
     title: "Item not found | Price Checker | Blackmarket Reader",
     description: "There is no Albion Online item at this address. Search all items in the Price Checker.",
@@ -318,13 +332,9 @@ function NoItem({ index, failed }: { index: ItemIndex | null; failed: boolean })
   return (
     <main className="pc pc-item">
       <div className="pc-missing">
-        <h2>{failed ? "The item list could not load" : index ? "No item at this address" : "Loading…"}</h2>
-        {index ? (
-          <>
-            <p>Search for it instead:</p>
-            <SearchBox index={index} size="hero" />
-          </>
-        ) : null}
+        <h2>No item at this address</h2>
+        <p>Search for it instead:</p>
+        <SearchBox index={index} size="hero" />
       </div>
     </main>
   );
@@ -337,7 +347,13 @@ export function ItemPricePage() {
   return (
     <PriceCheckerShell>
       {(region, setRegion) =>
-        item && index ? <ItemView key={item.slug} index={index} item={item} region={region} setRegion={setRegion} /> : <NoItem index={index} failed={failed} />
+        item && index ? (
+          <ItemView key={item.slug} index={index} item={item} region={region} setRegion={setRegion} />
+        ) : index ? (
+          <NoItem index={index} />
+        ) : (
+          <LoadingItem failed={failed} />
+        )
       }
     </PriceCheckerShell>
   );

@@ -31,10 +31,16 @@ const memory = new Map();
 /** Price lists vary per chest log, so the memory keeps at most this many answers (oldest go first). */
 const MEMORY_MAX = 300;
 
+/** Calls to AODP still running, by key: visitors asking the same thing at once share one call. */
+const pending = new Map();
+
 async function remembered(key, load) {
   const hit = memory.get(key);
   if (hit && hit.until > Date.now()) return hit.result;
-  const result = await load();
+  if (pending.has(key)) return pending.get(key);
+  const call = load().finally(() => pending.delete(key));
+  pending.set(key, call);
+  const result = await call;
   const ttl = result.status === 200 ? result.maxAge : result.status >= 500 ? FAILURE_TTL_S : 0;
   if (ttl > 0) {
     memory.delete(key);
