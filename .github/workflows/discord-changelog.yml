@@ -122,6 +122,8 @@ jobs:
           if [ -n "$IMAGE" ]; then
             if [[ ! "$IMAGE" =~ ^[A-Za-z0-9/_.-]+\.(png|jpg|jpeg|webp|gif)$ ]]; then echo "image must be a path like picture/x.png"; exit 1; fi
             BANNER="https://blackmarketreader.com/${IMAGE#/}"
+          elif printf '%s' "$NOTES" | grep -q 'Price Checker'; then
+            BANNER="https://blackmarketreader.com/picture/price-checker-preview.png"
           elif printf '%s' "$NOTES" | grep -q 'Loot Split'; then
             BANNER="https://blackmarketreader.com/picture/loot-split-preview.png"
           elif printf '%s' "$NOTES" | grep -q 'Gold Tracker'; then

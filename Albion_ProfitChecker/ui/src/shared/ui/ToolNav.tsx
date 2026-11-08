@@ -71,7 +71,8 @@ function CraftingMenu({ pathname }: { pathname: string }) {
         </svg>
       </button>
       {open ? (
-        <div className="tool-nav-panel" id={menuId}>
+        // mousedown keeps focus where it is, so a click on the panel's heading or padding does not blur and close it
+        <div className="tool-nav-panel" id={menuId} onMouseDown={(event) => event.preventDefault()}>
           <p>Crafting tools</p>
           {CRAFTING.map((tab) => (
             <Link key={tab.to} to={tab.to} className={isActiveTab(tab.to, pathname) ? "is-on" : ""} aria-current={isActiveTab(tab.to, pathname) ? "page" : undefined}>

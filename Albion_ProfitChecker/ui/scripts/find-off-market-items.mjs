@@ -1,9 +1,11 @@
 // Finds the items the game's lists contain but nobody trades: no icon on Albion's own image server
-// and never a price on the Europe or Americas market (vanity skins, island furniture, retired items).
-// Writes scripts/off-market-items.json, which build-item-index.mjs leaves out of the Price Checker.
+// and no order on record on the Europe or Americas market (vanity skins, island furniture, retired
+// items). AODP keeps the last order it saw per item, so "no order" means none reported in a long time.
+// Writes scripts/off-market-items.json, which build-item-index.mjs leaves out of the Price Checker,
+// and prints what changed against the old list: check newly left-out items before building.
 // Run after a big game patch, before build-item-index.mjs:  node scripts/find-off-market-items.mjs
 // Takes a few minutes: one small image request per item, then a few AODP calls.
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { OFF_MARKET, buildIndex, loadSources } from "./build-item-index.mjs";
 
 const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
@@ -28,7 +30,7 @@ async function hasIcon(id) {
   throw new Error(`image server gave no clear answer for ${id}`);
 }
 
-/** Ids of `ids` that have ever had a sell or buy order on either market. */
+/** Ids of `ids` with a sell or buy order on record on either market. */
 async function tradedIds(ids) {
   const traded = new Set();
   for (const host of AODP_HOSTS) {
@@ -58,5 +60,10 @@ await Promise.all(
 );
 const traded = await tradedIds(noIcon);
 const offMarket = noIcon.filter((id) => !traded.has(id)).sort();
+const before = new Set(existsSync(OFF_MARKET) ? JSON.parse(readFileSync(OFF_MARKET, "utf8")) : []);
+const added = offMarket.filter((id) => !before.has(id));
+const back = [...before].filter((id) => !offMarket.includes(id));
 writeFileSync(OFF_MARKET, `${JSON.stringify(offMarket, null, 1)}\n`);
-console.log(`${ids.length} items: ${noIcon.length} without icon, ${offMarket.length} of them never traded -> ${OFF_MARKET}`);
+console.log(`${ids.length} items: ${noIcon.length} without icon, ${offMarket.length} of them with no order on record -> ${OFF_MARKET}`);
+if (added.length) console.log(`newly left out (check these): ${added.join(", ")}`);
+if (back.length) console.log(`back in the Price Checker: ${back.join(", ")}`);
