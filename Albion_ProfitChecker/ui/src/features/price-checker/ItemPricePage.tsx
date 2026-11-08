@@ -11,6 +11,7 @@ import { ENCHANT_COLOR, MARKET_COLOR, QUALITIES, TierBadge } from "./ui/badges";
 import { silver } from "./ui/format";
 import { Ladder } from "./ui/Ladder";
 import { MarketTable } from "./ui/MarketTable";
+import { onIconError } from "./ui/icon";
 import { PriceChart, type ChartLine } from "./ui/PriceChart";
 import { itemPath } from "./ui/paths";
 import { RECENT_KEY, WATCH_KEY, isSavedItem, sameSaved, type SavedItem } from "./ui/saved";
@@ -122,7 +123,7 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
       <section className="pc-card pc-head" style={{ "--quality": QUALITIES[quality - 1].color, "--enchant": ENCHANT_COLOR[enchant] } as CSSProperties}>
         <div className="pc-head-main">
           <div className="pc-icon">
-            <img key={`${id}.${quality}`} src={iconUrl(id, quality)} alt="" width={128} height={128} />
+            <img key={`${id}.${quality}`} src={iconUrl(id, quality)} alt="" width={128} height={128} onError={onIconError} />
           </div>
           <div className="pc-head-text">
             <p className="pc-head-cat">

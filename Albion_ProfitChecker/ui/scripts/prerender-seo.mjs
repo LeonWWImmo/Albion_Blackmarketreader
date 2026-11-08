@@ -130,7 +130,7 @@ const ROUTES = [
     h1: "Albion Online Price Checker",
     ogImage: `${SITE}/picture/price-checker-preview.png`,
     intro:
-      "Search any of the 4,000+ items traded in Albion Online and see its price in every royal city, Caerleon, Brecilien and the Black Market: the cheapest sell order to buy from, the best buy order to sell into straight away, whether a flip pays after tax, the price history, items sold per day and how long ago each price was seen.",
+      "Search any of the 3,700+ items traded in Albion Online and see its price in every royal city, Caerleon, Brecilien and the Black Market: the cheapest sell order to buy from, the best buy order to sell into straight away, whether a flip pays after tax, the price history, items sold per day and how long ago each price was seen.",
   },
   {
     path: "community",

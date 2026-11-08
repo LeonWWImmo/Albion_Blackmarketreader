@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { useNavigate } from "react-router-dom";
 import { categoryLabel, iconUrl, type ItemIndex } from "../core/items";
 import { parseQuery, searchItems, type SearchHit } from "../core/search";
+import { onIconError } from "./icon";
 import { itemPath } from "./paths";
 import { TierBadge } from "./badges";
 
@@ -105,7 +106,7 @@ export function SearchBox({ index, size }: Props) {
                   pick(hit);
                 }}
               >
-                <img src={iconUrl(hit.item.variants[hit.enchant ?? 0])} alt="" loading="lazy" width={44} height={44} />
+                <img src={iconUrl(hit.item.variants[hit.enchant ?? 0])} alt="" loading="lazy" width={44} height={44} onError={onIconError} />
                 <span className="pc-hit-name">
                   <b>{hit.label}</b>
                   <small>{categoryLabel(hit.item.category)}</small>

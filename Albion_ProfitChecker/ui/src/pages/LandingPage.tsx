@@ -367,7 +367,7 @@ export function LandingPage() {
               <span className="section-eyebrow">Price Checker</span>
               <h2>Every item. Every city.</h2>
               <p>
-                Search any of the 4,000+ items and see its price in every royal city, Caerleon, Brecilien and the Black
+                Search any of the 3,700+ items and see its price in every royal city, Caerleon, Brecilien and the Black
                 Market, with where to buy cheapest, where to sell straight away and how old every price is.
               </p>
               <ul className="demo-points">

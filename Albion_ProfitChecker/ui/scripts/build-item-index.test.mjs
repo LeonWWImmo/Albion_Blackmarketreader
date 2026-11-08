@@ -44,6 +44,8 @@ describe("item index", () => {
       ["T4_RUNE", "Adept's Rune", "adepts-rune", "artefacts", "fragments", 4, 0.05, 0],
       ["T4_PLANKS", "Pine Planks", "pine-planks", "crafting", "refinedresources", 4, 0.51, ["T4_PLANKS", "T4_PLANKS_LEVEL1@1"]]
     ]);
+    // the off-market list drops an item with all its enchantment levels
+    expect(buildIndex(formatted, raw, new Set(), new Set(["T4_BAG", "T4_PLANKS"])).map((row) => row[0])).toEqual(["T4_RUNE"]);
   });
 
   it("gives two items with one name each their own slug", () => {

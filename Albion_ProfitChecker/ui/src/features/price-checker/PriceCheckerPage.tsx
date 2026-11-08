@@ -5,6 +5,7 @@ import { SeoHeading } from "../../shared/seo/SeoHeading";
 import { CATEGORIES, baseName, familyKey, iconUrl, type ItemEntry, type ItemIndex } from "./core/items";
 import { useItemIndex, useStoredList } from "./hooks/usePriceData";
 import { TierBadge } from "./ui/badges";
+import { onIconError } from "./ui/icon";
 import { itemPath } from "./ui/paths";
 import { SearchBox } from "./ui/SearchBox";
 import { PriceCheckerShell } from "./ui/Shell";
@@ -36,7 +37,7 @@ function SavedRow({ title, items, index }: { title: string; items: SavedItem[]; 
         {shown.map(({ saved, item }) => (
           <li key={`${saved.slug}.${saved.e}.${saved.q}`}>
             <Link to={itemPath(item, saved.e, saved.q)}>
-              <img src={iconUrl(item.variants[saved.e] ?? item.id, saved.q)} alt="" loading="lazy" width={52} height={52} />
+              <img src={iconUrl(item.variants[saved.e] ?? item.id, saved.q)} alt="" loading="lazy" width={52} height={52} onError={onIconError} />
               <span>
                 <b>{item.name}</b>
                 <TierBadge tier={item.tier} enchant={saved.e} />
@@ -93,7 +94,7 @@ export function PriceCheckerPage() {
                 const item = index?.bySlug.get(slug);
                 return item ? (
                   <Link key={slug} to={itemPath(item)}>
-                    <img src={iconUrl(item.id)} alt="" width={22} height={22} loading="lazy" />
+                    <img src={iconUrl(item.id)} alt="" width={22} height={22} loading="lazy" onError={onIconError} />
                     {item.name}
                   </Link>
                 ) : null;
@@ -119,7 +120,7 @@ export function PriceCheckerPage() {
                     setShowAll(false);
                   }}
                 >
-                  <img src={iconUrl(c.icon)} alt="" loading="lazy" width={56} height={56} />
+                  <img src={iconUrl(c.icon)} alt="" loading="lazy" width={56} height={56} onError={onIconError} />
                   <b>{c.label}</b>
                   <small>{counts.get(c.key) ?? "…"}</small>
                 </button>
@@ -129,7 +130,7 @@ export function PriceCheckerPage() {
               <div className="pc-family-grid">
                 {(showAll ? browse : browse.slice(0, BROWSE_FIRST)).map(({ lead, tiers }) => (
                   <Link key={lead.id} to={itemPath(lead)} className="pc-family">
-                    <img src={iconUrl(lead.id)} alt="" loading="lazy" width={64} height={64} />
+                    <img src={iconUrl(lead.id)} alt="" loading="lazy" width={64} height={64} onError={onIconError} />
                     <b>{tiers.length > 1 ? baseName(lead.name) : lead.name}</b>
                     <small>{tiers.length > 1 ? `T${tiers[0]}–T${tiers[tiers.length - 1]}` : tiers.length ? `T${tiers[0]}` : ""}</small>
                   </Link>

@@ -2,7 +2,8 @@
 // market, once per tier, with its English name, URL slug, shop category, weight and the market ids
 // of its enchantment levels. Source: ao-bin-dumps, the game's own item lists. It also writes
 // public/sitemap-prices.xml, one URL per item page, from the same slugs.
-// Run again after a big game patch:  node scripts/build-item-index.mjs
+// Run again after a big game patch:  node scripts/find-off-market-items.mjs, then
+//                                     node scripts/build-item-index.mjs
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,8 @@ const DUMPS = "https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master";
 const PUBLIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
 const OUT = path.join(PUBLIC, "data/items-index.json");
 const SITEMAP = path.join(PUBLIC, "sitemap-prices.xml");
+/** Items the game lists but nobody can trade (skins, island furniture, retired items): see find-off-market-items.mjs. */
+export const OFF_MARKET = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "off-market-items.json");
 const SITE = "https://blackmarketreader.com";
 const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
 
@@ -38,12 +41,13 @@ export function slugify(name) {
  * formatted: ao-bin-dumps formatted/items.json (market ids with names, enchanted ones included).
  * raw: ao-bin-dumps items.json `items` (shop category, weight).
  * craftable: item ids without their tier ("2H_BOW") that the Crafting Calculator knows.
+ * skip: item ids (without enchantment) to leave out, the off-market list.
  * Returns rows [id, name, slug, category, subcategory, tier, weight, enchants, craftable?], sorted by
  * name. enchants is the highest enchantment level when the market ids follow `${id}@n` (most items),
  * or the list of market ids from .0 up when they do not (refined resources: T4_PLANKS_LEVEL1@1). A
  * ninth value 1 marks a T4-T8 item the Crafting Calculator can open.
  */
-export function buildIndex(formatted, raw, craftable = new Set()) {
+export function buildIndex(formatted, raw, craftable = new Set(), skip = new Set()) {
   const shop = new Map();
   for (const list of Object.values(raw)) {
     if (!Array.isArray(list)) continue;
@@ -56,6 +60,7 @@ export function buildIndex(formatted, raw, craftable = new Set()) {
     const name = entry?.LocalizedNames?.["EN-US"];
     if (!id || !name || SKIP_IDS.test(id)) continue;
     const { base, enchant } = splitId(id);
+    if (skip.has(base)) continue;
     const item = shop.get(base);
     if (!item || SKIP_SUBCATEGORIES.has(item["@shopsubcategory1"])) continue;
     const group = groups.get(base) ?? { base, item, name: null, variants: [] };
@@ -95,11 +100,18 @@ async function getJson(url) {
   return res.json();
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/** The game's item lists and the Crafting Calculator's items: everything buildIndex reads. */
+export async function loadSources() {
   const [formatted, raw] = await Promise.all([getJson(`${DUMPS}/formatted/items.json`), getJson(`${DUMPS}/items.json`)]);
   const crafting = JSON.parse(readFileSync(path.join(PUBLIC, "items-categorized-crafting.json"), "utf8"));
   const craftable = new Set(crafting.categories.flatMap((category) => category.items.map((item) => item.id)));
-  const rows = buildIndex(formatted, raw.items, craftable);
+  return { formatted, raw: raw.items, craftable };
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const { formatted, raw, craftable } = await loadSources();
+  const offMarket = new Set(JSON.parse(readFileSync(OFF_MARKET, "utf8")));
+  const rows = buildIndex(formatted, raw, craftable, offMarket);
   writeFileSync(OUT, JSON.stringify(rows));
   writeFileSync(SITEMAP, buildSitemap(rows, new Date().toISOString().slice(0, 10)));
   console.log(`${rows.length} items (${rows.filter((r) => r[8]).length} craftable) -> ${path.relative(process.cwd(), OUT)}, ${path.relative(process.cwd(), SITEMAP)}`);

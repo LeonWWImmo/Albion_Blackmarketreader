@@ -39,6 +39,8 @@ body.price-checker-body {
   padding: 22px 24px 72px;
   box-sizing: border-box;
   display: grid;
+  /* minmax(0, ...): a long row inside (recently viewed, watchlist) scrolls in place instead of widening the page */
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
 }
 

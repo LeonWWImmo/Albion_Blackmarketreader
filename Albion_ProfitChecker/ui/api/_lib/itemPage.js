@@ -1,4 +1,4 @@
-// The head and crawler text of one Price Checker item page (/prices/<slug>). There are 4,000+ items,
+// The head and crawler text of one Price Checker item page (/prices/<slug>). There are 3,700+ items,
 // so these pages are not prerendered as files: api/seo/price-page.js renders each on request into
 // the site's index.html and the CDN keeps it. The texts match what the page itself sets with useSeo.
 import { applyPageMeta, escText } from "./pageMeta.js";
