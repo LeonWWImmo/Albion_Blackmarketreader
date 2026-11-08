@@ -73,6 +73,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/aodp/:endpoint",
+      "destination": "/api/aodp?endpoint=:endpoint"
+    },
+    {
       "source": "/prices/:slug",
       "destination": "/api/seo/price-page?slug=:slug"
     },

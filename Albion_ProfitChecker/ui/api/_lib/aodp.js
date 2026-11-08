@@ -1,5 +1,5 @@
 // Server-side access to the Albion Online Data Project (AODP) API, shared by the Vercel
-// functions in api/aodp/ and by the Vite dev server (vite.config.ts), so local development
+// function api/aodp.js and by the Vite dev server (vite.config.ts), so local development
 // serves the same responses as production.
 //
 // Visitors never call AODP themselves: the browser asks /api/aodp/*, Vercel's CDN caches the
@@ -360,7 +360,7 @@ export async function getHistory(regionInput, idInput, scaleInput, now = new Dat
 }
 
 /**
- * GET /api/aodp/<endpoint>?... — one Vercel function (api/aodp/[endpoint].js) and the Vite dev
+ * GET /api/aodp/<endpoint>?... — one Vercel function (api/aodp.js, reached through a vercel.json rewrite) and the Vite dev
  * server both answer through this table, so every endpoint is wired in exactly one place.
  *   gold         ?region                  hourly gold price, 90 days
  *   festivities  ?region                  daily crafting bonuses and weekly events
