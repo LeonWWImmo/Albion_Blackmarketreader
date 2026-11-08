@@ -1200,6 +1200,14 @@ export function DashboardPage() {
           </span>
           <span className="tool-rail-label">Loot Split</span>
         </a>
+        <a className="tool-rail-link" href="/prices" title="Price Checker">
+          <span className="tool-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42ZM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7Z" />
+            </svg>
+          </span>
+          <span className="tool-rail-label">Price Checker</span>
+        </a>
       </aside>
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
@@ -1221,6 +1229,7 @@ export function DashboardPage() {
           <a className="nav-link" href="/#bm-crafter-access">Crafting-Tools</a>
           <a className="nav-link" href="/gold-tracker">Gold Tracker</a>
           <a className="nav-link" href="/loot-split">Loot Split</a>
+          <a className="nav-link" href="/prices">Price Checker</a>
           <a className="nav-link" href="/community">Community</a>
         </nav>
         <div className="topbar-right">

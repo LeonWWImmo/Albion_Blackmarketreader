@@ -12,7 +12,7 @@ import "../priceChecker.css";
 export function PriceCheckerShell({ children }: { children: (region: Region, setRegion: (next: Region) => void) => ReactNode }) {
   const { pathname } = useLocation();
   const [region, setRegion] = useRegion();
-  const { meta, layers } = useToolAccount(pathname, null, region, setRegion);
+  const { meta, layers } = useToolAccount(pathname, "prices", region, setRegion);
 
   useEffect(() => {
     document.body.classList.add("price-checker-body");

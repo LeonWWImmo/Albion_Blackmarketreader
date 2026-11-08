@@ -91,11 +91,16 @@ export function useNow(): number {
  * A short list kept in this browser (watchlist, recently viewed). Storage can be blocked or full:
  * the list then simply lives for the visit.
  */
-export function useStoredList<T>(key: string, max: number, same: (a: T, b: T) => boolean): [T[], (item: T) => void, (item: T) => void] {
+export function useStoredList<T>(
+  key: string,
+  max: number,
+  same: (a: T, b: T) => boolean,
+  valid: (value: unknown) => value is T
+): [T[], (item: T) => void, (item: T) => void] {
   const [items, setItems] = useState<T[]>(() => {
     try {
       const parsed: unknown = JSON.parse(localStorage.getItem(key) || "[]");
-      return Array.isArray(parsed) ? (parsed as T[]).slice(0, max) : [];
+      return Array.isArray(parsed) ? parsed.filter(valid).slice(0, max) : [];
     } catch {
       return [];
     }
@@ -107,7 +112,7 @@ export function useStoredList<T>(key: string, max: number, same: (a: T, b: T) =>
       // storage blocked or full: keep the list for this visit only
     }
   }, [key, items]);
-  // `same` must be a stable function (defined outside the component)
+  // `same` and `valid` must be stable functions (defined outside the component)
   const add = useCallback((item: T) => setItems((prev) => [item, ...prev.filter((p) => !same(p, item))].slice(0, max)), [max, same]);
   const remove = useCallback((item: T) => setItems((prev) => prev.filter((p) => !same(p, item))), [same]);
   return [items, add, remove];

@@ -73,6 +73,10 @@
   ],
   "rewrites": [
     {
+      "source": "/prices/:slug",
+      "destination": "/api/seo/price-page?slug=:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

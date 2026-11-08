@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
@@ -14,6 +13,7 @@ import {
   GuestSignInLink,
   MobileNavBurger,
   RegionPicker,
+  ToolNav,
   StylePicker,
   exitGuestToLogin,
   hasChosenFaction,
@@ -422,16 +422,7 @@ export function GoldTrackerPage() {
               </div>
               <h1>RomulusKings Crafting Tools</h1>
             </div>
-            <div className="bm-nav bm-nav-switch">
-              <Link className="nav-tab" to="/">Home</Link>
-              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
-              <Link className="nav-tab" to="/bm-crafter">Blackmarket Crafter</Link>
-              <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
-              <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
-              <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
-              <span className="nav-tab active">Gold Tracker</span>
-              <Link className="nav-tab" to="/loot-split">Loot Split</Link>
-            </div>
+            <ToolNav />
           </div>
           <div className="bm-meta">
             <button className="bm-pill" type="button" onClick={requestRegionToggle}>

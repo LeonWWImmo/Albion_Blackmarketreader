@@ -1,13 +1,17 @@
 // Builds public/data/items-index.json for the Price Checker: every item that can be traded on the
 // market, once per tier, with its English name, URL slug, shop category, weight and the market ids
-// of its enchantment levels. Source: ao-bin-dumps, the game's own item lists.
+// of its enchantment levels. Source: ao-bin-dumps, the game's own item lists. It also writes
+// public/sitemap-prices.xml, one URL per item page, from the same slugs.
 // Run again after a big game patch:  node scripts/build-item-index.mjs
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DUMPS = "https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master";
-const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public/data/items-index.json");
+const PUBLIC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../public");
+const OUT = path.join(PUBLIC, "data/items-index.json");
+const SITEMAP = path.join(PUBLIC, "sitemap-prices.xml");
+const SITE = "https://blackmarketreader.com";
 const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
 
 /** Shop sections that are not real market goods. */
@@ -33,11 +37,13 @@ export function slugify(name) {
 /**
  * formatted: ao-bin-dumps formatted/items.json (market ids with names, enchanted ones included).
  * raw: ao-bin-dumps items.json `items` (shop category, weight).
- * Returns rows [id, name, slug, category, subcategory, tier, weight, enchants], sorted by name.
- * enchants is the highest enchantment level when the market ids follow `${id}@n` (most items), or
- * the list of market ids from .0 up when they do not (refined resources: T4_PLANKS_LEVEL1@1).
+ * craftable: item ids without their tier ("2H_BOW") that the Crafting Calculator knows.
+ * Returns rows [id, name, slug, category, subcategory, tier, weight, enchants, craftable?], sorted by
+ * name. enchants is the highest enchantment level when the market ids follow `${id}@n` (most items),
+ * or the list of market ids from .0 up when they do not (refined resources: T4_PLANKS_LEVEL1@1). A
+ * ninth value 1 marks a T4-T8 item the Crafting Calculator can open.
  */
-export function buildIndex(formatted, raw) {
+export function buildIndex(formatted, raw, craftable = new Set()) {
   const shop = new Map();
   for (const list of Object.values(raw)) {
     if (!Array.isArray(list)) continue;
@@ -67,12 +73,20 @@ export function buildIndex(formatted, raw) {
     const tier = Number(base.match(/^T(\d)_/)?.[1] ?? 0);
     const standard = variants.every((id, enchant) => id === (enchant ? `${base}@${enchant}` : base));
     const enchants = standard ? variants.length - 1 : variants;
-    rows.push([base, name, slugify(name), item["@shopcategory"], item["@shopsubcategory1"] ?? "", tier, Number(item["@weight"] ?? 0), enchants]);
+    const row = [base, name, slugify(name), item["@shopcategory"], item["@shopsubcategory1"] ?? "", tier, Number(item["@weight"] ?? 0), enchants];
+    if (tier >= 4 && tier <= 8 && craftable.has(base.replace(/^T\d_/, ""))) row.push(1);
+    rows.push(row);
     slugs.set(slugify(name), (slugs.get(slugify(name)) ?? 0) + 1);
   }
   // two items with one name (rare): both get their id in the slug so every URL stays unique
   for (const row of rows) if (slugs.get(row[2]) > 1) row[2] = `${row[2]}-${row[0].toLowerCase().replace(/_/g, "-")}`;
   return rows.sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+}
+
+/** A sitemap with one URL per item page. */
+export function buildSitemap(rows, lastmod) {
+  const urls = rows.map(([, , slug]) => `  <url><loc>${SITE}/prices/${slug}</loc><lastmod>${lastmod}</lastmod><changefreq>daily</changefreq><priority>0.5</priority></url>`);
+  return ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', ...urls, "</urlset>", ""].join("\n");
 }
 
 async function getJson(url) {
@@ -83,7 +97,10 @@ async function getJson(url) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [formatted, raw] = await Promise.all([getJson(`${DUMPS}/formatted/items.json`), getJson(`${DUMPS}/items.json`)]);
-  const rows = buildIndex(formatted, raw.items);
+  const crafting = JSON.parse(readFileSync(path.join(PUBLIC, "items-categorized-crafting.json"), "utf8"));
+  const craftable = new Set(crafting.categories.flatMap((category) => category.items.map((item) => item.id)));
+  const rows = buildIndex(formatted, raw.items, craftable);
   writeFileSync(OUT, JSON.stringify(rows));
-  console.log(`${rows.length} items -> ${path.relative(process.cwd(), OUT)}`);
+  writeFileSync(SITEMAP, buildSitemap(rows, new Date().toISOString().slice(0, 10)));
+  console.log(`${rows.length} items (${rows.filter((r) => r[8]).length} craftable) -> ${path.relative(process.cwd(), OUT)}, ${path.relative(process.cwd(), SITEMAP)}`);
 }

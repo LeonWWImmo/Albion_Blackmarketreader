@@ -1,0 +1,101 @@
+/* The tool tabs (ToolNav.tsx). The tab look itself lives with .bm-nav .nav-tab in bmCrafter.css;
+   this adds the one-line labels and the "Crafting" menu that holds the four crafting tools. */
+
+.bm-nav.bm-nav-switch .nav-tab {
+  white-space: nowrap;
+}
+
+.tool-nav-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* only the family: size and weight come from .bm-nav .nav-tab, including its smaller phone sizes */
+.bm-nav button.nav-tab {
+  gap: 6px;
+  font-family: inherit;
+}
+
+.bm-nav button.nav-tab svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
+
+.bm-nav button.nav-tab[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.tool-nav-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 1600;
+  display: grid;
+  gap: 2px;
+  width: 290px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(9, 14, 18, 0.98);
+  border: 1px solid rgba(var(--fx-accent-rgb, 45, 212, 191), 0.4);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: tool-nav-drop 0.15s ease both;
+}
+
+.tool-nav-panel p {
+  margin: 4px 10px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(183, 247, 223, 0.55);
+}
+
+.tool-nav-panel a {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  text-decoration: none;
+  color: #e8fff6;
+}
+
+.tool-nav-panel a:hover,
+.tool-nav-panel a:focus-visible {
+  background: rgba(var(--fx-accent-rgb, 45, 212, 191), 0.12);
+  outline: none;
+}
+
+.tool-nav-panel a.is-on {
+  background: rgba(var(--fx-accent-rgb, 45, 212, 191), 0.18);
+  box-shadow: inset 3px 0 0 rgba(var(--fx-accent-rgb, 45, 212, 191), 0.9);
+}
+
+.tool-nav-panel b {
+  font-size: 14.5px;
+}
+
+.tool-nav-panel small {
+  font-size: 12px;
+  color: rgba(183, 247, 223, 0.6);
+}
+
+@keyframes tool-nav-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-nav-panel,
+  .bm-nav button.nav-tab svg {
+    animation: none;
+    transition: none;
+  }
+}

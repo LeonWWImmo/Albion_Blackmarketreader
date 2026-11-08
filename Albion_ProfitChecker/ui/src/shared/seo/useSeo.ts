@@ -13,6 +13,8 @@ type SeoOptions = {
   twitterDescription?: string;
   twitterImage?: string;
   structuredData?: Record<string, unknown>;
+  /** keep this page out of search results (e.g. an address that shows "not found") */
+  noindex?: boolean;
   preloadHero?: {
     href: string;
     imageSrcSet?: string;
@@ -37,7 +39,7 @@ export function useSeo(options: SeoOptions) {
 
     upsertMeta("name", "description", options.description);
     if (options.keywords) upsertMeta("name", "keywords", options.keywords);
-    upsertMeta("name", "robots", "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1");
+    upsertMeta("name", "robots", options.noindex ? "noindex,follow" : "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1");
 
     upsertMeta("property", "og:type", "website");
     upsertMeta("property", "og:title", options.ogTitle ?? options.title);

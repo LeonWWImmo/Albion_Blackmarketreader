@@ -40,6 +40,12 @@ const LAUNCH_TOOLS = [
     name: "Loot Split",
     hint: "Chest log in, each player's cut out",
     icon: "M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2Zm-5 12H9v-2h6v2Zm5-7H4V4l16-.02V7Z"
+  },
+  {
+    href: "/prices",
+    name: "Price Checker",
+    hint: "Any item, every city, live",
+    icon: "M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42ZM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7Z"
   }
 ] as const;
 
@@ -238,6 +244,9 @@ export function LandingPage() {
               <a className="hero-cta" href="/loot-split">
                 Loot Split
               </a>
+              <a className="hero-cta" href="/prices">
+                Price Checker
+              </a>
             </div>
             {/* Phone only (landing.css): one main action, then the crafting tools as tiles,
                 instead of five identical buttons stacked down the screen. */}
@@ -348,6 +357,31 @@ export function LandingPage() {
               poster={assetUrl("video/loot-split-demo.jpg")}
               url="blackmarketreader.com/loot-split"
               label="Loot Split demo: a chest log priced and split between players"
+            />
+          </div>
+        </section>
+
+        <section className="section demo-section" id="price-checker-demo">
+          <div className="container demo-grid">
+            <div className="demo-copy">
+              <span className="section-eyebrow">Price Checker</span>
+              <h2>Every item. Every city.</h2>
+              <p>
+                Search any of the 4,000+ items and see its price in every royal city, Caerleon, Brecilien and the Black
+                Market, with where to buy cheapest, where to sell straight away and how old every price is.
+              </p>
+              <ul className="demo-points">
+                <li>Buy cheapest, sell instantly, flip after tax</li>
+                <li>Every price with its age</li>
+                <li>30 days of history, every tier and enchant</li>
+              </ul>
+              <a className="premium-plus-cta" href="/prices">Open Price Checker</a>
+            </div>
+            <DemoVideo
+              src={assetUrl("video/prices-demo.mp4")}
+              poster={assetUrl("video/prices-demo.jpg")}
+              url="blackmarketreader.com/prices"
+              label="Price Checker demo: searching an item and comparing its price in every market"
             />
           </div>
         </section>
@@ -600,6 +634,14 @@ export function LandingPage() {
                   Paste the chest log into the <a href="/loot-split">Loot Split</a>, pick the run you want to count and it
                   prices every item at live Black Market and city prices. Repairs are paid back first, then the guild's
                   cut, then the rest by share, ready to copy into Discord.
+                </p>
+              </details>
+              <details>
+                <summary>How do I check the price of an item in every city?</summary>
+                <p>
+                  Search it in the <a href="/prices">Price Checker</a>. It shows the item&apos;s price in every royal city,
+                  Caerleon, Brecilien and the Black Market, the cheapest place to buy, the best place to sell straight away
+                  and how long ago each price was seen.
                 </p>
               </details>
               <details>

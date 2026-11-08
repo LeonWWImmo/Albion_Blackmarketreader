@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { change, soldPerDay, type HistoryPoint } from "../core/history";
-import { baseName, buildItemIndex, toEntry, type ItemRow } from "../core/items";
+import { baseName, buildItemIndex, craftingCalculatorPath, toEntry, type ItemRow } from "../core/items";
+import { isSavedItem } from "../ui/saved";
 import { ageLabel, bestFlip, bestInstantSell, cheapestBuy, freshness, marketQuotes, type QuoteRow } from "../core/quotes";
 import { parseQuery, searchItems } from "../core/search";
 
@@ -18,6 +19,18 @@ describe("item index", () => {
   it("knows every enchantment level's market id", () => {
     expect(toEntry(ROWS[0]).variants).toEqual(["T4_BAG", "T4_BAG@1", "T4_BAG@2", "T4_BAG@3", "T4_BAG@4"]);
     expect(toEntry(ROWS[4]).variants).toEqual(["T4_PLANKS", "T4_PLANKS_LEVEL1@1"]);
+  });
+
+  it("links only items the Crafting Calculator knows, at the right tier and enchantment", () => {
+    const bow = toEntry(["T5_2H_BOW", "Expert's Bow", "experts-bow", "weapons", "bow", 5, 3, 4, 1]);
+    expect(bow.craftable).toBe(true);
+    expect(craftingCalculatorPath(bow, 2)).toBe("/crafting-calculator?item=2H_BOW&tier=5&enchant=2");
+    expect(toEntry(ROWS[0]).craftable).toBe(false);
+  });
+
+  it("keeps only well-formed saved items from browser storage", () => {
+    expect(isSavedItem({ slug: "adepts-bag", e: 2, q: 3 })).toBe(true);
+    expect([null, {}, { slug: "x", e: 9, q: 1 }, { slug: "../x", e: 0, q: 1 }, { slug: "x", e: 0, q: 0 }, { slug: "x", e: 1.5, q: 1 }].some(isSavedItem)).toBe(false);
   });
 
   it("groups the tiers of one item and finds pages by slug", () => {

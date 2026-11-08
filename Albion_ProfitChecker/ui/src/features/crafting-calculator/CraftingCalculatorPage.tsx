@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
@@ -8,7 +8,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, craftBonusPercentFor, craftCategoryOf, craftCategoryLabel, nextDailyReset } from "../../shared";
+import { JournalControls, MobileNavBurger, ToolNav, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, craftBonusPercentFor, craftCategoryOf, craftCategoryLabel, nextDailyReset } from "../../shared";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./craftingCalculator.css";
 import {
@@ -1533,16 +1533,7 @@ export function CraftingCalculatorPage() {
               </div>
               <h1>RomulusKings Crafting Tools</h1>
             </div>
-            <div className="bm-nav bm-nav-switch">
-              <Link className="nav-tab" to="/">Home</Link>
-              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
-              <Link className="nav-tab" to="/bm-crafter">Blackmarket Crafter</Link>
-              <span className="nav-tab active">Crafting Calculator</span>
-              <Link className="nav-tab" to="/refining-calculator">Refining Calculator</Link>
-              <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
-              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
-              <Link className="nav-tab" to="/loot-split">Loot Split</Link>
-            </div>
+            <ToolNav />
           </div>
           <div className="bm-meta">
             <button className="bm-pill" type="button" onClick={() => { setPendingRegion(region === "eu" ? "us" : "eu"); setShowRegionConfirm(true); }}>

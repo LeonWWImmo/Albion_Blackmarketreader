@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { applyPageMeta, escText } from "../api/_lib/pageMeta.js";
 
 /**
  * Post-build SEO prerender.
@@ -32,6 +33,7 @@ const toolContent = JSON.parse(
 const TOOL_OG_IMAGE = {
   "gold-tracker": `${SITE}/picture/gold-tracker-preview.png`,
   "loot-split": `${SITE}/picture/loot-split-preview.png`,
+  prices: `${SITE}/picture/price-checker-preview.png`,
 };
 
 const TOOL_LINKS = [
@@ -42,6 +44,7 @@ const TOOL_LINKS = [
   { href: "/food-potion-crafter", label: "Food & Potion Crafter" },
   { href: "/gold-tracker", label: "Gold Tracker" },
   { href: "/loot-split", label: "Loot Split" },
+  { href: "/prices", label: "Price Checker" },
 ];
 
 /** Indexable routes. Home (/) keeps the as-built dist/index.html. */
@@ -119,6 +122,17 @@ const ROUTES = [
       "Split guild loot in Albion Online from the chest log. Paste the log, pick the run that counts, and every item is valued at live Black Market, city buy order or sell order prices after tax. Repairs are paid back to the players who paid them, the guild takes its cut, the rest is shared by share, and the result is ready to paste into Discord with a link to the same split.",
   },
   {
+    path: "prices",
+    title: "Albion Online Price Checker: Every Item, Every City | Blackmarket Reader",
+    description:
+      "Live Albion Online market prices for every item in every city and the Black Market: the cheapest place to buy, the best place to sell, price history and how old each price is.",
+    keywords: "Albion Online price checker, Albion Online prices, Albion market prices, Albion item price, Albion Black Market price",
+    h1: "Albion Online Price Checker",
+    ogImage: `${SITE}/picture/price-checker-preview.png`,
+    intro:
+      "Search any of the 4,000+ items traded in Albion Online and see its price in every royal city, Caerleon, Brecilien and the Black Market: the cheapest sell order to buy from, the best buy order to sell into straight away, whether a flip pays after tax, the price history, items sold per day and how long ago each price was seen.",
+  },
+  {
     path: "community",
     title: "Community | Blackmarket Reader — Albion Online Tools",
     description: "Join the Blackmarket Reader community for Albion Online crafting, refining, and Black Market trading tools, tips, and updates.",
@@ -172,45 +186,6 @@ const GUIDE_ROUTES = [
 ];
 
 ROUTES.push(...GUIDE_ROUTES);
-
-function escAttr(value) {
-  return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-function escText(value) {
-  return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function setTitle(html, title) {
-  return html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escText(title)}</title>`);
-}
-function setMeta(html, attr, key, content) {
-  const re = new RegExp(`<meta\\s+${attr}="${key}"[\\s\\S]*?content="[\\s\\S]*?"\\s*/?>`, "i");
-  const tag = `<meta ${attr}="${key}" content="${escAttr(content)}" />`;
-  if (re.test(html)) return html.replace(re, tag);
-  // tag missing — inject before </head>
-  return html.replace(/<\/head>/i, `    ${tag}\n  </head>`);
-}
-function setCanonical(html, href) {
-  const re = /<link\s+rel="canonical"[\s\S]*?\/?>/i;
-  const tag = `<link rel="canonical" href="${escAttr(href)}" />`;
-  if (re.test(html)) return html.replace(re, tag);
-  return html.replace(/<\/head>/i, `    ${tag}\n  </head>`);
-}
-function setRobots(html, content) {
-  return setMeta(html, "name", "robots", content);
-}
-function setNoscript(html, inner) {
-  const re = /<noscript>[\s\S]*?<\/noscript>/i;
-  const block = `<noscript>\n${inner}\n    </noscript>`;
-  if (re.test(html)) return html.replace(re, block);
-  return html.replace(/<div id="root"><\/div>/i, `<div id="root"></div>\n    ${block}`);
-}
-function injectJsonLd(html, objects) {
-  const scripts = objects
-    .map((obj) => `    <script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n    </script>`)
-    .join("\n");
-  return html.replace(/<\/head>/i, `${scripts}\n  </head>`);
-}
 
 /**
  * The quiet guide link at the foot of a tool page (mirrors the ToolGuideLink component),
@@ -366,36 +341,25 @@ async function main() {
 
   for (const route of ROUTES) {
     const canonical = `${SITE}/${route.path}`;
-    let html = template;
 
-    html = setTitle(html, route.title);
-    html = setMeta(html, "name", "description", route.description);
-    if (route.keywords) html = setMeta(html, "name", "keywords", route.keywords);
-    html = setCanonical(html, canonical);
-    html = setRobots(html, route.noindex ? "noindex,follow" : "index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1");
-
-    html = setMeta(html, "property", "og:title", route.title);
-    html = setMeta(html, "property", "og:description", route.description);
-    html = setMeta(html, "property", "og:url", canonical);
-    html = setMeta(html, "property", "og:image", route.ogImage || OG_IMAGE);
-    html = setMeta(html, "name", "twitter:image", route.ogImage || OG_IMAGE);
-    html = setMeta(html, "name", "twitter:title", route.title);
-    html = setMeta(html, "name", "twitter:description", route.description);
-
-    html = setNoscript(html, noscriptContent(route));
-
+    // Guides are articles, the guides index is a collection, tool pages are the app itself.
+    const jsonLd = [];
     if (!route.noindex) {
-      // Guides are articles, the guides index is a collection, tool pages are the app itself.
-      const primary = route.guideOf
-        ? articleLd(route, canonical)
-        : route.guidesIndex
-          ? collectionLd(route, canonical)
-          : softwareAppLd(route, canonical);
-      const schemas = [primary, breadcrumbLd(route, canonical)].filter(Boolean);
+      jsonLd.push(route.guideOf ? articleLd(route, canonical) : route.guidesIndex ? collectionLd(route, canonical) : softwareAppLd(route, canonical));
+      jsonLd.push(breadcrumbLd(route, canonical));
       const faq = faqLd(route);
-      if (faq) schemas.push(faq);
-      html = injectJsonLd(html, schemas);
+      if (faq) jsonLd.push(faq);
     }
+    const html = applyPageMeta(template, {
+      title: route.title,
+      description: route.description,
+      keywords: route.keywords,
+      canonical,
+      image: route.ogImage || OG_IMAGE,
+      noindex: route.noindex,
+      noscript: noscriptContent(route),
+      jsonLd: jsonLd.filter(Boolean)
+    });
 
     const outDir = path.join(distDir, route.path);
     await fs.mkdir(outDir, { recursive: true });

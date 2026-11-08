@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
@@ -8,7 +7,7 @@ import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { MobileNavBurger, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag, craftBonusPercentFor } from "../../../shared";
+import { MobileNavBurger, ToolNav, ResponsiveFilters, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag, craftBonusPercentFor } from "../../../shared";
 import { createStackingContext, getReturnRatePresetConfig, makeRefiner, type Enchant, type MarketRegion, type MaterialKey, type RefineTierInput, type RefineVariant, type ReturnRatePreset, type StackedRefining, type Tier } from "../core";
 import { buildRefiningLiveSnapshot, DEFAULT_PRICE_BY_ITEM_ID, ENCHANTS, MATERIAL_BY_KEY, MATERIAL_DEFINITIONS, REFINE_VARIANTS, TIERS, isEnchantAvailable, rawItemIdFor, refinedItemIdFor } from "../data";
 import "../../bm-crafter/ui/bmCrafter.css";
@@ -1034,16 +1033,7 @@ export function RefiningCalculatorPage() {
               <div className="bm-logo" aria-hidden="true"><img src={assetUrl("picture/testo ohne background.png")} alt="" /></div>
               <h1>RomulusKings Crafting Tools</h1>
             </div>
-            <div className="bm-nav bm-nav-switch">
-              <Link className="nav-tab" to="/">Home</Link>
-              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
-              <Link className="nav-tab" to="/bm-crafter">Blackmarket Crafter</Link>
-              <Link className="nav-tab" to="/crafting-calculator">Crafting Calculator</Link>
-              <span className="nav-tab active">Refining Calculator</span>
-              <Link className="nav-tab" to="/food-potion-crafter">Food &amp; Potion Crafter</Link>
-              <Link className="nav-tab" to="/gold-tracker">Gold Tracker</Link>
-              <Link className="nav-tab" to="/loot-split">Loot Split</Link>
-            </div>
+            <ToolNav />
           </div>
           <div className="bm-meta">
             <button className="bm-pill" type="button" onClick={() => { setPendingRegion(region === "eu" ? "us" : "eu"); setShowRegionConfirm(true); }}>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
@@ -8,7 +8,7 @@ import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/
 import { RegionService } from "@shared/region/regionService";
 import { useSeo } from "../../../shared/seo/useSeo";
 import { SeoHeading } from "../../../shared/seo/SeoHeading";
-import { JournalControls, MobileNavBurger, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag } from "../../../shared";
+import { JournalControls, MobileNavBurger, ToolNav, ResponsiveFilters, useJournals, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, DailyBonusTag } from "../../../shared";
 import {
   buildArtefactId,
   buildMaterialId,
@@ -489,16 +489,7 @@ export function BmCrafterPage() {
               </div>
               <h1>RomulusKings Crafting Tools</h1>
             </div>
-            <div className="bm-nav bm-nav-switch">
-              <Link className="nav-tab" to="/">Home</Link>
-              <Link className="nav-tab" to="/dashboard">Dashboard</Link>
-              <Link className="nav-tab active" to="/bm-crafter">Blackmarket Crafter</Link>
-              <a className="nav-tab" href="/crafting-calculator">Crafting Calculator</a>
-              <a className="nav-tab" href="/refining-calculator">Refining Calculator</a>
-              <a className="nav-tab" href="/food-potion-crafter">Food & Potion Crafter</a>
-              <a className="nav-tab" href="/gold-tracker">Gold Tracker</a>
-              <a className="nav-tab" href="/loot-split">Loot Split</a>
-            </div>
+            <ToolNav />
           </div>
           <div className="bm-meta">
             <button className="bm-pill" type="button" onClick={requestRegionToggle}>

@@ -8,7 +8,7 @@ import { TierBadge } from "./ui/badges";
 import { itemPath } from "./ui/paths";
 import { SearchBox } from "./ui/SearchBox";
 import { PriceCheckerShell } from "./ui/Shell";
-import { sameSaved, type SavedItem, RECENT_KEY, WATCH_KEY } from "./ui/saved";
+import { RECENT_KEY, WATCH_KEY, isSavedItem, sameSaved, type SavedItem } from "./ui/saved";
 
 const EXAMPLES = ["adepts-bag", "elders-crossbow", "adepts-transport-ox", "pine-planks", "experts-rune"];
 const BROWSE_FIRST = 48;
@@ -60,8 +60,8 @@ export function PriceCheckerPage() {
   const { index, failed } = useItemIndex();
   const [category, setCategory] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
-  const [watch] = useStoredList<SavedItem>(WATCH_KEY, 24, sameSaved);
-  const [recent] = useStoredList<SavedItem>(RECENT_KEY, 12, sameSaved);
+  const [watch] = useStoredList<SavedItem>(WATCH_KEY, 24, sameSaved, isSavedItem);
+  const [recent] = useStoredList<SavedItem>(RECENT_KEY, 12, sameSaved, isSavedItem);
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of index?.items ?? []) map.set(item.category, (map.get(item.category) ?? 0) + 1);

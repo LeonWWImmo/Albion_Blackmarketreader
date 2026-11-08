@@ -1227,6 +1227,51 @@ body.price-checker-body {
 
 /* ------------------------------------------------------------------ small bits */
 
+.pc-craft {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  color: var(--pc-text);
+  text-decoration: none;
+  background: linear-gradient(90deg, rgba(var(--pc-gold-rgb), 0.1), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(var(--pc-gold-rgb), 0.3);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.pc-craft:hover {
+  border-color: rgba(var(--pc-gold-rgb), 0.7);
+  transform: translateY(-2px);
+}
+
+.pc-craft-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  font-size: 22px;
+  color: #1a1206;
+  background: linear-gradient(180deg, #ffe7a3, var(--pc-gold));
+}
+
+.pc-craft span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+}
+
+.pc-craft small {
+  font-size: 13px;
+  color: var(--pc-muted);
+}
+
+.pc-craft > span:last-child {
+  font-size: 20px;
+  color: var(--pc-gold);
+}
+
 .pc-note {
   margin: 0;
   font-size: 12.5px;

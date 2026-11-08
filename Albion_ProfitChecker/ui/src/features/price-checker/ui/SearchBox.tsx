@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { categoryLabel, iconUrl, type ItemIndex } from "../core/items";
-import { searchItems, type SearchHit } from "../core/search";
+import { parseQuery, searchItems, type SearchHit } from "../core/search";
 import { itemPath } from "./paths";
 import { TierBadge } from "./badges";
 
@@ -54,7 +54,8 @@ export function SearchBox({ index, size }: Props) {
     }
   };
 
-  const showList = open && query.trim().length > 0;
+  // only a tier so far ("t6") is not a search yet: no list, rather than "no item"
+  const showList = open && parseQuery(query).words.length > 0;
 
   return (
     <div className={`pc-search is-${size}`}>

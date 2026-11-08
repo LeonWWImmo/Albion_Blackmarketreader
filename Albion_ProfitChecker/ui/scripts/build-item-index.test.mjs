@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildIndex, slugify, splitId } from "./build-item-index.mjs";
+import { buildIndex, buildSitemap, slugify, splitId } from "./build-item-index.mjs";
 
 const named = (id, name) => ({ UniqueName: id, LocalizedNames: { "EN-US": name } });
 const shop = (id, category, sub, weight = 1) => ({ "@uniquename": id, "@shopcategory": category, "@shopsubcategory1": sub, "@weight": String(weight) });
@@ -50,5 +50,24 @@ describe("item index", () => {
     const formatted = [named("SKIN_A", "Horse Skin"), named("SKIN_B", "Horse Skin")];
     const raw = { mountskin: [shop("SKIN_A", "vanity", "mounts"), shop("SKIN_B", "vanity", "mounts")] };
     expect(buildIndex(formatted, raw).map((row) => row[2])).toEqual(["horse-skin-skin-a", "horse-skin-skin-b"]);
+  });
+});
+
+describe("craftable items and sitemap", () => {
+  it("marks T4-T8 items the Crafting Calculator knows", () => {
+    const formatted = [named("T4_2H_BOW", "Adept's Bow"), named("T3_2H_BOW", "Journeyman's Bow"), named("T4_BAG", "Adept's Bag")];
+    const raw = { weapon: [shop("T4_2H_BOW", "weapons", "bow"), shop("T3_2H_BOW", "weapons", "bow")], equipmentitem: [shop("T4_BAG", "bags", "bags")] };
+    const rows = buildIndex(formatted, raw, new Set(["2H_BOW"]));
+    expect(rows.map((row) => [row[0], row[8]])).toEqual([
+      ["T4_BAG", undefined],
+      ["T4_2H_BOW", 1],
+      ["T3_2H_BOW", undefined]
+    ]);
+  });
+
+  it("lists one URL per item page", () => {
+    const xml = buildSitemap([["T4_BAG", "Adept's Bag", "adepts-bag", "bags", "bags", 4, 3.4, 4]], "2026-11-08");
+    expect(xml).toContain("<loc>https://blackmarketreader.com/prices/adepts-bag</loc><lastmod>2026-11-08</lastmod>");
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset')).toBe(true);
   });
 });

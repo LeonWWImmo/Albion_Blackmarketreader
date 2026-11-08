@@ -44,6 +44,8 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Loot Split: sell everything at the Black Market or one city, add a second chest log on top, and follow the step by step guide if you have never copied a chest log before.
 - The home page now shows the Gold Tracker and the Loot Split in action, with a short clip of each.
 - Black Market Crafter: profits now take off the sales tax you pay when selling to the Black Market (4% with Premium, 8% without), with a new Premium switch. The daily Discord post counts it too, so the numbers match what you actually keep.
+- New tool: Price Checker. Search any of 4,000+ items and see its price in every city and the Black Market: where to buy cheapest, where to sell straight away, whether a flip pays after tax, 30 days of price history, and how old every price is.
+- Tidier tool tabs: the four crafting tools now sit together under one Crafting menu, so the header fits on one line.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

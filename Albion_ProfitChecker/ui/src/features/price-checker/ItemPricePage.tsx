@@ -4,7 +4,7 @@ import { useSessionState } from "../../shared";
 import { useSeo } from "../../shared/seo/useSeo";
 import type { Region } from "@shared/types";
 import { lastDays, seriesFor, soldPerDay } from "./core/history";
-import { categoryLabel, familyKey, iconUrl, type ItemEntry, type ItemIndex } from "./core/items";
+import { categoryLabel, craftingCalculatorPath, familyKey, iconUrl, type ItemEntry, type ItemIndex } from "./core/items";
 import { MARKETS, bestFlip, bestInstantSell, cheapestBuy, marketQuotes, type QuoteRow } from "./core/quotes";
 import { useHistory, useItemIndex, useNow, useQuotes, useStoredList } from "./hooks/usePriceData";
 import { ENCHANT_COLOR, MARKET_COLOR, QUALITIES, TierBadge } from "./ui/badges";
@@ -13,7 +13,7 @@ import { Ladder } from "./ui/Ladder";
 import { MarketTable } from "./ui/MarketTable";
 import { PriceChart, type ChartLine } from "./ui/PriceChart";
 import { itemPath } from "./ui/paths";
-import { RECENT_KEY, WATCH_KEY, sameSaved, type SavedItem } from "./ui/saved";
+import { RECENT_KEY, WATCH_KEY, isSavedItem, sameSaved, type SavedItem } from "./ui/saved";
 import { SearchBox } from "./ui/SearchBox";
 import { PriceCheckerShell } from "./ui/Shell";
 import { StatCards } from "./ui/StatCards";
@@ -41,8 +41,8 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
   const [range, setRange] = useState<Range>("30d");
   const [hidden, setHidden] = useState<Set<string>>(new Set(["Brecilien"]));
   const [toast, setToast] = useState("");
-  const [watch, addWatch, removeWatch] = useStoredList<SavedItem>(WATCH_KEY, 24, sameSaved);
-  const [, addRecent] = useStoredList<SavedItem>(RECENT_KEY, 12, sameSaved);
+  const [watch, addWatch, removeWatch] = useStoredList<SavedItem>(WATCH_KEY, 24, sameSaved, isSavedItem);
+  const [, addRecent] = useStoredList<SavedItem>(RECENT_KEY, 12, sameSaved, isSavedItem);
   const saved: SavedItem = useMemo(() => ({ slug: item.slug, e: enchant, q: quality }), [item.slug, enchant, quality]);
   const watching = watch.some((w) => sameSaved(w, saved));
 
@@ -98,11 +98,13 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
     }
   };
 
+  // the same texts the server writes into this page for crawlers (api/_lib/itemPage.js)
   useSeo({
     title: `${item.name} Price in Albion Online: Every City | Blackmarket Reader`,
-    description: `Live Albion Online price of ${item.name} (${categoryLabel(item.category)}) in every royal city, Caerleon, Brecilien and the Black Market: the cheapest place to buy, the best place to sell and the price history.`,
-    keywords: `${item.name} price, ${item.name} Albion Online, Albion Online ${categoryLabel(item.category).toLowerCase()} prices`,
-    canonical: `https://blackmarketreader.com/prices/${item.slug}`
+    description: `Live Albion Online price of ${item.name} in every royal city, Caerleon, Brecilien and the Black Market: the cheapest place to buy, the best place to sell and the price history.`,
+    keywords: `${item.name} price, ${item.name} Albion Online, Albion Online prices, Albion Online price checker`,
+    canonical: `https://blackmarketreader.com/prices/${item.slug}`,
+    ogImage: iconUrl(item.id)
   });
 
   const loading = quotes.status === "loading";
@@ -281,6 +283,17 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
         />
       </div>
 
+      {item.craftable ? (
+        <Link className="pc-craft" to={craftingCalculatorPath(item, enchant)}>
+          <span className="pc-craft-icon" aria-hidden="true">⚒</span>
+          <span>
+            <b>Craft it yourself?</b>
+            <small>Open the {item.name}{enchant ? ` .${enchant}` : ""} in the Crafting Calculator: material cost, return rate and profit.</small>
+          </span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      ) : null}
+
       <p className="pc-note">
         Prices come from players who share what they see on the market. Each price shows how long ago it was seen; prices older than two
         days are greyed out and not used for the best price or the flip.
@@ -294,6 +307,29 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
   );
 }
 
+/** Loading, a failed item list, or an address with no item behind it. */
+function NoItem({ index, failed }: { index: ItemIndex | null; failed: boolean }) {
+  useSeo({
+    title: "Item not found | Price Checker | Blackmarket Reader",
+    description: "There is no Albion Online item at this address. Search all items in the Price Checker.",
+    canonical: "https://blackmarketreader.com/prices",
+    noindex: true
+  });
+  return (
+    <main className="pc pc-item">
+      <div className="pc-missing">
+        <h2>{failed ? "The item list could not load" : index ? "No item at this address" : "Loading…"}</h2>
+        {index ? (
+          <>
+            <p>Search for it instead:</p>
+            <SearchBox index={index} size="hero" />
+          </>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
 export function ItemPricePage() {
   const { slug = "" } = useParams();
   const { index, failed } = useItemIndex();
@@ -301,21 +337,7 @@ export function ItemPricePage() {
   return (
     <PriceCheckerShell>
       {(region, setRegion) =>
-        item && index ? (
-          <ItemView key={item.slug} index={index} item={item} region={region} setRegion={setRegion} />
-        ) : (
-          <main className="pc pc-item">
-            <div className="pc-missing">
-              <h2>{failed ? "The item list could not load" : index ? "No item at this address" : "Loading…"}</h2>
-              {index ? (
-                <>
-                  <p>Search for it instead:</p>
-                  <SearchBox index={index} size="hero" />
-                </>
-              ) : null}
-            </div>
-          </main>
-        )
+        item && index ? <ItemView key={item.slug} index={index} item={item} region={region} setRegion={setRegion} /> : <NoItem index={index} failed={failed} />
       }
     </PriceCheckerShell>
   );

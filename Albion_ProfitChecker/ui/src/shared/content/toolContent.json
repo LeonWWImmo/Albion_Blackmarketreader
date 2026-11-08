@@ -887,5 +887,123 @@
         "Send the link with the split, so everyone sees the same numbers."
       ]
     }
+  },
+  "prices": {
+    "title": "How to check Albion Online prices",
+    "quick": {
+      "tagline": "Search any item and see its price in every city and the Black Market, with how old each price is.",
+      "video": "video/prices-demo.mp4",
+      "poster": "video/prices-demo.jpg",
+      "steps": [
+        {
+          "title": "Search any item",
+          "text": "Type a name. \"t6 bag\" or \"4.1 bag\" jumps straight to a tier and enchantment.",
+          "image": "picture/guides/prices-1.jpg"
+        },
+        {
+          "title": "See the best deal",
+          "text": "Where to buy cheapest, where to sell straight away, and whether a flip pays after tax.",
+          "image": "picture/guides/prices-2.jpg"
+        },
+        {
+          "title": "Compare every market",
+          "text": "Every city and the Black Market side by side, each price with its age and a week of history.",
+          "image": "picture/guides/prices-3.jpg"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Where the prices come from",
+        "paragraphs": [
+          "The prices come from the Albion Online Data Project: players who run its small data client share the orders they see whenever they open a market. That makes the numbers real, but not continuous. A popular item in a busy city is seen every few minutes; a rare item in a quiet market may not have been seen for days.",
+          "So every price on the page carries its age: green when it was seen within the hour, orange when it is several hours old, red and greyed out when it is older than two days. Prices older than two days are still shown, but they are not used for the best price or the flip, because the order behind them is probably gone. Brecilien is shown too, but it has so few orders that it never counts as the best price."
+        ]
+      },
+      {
+        "heading": "Buy for and sell now for",
+        "paragraphs": [
+          "A market has two prices for every item. Sell orders are what other players ask; the lowest one is what buying one costs you right now (\"Buy for\"). Buy orders are what other players offer; the highest one is what selling one brings straight away (\"Sell now for\"). The Black Market only places buy orders, so it only has a \"Sell now for\" price.",
+          "Selling pays the sales tax: 4% with Premium, 8% without. Selling straight into a buy order costs only that tax. Listing your own sell order also pays a 2.5% setup fee up front, and you have to wait for a buyer."
+        ]
+      },
+      {
+        "heading": "The flip",
+        "paragraphs": [
+          "The flip card answers one question: if you buy the cheapest sell order and sell straight into the best buy order in another market, what is left after tax? It only appears when the answer is positive and both prices are less than two days old.",
+          "It does not include the trip. Carrying items between cities takes time and can get you killed outside the safe zones, and the item's weight (shown under its name) decides how many fit on your mount. Prices also move while you travel, so check the age of both prices before you set off."
+        ]
+      },
+      {
+        "heading": "History and items sold",
+        "paragraphs": [
+          "The chart shows the average price per market over the last 30 days (one point a day) or the last 7 days (four points a day), with the number of items sold as bars underneath. Switch markets on and off with the coloured chips. A single odd day, such as one sale at forty times the normal price, is drawn at the edge of the chart so it does not flatten every other line; the tooltip still shows its real value.",
+          "Items sold per day in the table is the average of the last week. It tells you how fast an item really moves: a big margin on something nobody buys is not worth much."
+        ]
+      },
+      {
+        "heading": "Enchantment and quality",
+        "paragraphs": [
+          "The two ladders under the chart show the cheapest price for every enchantment level and every quality of the item, with what each step adds over the one before. Click a step to switch the page to it.",
+          "Quality matters for buy orders: a buy order takes items of its quality or better, so an Excellent item can fill a Normal buy order, but not the other way round."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "How often are Albion Online prices updated?",
+        "a": "Whenever a player with the Albion Online Data Project client opens a market, which for busy items is every few minutes. The Price Checker shows how long ago each price was seen, so you can tell a fresh price from an old one."
+      },
+      {
+        "q": "Why is a price missing or old?",
+        "a": "Nobody with the data client has looked at that item in that market recently. Rare items and quiet markets have fewer and older prices. Prices older than two days are greyed out and not used for the best price."
+      },
+      {
+        "q": "Is the Black Market price what I get?",
+        "a": "It is the highest Black Market buy order. Selling into it costs the sales tax, 4% with Premium and 8% without, so you keep 96% or 92% of it."
+      },
+      {
+        "q": "Can I check prices on the America server?",
+        "a": "Yes. Switch between EU and US on the item page; the region also applies to every other tool on the site."
+      },
+      {
+        "q": "Can I share a price in Discord?",
+        "a": "Yes. Copy on the item page puts the item, the cheapest buy and the best instant sell into your clipboard, with a link back to the page."
+      }
+    ],
+    "guide": {
+      "slug": "albion-online-price-checker",
+      "h1": "How to check Albion Online prices",
+      "title": "Albion Online Price Checker Guide: Prices in Every City | Blackmarket Reader",
+      "description": "How to check Albion Online market prices: where the prices come from and how old they are, buy orders and sell orders, the Black Market, flips after tax and price history.",
+      "keywords": "Albion Online price checker, Albion Online prices, Albion market prices, Albion Black Market price, Albion buy order sell order",
+      "toolLabel": "Price Checker"
+    },
+    "summary": {
+      "intro": "Every item has two prices in every market: what buying one costs and what selling one brings straight away. The Price Checker shows both for every city and the Black Market, with the age of each.",
+      "cards": [
+        {
+          "label": "Buy cheapest",
+          "formula": "lowest sell order, at most 2 days old",
+          "text": "What buying one costs right now, in the market where it is cheapest."
+        },
+        {
+          "label": "Sell instantly",
+          "formula": "highest buy order x (1 - tax)",
+          "text": "Tax is 4% with Premium and 8% without; selling into a buy order has no setup fee."
+        },
+        {
+          "label": "Flip",
+          "formula": "sell instantly - buy cheapest",
+          "text": "Only when both prices are fresh and the result is positive. The trip is not included."
+        }
+      ],
+      "tipsHeading": "Quick tips",
+      "tips": [
+        "Check the age of a price before you travel for it.",
+        "Look at items sold per day: a big margin on something nobody buys is worth little.",
+        "Use the enchantment ladder to see whether enchanting yourself is cheaper than buying."
+      ]
+    }
   }
 }
