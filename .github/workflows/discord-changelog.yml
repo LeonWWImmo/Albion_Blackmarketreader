@@ -131,6 +131,13 @@ jobs:
           else
             BANNER="https://blackmarketreader.com/picture/hero-forge-1280.jpg"
           fi
+          # a push to main starts this before Vercel has deployed: a banner that is new in this push
+          # would still be missing, and Discord keeps the broken image. Wait until it is online.
+          for _ in $(seq 1 40); do
+            if curl -sfI "$BANNER" > /dev/null; then break; fi
+            sleep 15
+          done
+          curl -sfI "$BANNER" > /dev/null || { echo "banner $BANNER is not online after 10 minutes"; exit 1; }
           echo "Posting to $TARGET with banner $BANNER"
 
           # one card (Discord components V2): banner, the new bullets, a button to the site
