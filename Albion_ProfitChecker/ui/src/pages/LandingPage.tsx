@@ -105,23 +105,23 @@ export function LandingPage() {
   useSeo({
     title: "Albion Online Tool | Blackmarket Reader & Blackmarket Crafter",
     description:
-      "Free Albion Online community tool by RomulusKings: Blackmarket Reader dashboard, city comparison, profit filters, and Blackmarket Crafter for profitable crafting routes.",
+      "Free Albion Online tools: a Price Checker for every item in every city and the Black Market, Black Market Crafter, crafting and refining calculators, Loot Split and a live Gold Tracker.",
     keywords:
-      "Albion Online Tool, Blackmarket Reader, Blackmarket Crafter, Albion Black Market, Albion Blackmarket",
+      "Albion Online Tool, Albion Online price checker, Albion loot split, Blackmarket Reader, Blackmarket Crafter, Albion Black Market, Albion Blackmarket",
     canonical: "https://blackmarketreader.com/",
     ogTitle: "Albion Online Tool | Blackmarket Reader Dashboard & Blackmarket Crafter",
-    ogDescription: "Free Albion Online community tool: Black Market scans, city filters, profit views, and Blackmarket Crafter access. Market data syncs once per day.",
+    ogDescription: "Free Albion Online tools: a Price Checker for every item in every city and the Black Market, Black Market Crafter, crafting and refining calculators, Loot Split and a live Gold Tracker.",
     ogUrl: "https://blackmarketreader.com/",
     ogImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
     twitterTitle: "Albion Online Tool | Blackmarket Reader Dashboard & Blackmarket Crafter",
-    twitterDescription: "Free Albion Online community tool: Black Market scans, city filters, profit views, and Blackmarket Crafter access. Market data syncs once per day.",
+    twitterDescription: "Free Albion Online tools: a Price Checker for every item in every city and the Black Market, Black Market Crafter, crafting and refining calculators, Loot Split and a live Gold Tracker.",
     twitterImage: "https://blackmarketreader.com/picture/bm-crafter-table.png",
     structuredData: {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "Blackmarket Reader",
       url: "https://blackmarketreader.com/",
-      description: "Free Albion Online community tool with Blackmarket Reader dashboard and Blackmarket Crafter for profit analysis.",
+      description: "Free Albion Online tools: Price Checker, Black Market Crafter, crafting and refining calculators, Loot Split and Gold Tracker.",
       potentialAction: {
         "@type": "SearchAction",
         target: "https://blackmarketreader.com/#platform-overview",

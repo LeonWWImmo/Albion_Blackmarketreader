@@ -46,3 +46,23 @@ describe("item page head", () => {
     expect(html).not.toContain("</script><script>alert(1)");
   });
 });
+
+describe("related items", () => {
+  const rows = [
+    ["T4_2H_CROSSBOW", "Adept's Crossbow", "adepts-crossbow", "weapons", "crossbow", 4],
+    ["T8_2H_CROSSBOW", "Elder's Crossbow", "elders-crossbow", "weapons", "crossbow", 8],
+    ["T5_2H_CROSSBOW", "Expert's Crossbow", "experts-crossbow", "weapons", "crossbow", 5],
+    ["T8_2H_CROSSBOWLARGE", "Elder's Heavy Crossbow", "elders-heavy-crossbow", "weapons", "crossbow", 8],
+    ["T8_BAG", "Elder's Bag", "elders-bag", "bags", "bags", 8]
+  ];
+
+  it("links other tiers first, then the same kind of item at the same tier", () => {
+    const { html } = renderItemPage(TEMPLATE, rows, "elders-crossbow");
+    const links = [...html.matchAll(/href="\/prices\/([a-z-]+)"/g)].map((m) => m[1]);
+    expect(links).toEqual(["adepts-crossbow", "experts-crossbow", "elders-heavy-crossbow"]);
+  });
+
+  it("leaves the list out when nothing is related", () => {
+    expect(renderItemPage(TEMPLATE, rows, "elders-bag").html).not.toContain("Related item prices");
+  });
+});

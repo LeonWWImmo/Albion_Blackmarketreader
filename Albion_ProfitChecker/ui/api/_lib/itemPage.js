@@ -12,6 +12,20 @@ export const itemDescription = (name) =>
 /** The item's icon from Albion's own image server, as its share preview. */
 const iconUrl = (id) => `https://render.albiononline.com/v1/item/${encodeURIComponent(id)}.png`;
 
+const baseId = (id) => id.replace(/^T\d+_/, "");
+const MAX_RELATED = 12;
+
+/**
+ * Other tiers of the same item, then items of the same kind and tier: links between item pages,
+ * so crawlers that do not run JavaScript reach more of them than the sitemap alone gives.
+ */
+export function relatedItems(rows, row) {
+  const [id, , , , sub, tier] = row;
+  const tiers = rows.filter((r) => r[0] !== id && baseId(r[0]) === baseId(id)).sort((a, b) => a[5] - b[5]);
+  const kind = rows.filter((r) => r[0] !== id && sub && r[4] === sub && r[5] === tier && !tiers.includes(r));
+  return [...tiers, ...kind].slice(0, MAX_RELATED);
+}
+
 /**
  * rows: public/data/items-index.json. Returns the status and the page for one slug; an unknown slug
  * gets the app (which shows "no item at this address") with a 404 and noindex.
@@ -33,6 +47,7 @@ export function renderItemPage(template, rows, slug) {
   }
   const [id, name, , , , tier] = row;
   const canonical = `${SITE}/prices/${slug}`;
+  const related = relatedItems(rows, row).map((r) => `          <li><a href="/prices/${r[2]}">${escText(r[1])} price</a></li>`);
   return {
     status: 200,
     html: applyPageMeta(template, {
@@ -45,6 +60,7 @@ export function renderItemPage(template, rows, slug) {
         `      <section style="max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: system-ui, sans-serif; color: #e2e8f0">`,
         `        <h1>${escText(name)} price in Albion Online</h1>`,
         `        <p>${escText(itemDescription(name))}${tier ? ` Tier ${tier}, item id ${escText(id)}.` : ""}</p>`,
+        ...(related.length ? [`        <h2>Related item prices</h2>`, `        <ul>`, ...related, `        </ul>`] : []),
         `        <p><a href="/prices">Search every Albion Online item in the Price Checker</a></p>`,
         `      </section>`
       ].join("\n"),

@@ -47,6 +47,33 @@ const TOOL_LINKS = [
   { href: "/prices", label: "Price Checker" },
 ];
 
+/**
+ * Items the Price Checker page links to in its no-JavaScript HTML. Crawlers that do not run
+ * JavaScript (most AI crawlers) find the 3,700 item pages only through these links and the
+ * sitemap; these are the items players look up most. Ids missing from the index are skipped.
+ */
+const POPULAR_ITEMS = [
+  "T4_BAG", "T6_BAG", "T8_BAG", "T4_CAPE", "T4_MOUNT_HORSE", "T5_MOUNT_ARMORED_HORSE", "T4_MOUNT_OX", "T7_MOUNT_OX",
+  "T8_MOUNT_MAMMOTH_TRANSPORT", "T6_FARM_HORSE_BABY", "T4_POTION_HEAL", "T6_POTION_HEAL", "T6_MEAL_SANDWICH", "T7_MEAL_OMELETTE",
+  "T8_MEAL_STEW", "T4_SKILLBOOK_STANDARD", "T4_ORE", "T4_WOOD", "T4_HIDE", "T4_FIBER", "T4_ROCK", "T4_METALBAR", "T4_PLANKS",
+  "T4_LEATHER", "T4_CLOTH", "T4_STONEBLOCK", "T4_ESSENCE", "T5_ALCHEMY_RARE_PANTHER", "T4_RUNE", "T4_SOUL", "T4_RELIC",
+  "T4_SHARD_AVALONIAN", "T4_ARTEFACT_2H_CROSSBOWLARGE_MORGANA", "T4_2H_CROSSBOW", "T8_2H_CROSSBOW", "T4_MAIN_SWORD",
+  "T4_2H_CLAYMORE", "T4_2H_BOW", "T4_2H_HAMMER", "T4_MAIN_SPEAR", "T4_MAIN_FIRESTAFF", "T4_MAIN_NATURESTAFF",
+  "T4_2H_HOLYSTAFF", "T4_OFF_SHIELD", "T4_HEAD_PLATE_SET1", "T4_ARMOR_LEATHER_SET1", "T4_SHOES_CLOTH_SET1",
+];
+const itemIndex = new Map(
+  JSON.parse(await fs.readFile(path.join(process.cwd(), "public", "data", "items-index.json"), "utf8")).map((row) => [row[0], row])
+);
+
+/** Links to the popular item pages, for the Price Checker route. */
+function popularItemsHtml() {
+  const items = POPULAR_ITEMS.map((id) => itemIndex.get(id))
+    .filter(Boolean)
+    .map(([, name, slug]) => `          <li><a href="/prices/${slug}">${escText(name)} price</a></li>`)
+    .join("\n");
+  return `        <h2>Popular item prices</h2>\n        <ul>\n${items}\n        </ul>`;
+}
+
 /** Indexable routes. Home (/) keeps the as-built dist/index.html. */
 const ROUTES = [
   {
@@ -252,7 +279,9 @@ function noscriptContent(route) {
     ? guidesIndexHtml(route)
     : route.guideOf
       ? guideHtml(route.guideOf)
-      : guideLinkHtml(route);
+      : route.path === "prices"
+        ? `${popularItemsHtml()}\n${guideLinkHtml(route)}`
+        : guideLinkHtml(route);
   return `      <section style="max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: system-ui, sans-serif; color: #e2e8f0">
         <h1>${escText(route.h1)}</h1>
         <p>${escText(route.intro)}</p>
