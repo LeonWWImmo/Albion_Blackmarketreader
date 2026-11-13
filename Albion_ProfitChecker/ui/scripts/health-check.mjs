@@ -34,9 +34,10 @@ const VIEWPORTS = [{ name: "desktop", width: 1440, height: 900 }, { name: "phone
 // overflow that is already there and known; only report it when it gets worse
 const KNOWN_OVERFLOW = { "/dashboard@desktop": 48 };
 const BLOCKED = /(_vercel|googlesyndication|doubleclick|google-analytics|googletagmanager|adservice|fundingchoices)/;
-// share of refined materials with a price per city; Brecilien has few traders, so half the bar
+// share of refined materials with a price per city; Brecilien has few traders, so half the bar.
+// Thin coverage is only a warning: it depends on how many players upload prices (US Brecilien is
+// often near 10%), which no fix on our side changes. A city with no price at all means the build broke.
 const COVERAGE_WARN = 50;
-const COVERAGE_FAIL = 25;
 const COVERAGE_FACTOR = { Brecilien: 0.5 };
 const CITY_NAMES = { Lymhurst: "LYM", Martlock: "MAR", "Fort Sterling": "FS", Thetford: "THE", Bridgewatch: "BW", Caerleon: "CAE", Brecilien: "BRE" };
 // Vercel renews its certificates about 30 days before they run out
@@ -247,7 +248,7 @@ export function coverageProblems(region, cities) {
   let level = null;
   for (const { city, percent } of cities) {
     const factor = COVERAGE_FACTOR[city] ?? 1;
-    if (percent < COVERAGE_FAIL * factor) level = "fail";
+    if (percent === 0) level = "fail";
     else if (percent < COVERAGE_WARN * factor) level ??= "warn";
     else continue;
     problems.push(`${region.toUpperCase()} ${city}: only ${Math.round(percent)}% of the materials have a price`);

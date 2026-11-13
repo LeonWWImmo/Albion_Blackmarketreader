@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { PageErrorBoundary } from "./shared/ui/PageErrorBoundary";
 
 const LandingPage = lazy(() => import("./pages/LandingPage").then((m) => ({ default: m.LandingPage })));
 const LoginPage = lazy(() => import("./pages/LoginPage").then((m) => ({ default: m.LoginPage })));
@@ -24,32 +25,35 @@ const PriceCheckerPage = lazy(() => import("./features/price-checker").then((m) 
 const ItemPricePage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.ItemPricePage })));
 
 export function App() {
+  const { pathname } = useLocation();
   return (
-    <Suspense fallback={null}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/legal" element={<LegalPage />} />
-        <Route path="/guides" element={<GuidesIndexPage />} />
-        <Route path="/guides/:slug" element={<GuidePage />} />
-        <Route path="/bm-crafter" element={<BmCrafterPage />} />
-        <Route path="/crafting-calculator" element={<CraftingCalculatorPage />} />
-        <Route path="/refining-calculator" element={<RefiningCalculatorPage />} />
-        <Route path="/food-potion-crafter" element={<FoodPotionCrafterPage />} />
-        <Route path="/gold-tracker" element={<GoldTrackerPage />} />
-        <Route path="/loot-split" element={<LootSplitPage />} />
-        <Route path="/prices" element={<PriceCheckerPage />} />
-        <Route path="/prices/:slug" element={<ItemPricePage />} />
-        <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />
-        <Route path="/Blackmarket-Crafter/index.html" element={<Navigate to="/bm-crafter" replace />} />
-        <Route path="/crafting-calculator/index.html" element={<Navigate to="/crafting-calculator" replace />} />
-        {/* old links: the router matches the decoded path, so the space is written as a space here */}
-        <Route path="/Refining Calculator" element={<Navigate to="/refining-calculator" replace />} />
-        <Route path="/Refining Calculator/index.html" element={<Navigate to="/refining-calculator" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+    <PageErrorBoundary key={pathname}>
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/legal" element={<LegalPage />} />
+          <Route path="/guides" element={<GuidesIndexPage />} />
+          <Route path="/guides/:slug" element={<GuidePage />} />
+          <Route path="/bm-crafter" element={<BmCrafterPage />} />
+          <Route path="/crafting-calculator" element={<CraftingCalculatorPage />} />
+          <Route path="/refining-calculator" element={<RefiningCalculatorPage />} />
+          <Route path="/food-potion-crafter" element={<FoodPotionCrafterPage />} />
+          <Route path="/gold-tracker" element={<GoldTrackerPage />} />
+          <Route path="/loot-split" element={<LootSplitPage />} />
+          <Route path="/prices" element={<PriceCheckerPage />} />
+          <Route path="/prices/:slug" element={<ItemPricePage />} />
+          <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />
+          <Route path="/Blackmarket-Crafter/index.html" element={<Navigate to="/bm-crafter" replace />} />
+          <Route path="/crafting-calculator/index.html" element={<Navigate to="/crafting-calculator" replace />} />
+          {/* old links: the router matches the decoded path, so the space is written as a space here */}
+          <Route path="/Refining Calculator" element={<Navigate to="/refining-calculator" replace />} />
+          <Route path="/Refining Calculator/index.html" element={<Navigate to="/refining-calculator" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </PageErrorBoundary>
   );
 }

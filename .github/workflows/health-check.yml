@@ -43,7 +43,14 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Install browser
-        run: npx playwright install --with-deps chromium
+        # the runner's apt mirrors sometimes fail to resolve for a minute; that is no site problem
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "install attempt $attempt failed, trying again in 30 s"
+            sleep 30
+          done
+          exit 1
 
       - name: Run checks
         env:

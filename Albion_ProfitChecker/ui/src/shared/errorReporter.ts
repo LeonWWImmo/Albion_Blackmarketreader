@@ -36,9 +36,19 @@ function send(report: Report): void {
   }
 }
 
+let reportOne: ((raw: Report) => void) | null = null;
+
+/** Reports an error the page caught itself (PageErrorBoundary), which never reaches window "error". */
+export function reportCaughtError(error: unknown): void {
+  const e = error instanceof Error ? error : new Error(String(error));
+  reportOne?.({ message: `${e.name}: ${e.message}`, stack: e.stack ?? "", source: "" });
+}
+
 export function installErrorReporter(): void {
-  // dev runs on localhost and previews on vercel.app, so this is the live build only
-  if (location.hostname !== LIVE_HOST) return;
+  // dev runs on localhost and previews on vercel.app, so this is the live build only.
+  // Automated browsers (scrapers, test bots) often block stylesheets and scripts on purpose: their
+  // "Unable to preload CSS" reports say nothing about what visitors see.
+  if (location.hostname !== LIVE_HOST || navigator.webdriver) return;
   const seen = new Set<string>();
   const report = (raw: Report) => {
     // a thrown object can carry anything in these fields
@@ -50,6 +60,7 @@ export function installErrorReporter(): void {
     seen.add(key);
     send(r);
   };
+  reportOne = report;
   window.addEventListener("error", (event) => {
     const error = event.error as Error | undefined;
     report({ message: error?.message ? `${error.name}: ${error.message}` : event.message, stack: error?.stack ?? "", source: event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : "" });

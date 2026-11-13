@@ -93,10 +93,11 @@ describe("price coverage", () => {
   });
 
   it("warns below 50 %, fails below 25 %, and asks half of that from Brecilien", () => {
-    expect(coverageProblems("us", [{ city: "Caerleon", percent: 3 }])).toEqual({ level: "fail", problems: ["US Caerleon: only 3% of the materials have a price"] });
+    expect(coverageProblems("us", [{ city: "Caerleon", percent: 3 }])).toEqual({ level: "warn", problems: ["US Caerleon: only 3% of the materials have a price"] });
+    expect(coverageProblems("us", [{ city: "Thetford", percent: 0 }]).level).toBe("fail");
     expect(coverageProblems("eu", [{ city: "Caerleon", percent: 40 }]).level).toBe("warn");
     expect(coverageProblems("eu", [{ city: "Brecilien", percent: 28 }]).level).toBeNull();
-    expect(coverageProblems("eu", [{ city: "Brecilien", percent: 10 }]).level).toBe("fail");
+    expect(coverageProblems("eu", [{ city: "Brecilien", percent: 10 }]).level).toBe("warn");
     expect(coverageProblems("eu", [{ city: "Lymhurst", percent: 97 }])).toEqual({ level: null, problems: [] });
   });
 
