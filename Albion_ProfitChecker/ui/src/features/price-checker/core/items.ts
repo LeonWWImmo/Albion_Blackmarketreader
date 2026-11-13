@@ -1,5 +1,5 @@
 /** One row of public/data/items-index.json (scripts/build-item-index.mjs). */
-export type ItemRow = [string, string, string, string, string, number, number, number | string[], 1?];
+export type ItemRow = [string, string, string, string, string, number, number, number | string[], (0 | 1)?, 1?];
 
 export type ItemEntry = {
   /** market id of the .0 item, e.g. "T4_BAG" */
@@ -14,6 +14,8 @@ export type ItemEntry = {
   variants: string[];
   /** the Crafting Calculator can open it (a T4-T8 item it has the recipe for) */
   craftable: boolean;
+  /** it comes in qualities Normal to Masterpiece; artefacts, resources, food and the like do not */
+  qualities: boolean;
 };
 
 export type ItemIndex = {
@@ -26,9 +28,9 @@ export type ItemIndex = {
 /** The id without its tier: T4_BAG and T8_BAG are the same kind of item. */
 export const familyKey = (id: string) => id.replace(/^T\d_/, "");
 
-export function toEntry([id, name, slug, category, subcategory, tier, weight, enchants, craftable]: ItemRow): ItemEntry {
+export function toEntry([id, name, slug, category, subcategory, tier, weight, enchants, craftable, qualities]: ItemRow): ItemEntry {
   const variants = Array.isArray(enchants) ? enchants : Array.from({ length: enchants + 1 }, (_, e) => (e ? `${id}@${e}` : id));
-  return { id, name, slug, category, subcategory, tier, weight, variants, craftable: craftable === 1 };
+  return { id, name, slug, category, subcategory, tier, weight, variants, craftable: craftable === 1, qualities: qualities === 1 };
 }
 
 /** The Crafting Calculator with this item, tier and enchantment open. */

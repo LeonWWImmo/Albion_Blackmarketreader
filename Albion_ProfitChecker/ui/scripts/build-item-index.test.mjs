@@ -67,6 +67,22 @@ describe("craftable items and sitemap", () => {
     ]);
   });
 
+  it("marks items that come in qualities, from the game's maxqualitylevel", () => {
+    const formatted = [named("T4_2H_BOW", "Adept's Bow"), named("T5_2H_BOW", "Expert's Bow"), named("T4_RUNE", "Adept's Rune")];
+    const raw = {
+      weapon: [{ ...shop("T4_2H_BOW", "weapons", "bow"), "@maxqualitylevel": "5" }, { ...shop("T5_2H_BOW", "weapons", "bow"), "@maxqualitylevel": "5" }],
+      simpleitem: [shop("T4_RUNE", "artefacts", "fragments")]
+    };
+    const rows = buildIndex(formatted, raw, new Set(["2H_BOW"]));
+    expect(rows.map((row) => [row[0], row[8], row[9]])).toEqual([
+      ["T4_2H_BOW", 1, 1],
+      ["T4_RUNE", undefined, undefined],
+      ["T5_2H_BOW", 1, 1]
+    ]);
+    const uncraftable = buildIndex(formatted, raw);
+    expect(uncraftable[0].slice(8)).toEqual([0, 1]);
+  });
+
   it("lists one URL per item page", () => {
     const xml = buildSitemap([["T4_BAG", "Adept's Bag", "adepts-bag", "bags", "bags", 4, 3.4, 4]], "2026-11-08");
     expect(xml).toContain("<loc>https://blackmarketreader.com/prices/adepts-bag</loc><lastmod>2026-11-08</lastmod>");

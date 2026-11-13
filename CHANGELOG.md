@@ -47,6 +47,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - New tool: Price Checker. Search any of 3,700+ items and see its price in every city and the Black Market: where to buy cheapest, where to sell straight away, whether a flip pays after tax, 30 days of price history, and how old every price is.
 - Tidier tool tabs: the four crafting tools now sit together under one Crafting menu, so the header fits on one line.
 - If a page cannot load (usually a weak connection), you now get a Reload button instead of an empty screen.
+- Price Checker: artefacts, resources, food, furniture and other items that only exist in Normal quality no longer show a quality picker, so you cannot end up on a quality nobody can sell.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

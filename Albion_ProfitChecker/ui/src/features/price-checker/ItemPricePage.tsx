@@ -35,7 +35,8 @@ function cheapestOf(rows: QuoteRow[], id: string, quality: number, now: number) 
 function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: ItemEntry; region: Region; setRegion: (r: Region) => void }) {
   const [params, setParams] = useSearchParams();
   const enchant = clamp(Number(params.get("e") ?? 0), 0, item.variants.length - 1);
-  const quality = clamp(Number(params.get("q") ?? 1), 1, 5);
+  // artefacts, resources, food and the like only trade as Normal: a ?q= on them is ignored
+  const quality = item.qualities ? clamp(Number(params.get("q") ?? 1), 1, 5) : 1;
   const id = item.variants[enchant];
   const now = useNow();
   const [premium, setPremium] = useSessionState("pc:premium", true);
@@ -86,7 +87,7 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
   const title = `${item.name}${enchant ? ` .${enchant}` : ""}`;
   const copyForDiscord = async () => {
     const lines = [
-      `**${title}** · ${qualityLabel} · ${region.toUpperCase()}`,
+      `**${title}**${item.qualities ? ` · ${qualityLabel}` : ""} · ${region.toUpperCase()}`,
       cheapest ? `Buy cheapest: **${silver(cheapest.price)}** in ${cheapest.market}` : "Buy cheapest: no recent sell order",
       bestSell ? `Sell instantly: **${silver(bestSell.price)}** at ${bestSell.market}` : "Sell instantly: no recent buy order",
       `[All markets](<${window.location.origin}${itemPath(item, enchant, quality)}>)`
@@ -182,15 +183,17 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
               ))}
             </div>
           ) : null}
-          <div className="pc-picker" role="group" aria-label="Quality">
-            <span>Quality</span>
-            {QUALITIES.map((q) => (
-              <button key={q.value} type="button" className={q.value === quality ? "is-on" : ""} aria-pressed={q.value === quality} style={{ "--pick": q.color } as CSSProperties} onClick={() => go(enchant, q.value)} title={q.label}>
-                <i aria-hidden="true" />
-                <span className="pc-q-label">{q.label}</span>
-              </button>
-            ))}
-          </div>
+          {item.qualities ? (
+            <div className="pc-picker" role="group" aria-label="Quality">
+              <span>Quality</span>
+              {QUALITIES.map((q) => (
+                <button key={q.value} type="button" className={q.value === quality ? "is-on" : ""} aria-pressed={q.value === quality} style={{ "--pick": q.color } as CSSProperties} onClick={() => go(enchant, q.value)} title={q.label}>
+                  <i aria-hidden="true" />
+                  <span className="pc-q-label">{q.label}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -205,9 +208,7 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
       <section className="pc-card" aria-labelledby="pc-markets-title">
         <div className="pc-card-head">
           <h2 id="pc-markets-title">Every market</h2>
-          <span>
-            {qualityLabel} · prices players reported, each with its age
-          </span>
+          <span>{item.qualities ? `${qualityLabel} · prices players reported, each with its age` : "Prices players reported, each with its age"}</span>
         </div>
         <MarketTable quotes={markets} cheapest={cheapest} bestSell={bestSell} soldPerDay={sold} week={week} now={now} />
       </section>
@@ -257,32 +258,36 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
         )}
       </section>
 
-      <div className="pc-ladders">
-        {item.variants.length > 1 ? (
-          <Ladder
-            title="Price per enchantment"
-            rungs={item.variants.map((variant, e) => ({
-              key: variant,
-              label: `.${e}`,
-              color: ENCHANT_COLOR[e],
-              price: cheapestOf(rows, variant, quality, now),
-              active: e === enchant,
-              onPick: () => go(e, quality)
-            }))}
-          />
-        ) : null}
-        <Ladder
-          title="Price per quality"
-          rungs={QUALITIES.map((q) => ({
-            key: String(q.value),
-            label: q.label,
-            color: q.color,
-            price: cheapestOf(rows, id, q.value, now),
-            active: q.value === quality,
-            onPick: () => go(enchant, q.value)
-          }))}
-        />
-      </div>
+      {item.variants.length > 1 || item.qualities ? (
+        <div className="pc-ladders">
+          {item.variants.length > 1 ? (
+            <Ladder
+              title="Price per enchantment"
+              rungs={item.variants.map((variant, e) => ({
+                key: variant,
+                label: `.${e}`,
+                color: ENCHANT_COLOR[e],
+                price: cheapestOf(rows, variant, quality, now),
+                active: e === enchant,
+                onPick: () => go(e, quality)
+              }))}
+            />
+          ) : null}
+          {item.qualities ? (
+            <Ladder
+              title="Price per quality"
+              rungs={QUALITIES.map((q) => ({
+                key: String(q.value),
+                label: q.label,
+                color: q.color,
+                price: cheapestOf(rows, id, q.value, now),
+                active: q.value === quality,
+                onPick: () => go(enchant, q.value)
+              }))}
+            />
+          ) : null}
+        </div>
+      ) : null}
 
       {item.craftable ? (
         <Link className="pc-craft" to={craftingCalculatorPath(item, enchant)}>

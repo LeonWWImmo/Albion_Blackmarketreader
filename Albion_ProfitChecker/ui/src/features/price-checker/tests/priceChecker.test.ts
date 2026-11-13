@@ -26,6 +26,8 @@ describe("item index", () => {
     expect(bow.craftable).toBe(true);
     expect(craftingCalculatorPath(bow, 2)).toBe("/crafting-calculator?item=2H_BOW&tier=5&enchant=2");
     expect(toEntry(ROWS[0]).craftable).toBe(false);
+    expect(toEntry(["T4_RUNE", "Adept's Rune", "adepts-rune", "artefacts", "fragments", 4, 0.05, 0]).qualities).toBe(false);
+    expect(toEntry(["T4_BAG", "Adept's Bag", "adepts-bag", "bags", "bags", 4, 3.4, 4, 0, 1]).qualities).toBe(true);
   });
 
   it("keeps only well-formed saved items from browser storage", () => {

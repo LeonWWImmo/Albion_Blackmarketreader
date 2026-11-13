@@ -36,8 +36,8 @@ function SavedRow({ title, items, index }: { title: string; items: SavedItem[]; 
       <ul>
         {shown.map(({ saved, item }) => (
           <li key={`${saved.slug}.${saved.e}.${saved.q}`}>
-            <Link to={itemPath(item, saved.e, saved.q)}>
-              <img src={iconUrl(item.variants[saved.e] ?? item.id, saved.q)} alt="" loading="lazy" width={52} height={52} onError={onIconError} />
+            <Link to={itemPath(item, saved.e, item.qualities ? saved.q : 1)}>
+              <img src={iconUrl(item.variants[saved.e] ?? item.id, item.qualities ? saved.q : 1)} alt="" loading="lazy" width={52} height={52} onError={onIconError} />
               <span>
                 <b>{item.name}</b>
                 <TierBadge tier={item.tier} enchant={saved.e} />

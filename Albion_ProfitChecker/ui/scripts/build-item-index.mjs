@@ -42,10 +42,13 @@ export function slugify(name) {
  * raw: ao-bin-dumps items.json `items` (shop category, weight).
  * craftable: item ids without their tier ("2H_BOW") that the Crafting Calculator knows.
  * skip: item ids (without enchantment) to leave out, the off-market list.
- * Returns rows [id, name, slug, category, subcategory, tier, weight, enchants, craftable?], sorted by
+ * Returns rows [id, name, slug, category, subcategory, tier, weight, enchants, craftable?, qualities?], sorted by
  * name. enchants is the highest enchantment level when the market ids follow `${id}@n` (most items),
  * or the list of market ids from .0 up when they do not (refined resources: T4_PLANKS_LEVEL1@1). A
- * ninth value 1 marks a T4-T8 item the Crafting Calculator can open.
+ * ninth value 1 marks a T4-T8 item the Crafting Calculator can open. A tenth value 1 marks an item
+ * with quality levels (Normal to Masterpiece: weapons, armor, bags, capes, gathering gear, most
+ * mounts), from the game's @maxqualitylevel. Artefacts, resources, food and the like only ever trade
+ * as Normal. Trailing flags that are 0 are left out.
  */
 export function buildIndex(formatted, raw, craftable = new Set(), skip = new Set()) {
   const shop = new Map();
@@ -79,7 +82,10 @@ export function buildIndex(formatted, raw, craftable = new Set(), skip = new Set
     const standard = variants.every((id, enchant) => id === (enchant ? `${base}@${enchant}` : base));
     const enchants = standard ? variants.length - 1 : variants;
     const row = [base, name, slugify(name), item["@shopcategory"], item["@shopsubcategory1"] ?? "", tier, Number(item["@weight"] ?? 0), enchants];
-    if (tier >= 4 && tier <= 8 && craftable.has(base.replace(/^T\d_/, ""))) row.push(1);
+    const canCraft = tier >= 4 && tier <= 8 && craftable.has(base.replace(/^T\d_/, ""));
+    const hasQualities = Number(item["@maxqualitylevel"] ?? 1) > 1;
+    if (hasQualities) row.push(canCraft ? 1 : 0, 1);
+    else if (canCraft) row.push(1);
     rows.push(row);
     slugs.set(slugify(name), (slugs.get(slugify(name)) ?? 0) + 1);
   }
