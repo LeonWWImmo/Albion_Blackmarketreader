@@ -1,19 +1,26 @@
 import { Component, type ReactNode } from "react";
+import { reload } from "../browserGuards";
 import { reportCaughtError } from "../errorReporter";
 
-type Props = { children: ReactNode };
-type State = { failed: boolean };
+/** resetKey: the page's path. A new path clears the error without remounting the page. */
+type Props = { children: ReactNode; resetKey: string };
+type State = { failed: boolean; resetKey: string };
 
 /**
  * Without this, a page that fails to render (most often: its code could not be downloaded, even
  * after the stale-build reload) leaves the visitor on an empty dark screen. This says what happened
- * and offers a way out; App gives it the path as key, so another page starts fresh.
+ * and offers a way out. Navigating to another page clears it, while moving between pages that share
+ * one component (/prices/a -> /prices/b) keeps that component and its state.
  */
 export class PageErrorBoundary extends Component<Props, State> {
-  state: State = { failed: false };
+  state: State = { failed: false, resetKey: this.props.resetKey };
 
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): Partial<State> {
     return { failed: true };
+  }
+
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    return props.resetKey === state.resetKey ? null : { failed: false, resetKey: props.resetKey };
   }
 
   componentDidCatch(error: unknown) {
@@ -22,6 +29,8 @@ export class PageErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.failed) return this.props.children;
+    // the page is reloading onto the new build (browserGuards): no need to show an error first
+    if (reload.pending) return null;
     return (
       <main role="alert" style={{ minHeight: "100vh", display: "grid", placeContent: "center", gap: 16, padding: 24, textAlign: "center", color: "#eef2fa", background: "#05070d", fontFamily: "Inter, 'Segoe UI', sans-serif" }}>
         <h1 style={{ margin: 0, fontSize: 24 }}>This page could not load</h1>

@@ -27,7 +27,7 @@ const ItemPricePage = lazy(() => import("./features/price-checker").then((m) => 
 export function App() {
   const { pathname } = useLocation();
   return (
-    <PageErrorBoundary key={pathname}>
+    <PageErrorBoundary resetKey={pathname}>
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
