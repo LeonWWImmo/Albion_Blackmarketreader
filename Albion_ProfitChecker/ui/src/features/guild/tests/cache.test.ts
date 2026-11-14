@@ -35,9 +35,14 @@ describe("guild cache", () => {
   });
 
   it("reads an entry another page view stored in sessionStorage", () => {
-    const store = new Map<string, string>([["gd-cache:g", JSON.stringify({ at: 100, data: { n: 7 } })]]);
+    const store = new Map<string, string>([
+      ["gd-cache:v3:g", JSON.stringify({ at: 100, data: { n: 7 } })],
+      ["gd-cache:old", JSON.stringify({ at: 100, data: { shape: "before an update" } })]
+    ]);
     vi.stubGlobal("sessionStorage", { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => store.set(k, v), removeItem: (k: string) => store.delete(k) });
     expect(peek("g", 150)).toEqual({ data: { n: 7 }, age: 50 });
+    // a copy stored by an older version of the page is never read
+    expect(peek("old", 150)).toBeNull();
   });
 });
 

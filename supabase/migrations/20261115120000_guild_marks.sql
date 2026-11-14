@@ -17,6 +17,13 @@ insert into public.guild_marks (user_id, guild_id)
 select manager_id, id from public.guilds where manager_id is not null
 on conflict (user_id) do nothing;
 
+-- every kind of fame Albion counts, so the Activity tab can show each one gained per week and month.
+-- Empty (null) on older rows: those days were not counted, and must not look like 0 fame.
+alter table public.guild_snapshots
+  add column if not exists fishing bigint,
+  add column if not exists farming bigint,
+  add column if not exists crystal bigint;
+
 drop index if exists public.guilds_sync_due;
 alter table public.guilds drop column if exists manager_id;
 create index if not exists guilds_last_synced on public.guilds (last_synced_at);

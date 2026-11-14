@@ -2,32 +2,29 @@ import { describe, expect, it } from "vitest";
 import type { Activity, ActivityMember } from "../api";
 import { guildPath } from "../api";
 import { isGuildTab } from "../core/tools";
-import { daysAgo, filterMembers, kickListText, searchMembers, sparkHeights, timeAgo } from "../core/view";
+import { areaLabel, daysAgo, filterMembers, joinedAndLeft, kickListText, searchMembers, shareBars, sparkHeights, timeAgo } from "../core/view";
 
 const NOW = new Date("2026-11-14T15:00:00Z");
-const member = (name: string, status: ActivityMember["status"], isNew = false): ActivityMember => ({
+const member = (name: string, status: ActivityMember["status"], extra: Partial<ActivityMember> = {}): ActivityMember => ({
   id: name,
   name,
   status,
   lastActive: null,
   lastFightAt: null,
   joinedOn: null,
-  isNew,
-  pve: null,
-  pvp: null,
-  gathering: null,
-  crafting: null,
-  lifetime: null,
+  isNew: false,
+  gains: { 7: null, 30: null },
   totals: null,
-  spark: []
+  main: null,
+  spark: [],
+  details: null,
+  ...extra
 });
-const activity = (members: ActivityMember[]): Activity => ({
-  periodDays: 7,
-  coveredDays: 7,
+const activity = (members: ActivityMember[], left: Activity["left"] = []): Activity => ({
+  coveredDays: { 7: 7, 30: 30 },
   counts: { active: 0, quiet: 0, inactive: 0, unknown: 0 },
-  joined: 0,
   members,
-  left: []
+  left
 });
 
 describe("guild view helpers", () => {
@@ -42,7 +39,7 @@ describe("guild view helpers", () => {
   });
 
   it("filters members by status or as new", () => {
-    const list = [member("Ann", "active", true), member("Bo", "inactive"), member("Cy", "quiet")];
+    const list = [member("Ann", "active", { isNew: true }), member("Bo", "inactive"), member("Cy", "quiet")];
     expect(filterMembers(list, "all")).toHaveLength(3);
     expect(filterMembers(list, "inactive").map((m) => m.name)).toEqual(["Bo"]);
     expect(filterMembers(list, "new").map((m) => m.name)).toEqual(["Ann"]);
@@ -55,24 +52,42 @@ describe("guild view helpers", () => {
     expect(searchMembers(list, "")).toHaveLength(3);
   });
 
-  it("writes the inactive list to paste", () => {
-    expect(kickListText("Angry fuzzies", activity([member("Bo", "inactive"), member("Ann", "active"), member("Zed", "inactive")]))).toBe(
-      "Angry fuzzies: inactive for 14+ days (2): Bo, Zed"
+  it("counts who joined and left within some days", () => {
+    const a = activity(
+      [member("New", "active", { isNew: true, joinedOn: "2026-11-12" }), member("Older", "active", { isNew: true, joinedOn: "2026-10-20" })],
+      [
+        { id: "x", name: "Gone", leftOn: "2026-11-10" },
+        { id: "y", name: "LongGone", leftOn: "2026-10-25" }
+      ]
     );
-    expect(kickListText("Angry fuzzies", activity([member("Ann", "active")]))).toBe("Angry fuzzies: nobody inactive for 14+ days.");
+    expect(joinedAndLeft(a, 7, NOW)).toEqual({ joined: 1, left: 1 });
+    expect(joinedAndLeft(a, 30, NOW)).toEqual({ joined: 2, left: 2 });
   });
 
-  it("scales the 14-day bars and keeps empty days apart from days without gain", () => {
+  it("writes the inactive list as a block for Discord, longest gone first", () => {
+    const list = [member("Bo", "inactive", { lastActive: "2026-10-20" }), member("Ann", "active"), member("Zed", "inactive", { lastActive: "2026-10-01" })];
+    expect(kickListText("Angry fuzzies", activity(list), NOW)).toBe(
+      "**Angry fuzzies** · inactive for 14+ days (2)\n• Zed · last played 44 days ago\n• Bo · last played 25 days ago"
+    );
+    expect(kickListText("Angry fuzzies", activity([member("Ann", "active")]), NOW)).toBe("**Angry fuzzies**: nobody inactive for 14+ days.");
+  });
+
+  it("scales bars: the 14-day gains, and shares of the largest", () => {
     expect(sparkHeights([null, 0, 50, 100])).toEqual([null, 0, 50, 100]);
     expect(sparkHeights([1, 1000])).toEqual([8, 100]);
-    expect(sparkHeights([null, null])).toEqual([null, null]);
+    expect(shareBars([["Ore", 30], ["Wood", 120], ["Fiber", 0]])).toEqual([
+      ["Wood", 120, 100],
+      ["Ore", 30, 25]
+    ]);
   });
 
-  it("builds guild addresses and knows its tabs", () => {
+  it("names kill areas and builds guild addresses", () => {
+    expect(areaLabel("OPEN_WORLD")).toBe("Open world");
+    expect(areaLabel(null)).toBe("Unknown area");
     expect(guildPath({ region: "eu", slug: "angry-fuzzies" })).toBe("/guild/eu/angry-fuzzies");
     expect(guildPath({ region: "us", slug: "x" }, "activity")).toBe("/guild/us/x/activity");
     expect(guildPath({ region: "us", slug: "x" }, "overview")).toBe("/guild/us/x");
-    expect(isGuildTab("activity")).toBe(true);
+    expect(isGuildTab("killboard")).toBe(true);
     expect(isGuildTab("regear")).toBe(false);
   });
 });

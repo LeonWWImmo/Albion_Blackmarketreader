@@ -6,7 +6,19 @@ import type { Region } from "@shared/types";
 export type GuildHit = { id: string; name: string; slug: string; allianceName: string | null; killFame: number; deathFame: number };
 export type GuildRef = { id: string; region: Region; slug: string; name: string };
 export type MemberStatus = "active" | "quiet" | "inactive" | "unknown";
-export type FameTotals = { pve: number; pvp: number; gathering: number; crafting: number };
+/** Every kind of fame Albion counts, and their sum. */
+export type Fame = { total: number; pve: number; pvp: number; gathering: number; crafting: number; fishing: number; farming: number; crystal: number };
+export type FameKind = Exclude<keyof Fame, "total">;
+/** Fame gained per kind; null for a kind an older snapshot did not record yet. */
+export type FameGain = { total: number } & Record<FameKind, number | null>;
+
+/** Where a member's lifetime fame came from (today's roster). */
+export type MemberDetails = {
+  pveZones: { royal: number; outlands: number; avalon: number; hellgate: number; corrupted: number; mists: number };
+  resources: { fiber: number; hide: number; ore: number; rock: number; wood: number };
+  killFame: number;
+  deathFame: number;
+};
 
 export type ActivityMember = {
   id: string;
@@ -16,21 +28,21 @@ export type ActivityMember = {
   lastFightAt: string | null;
   joinedOn: string | null;
   isNew: boolean;
-  pve: number | null;
-  pvp: number | null;
-  gathering: number | null;
-  crafting: number | null;
-  lifetime: number | null;
-  totals: FameTotals | null;
+  /** fame gained in 7 and 30 days; null without two snapshots */
+  gains: Record<"7" | "30", FameGain | null>;
+  /** lifetime fame */
+  totals: Fame | null;
+  main: FameKind | null;
   spark: (number | null)[];
+  details: MemberDetails | null;
 };
 
 export type Activity = {
-  periodDays: number;
-  coveredDays: number;
+  /** days the gains cover so far, per period */
+  coveredDays: Record<"7" | "30", number>;
   counts: Record<MemberStatus, number>;
-  joined: number;
   members: ActivityMember[];
+  /** who left in the last 30 days */
   left: { id: string; name: string; leftOn: string }[];
 };
 
@@ -49,15 +61,42 @@ export type GuildPageData = {
     memberCount: number;
   };
   tracking: { tracked: boolean; since: string | null; lastSyncedAt: string | null; markedBy: number; canMark: boolean };
-  activity: Record<"7" | "30", Activity>;
+  activity: Activity;
   fights: Fight[];
 };
 
-export type GearPiece = { type: string; quality: number };
-export type Fighter = { id: string; name: string; guildId: string | null; guildName: string | null; allianceName: string | null; itemPower: number; gear: Partial<Record<GearSlot, GearPiece>> };
-export type GearSlot = "MainHand" | "OffHand" | "Head" | "Armor" | "Shoes" | "Cape" | "Bag" | "Mount";
-export type KillEvent = { id: number; time: string; fame: number; participants: number; battleId: number | null; killer: Fighter; victim: Fighter };
-export type Killboard = { kills: KillEvent[]; deaths: KillEvent[] };
+export type GearSlot = "MainHand" | "OffHand" | "Head" | "Armor" | "Shoes" | "Cape" | "Bag" | "Mount" | "Potion" | "Food";
+/** An item with its market value (silver, for the whole stack; 0 when the market does not know it). */
+export type PricedItem = { type: string; quality: number; count: number; value: number };
+export type Fighter = {
+  id: string;
+  name: string;
+  guildId: string | null;
+  guildName: string | null;
+  allianceName: string | null;
+  itemPower: number;
+  gear: Partial<Record<GearSlot, PricedItem>>;
+  gearValue: number;
+};
+export type Helper = { name: string; guildName: string | null; itemPower: number; damage: number; heal: number };
+export type KillEvent = {
+  id: number;
+  time: string;
+  fame: number;
+  participants: number;
+  groupSize: number | null;
+  area: string | null;
+  battleId: number | null;
+  killer: Fighter;
+  victim: Fighter & { inventory: PricedItem[]; inventoryValue: number };
+  helpers: Helper[];
+  /** the helpers past the ten biggest, summed up */
+  otherHelpers: { count: number; damage: number; heal: number } | null;
+  /** silver the victim lost: gear and bag */
+  value: number;
+};
+/** priced: values could load; pricesComplete: every item got a price lookup (very full boards may not). */
+export type Killboard = { kills: KillEvent[]; deaths: KillEvent[]; priced: boolean; pricesComplete: boolean };
 
 /** An answer the API gave with an error text, shown to the visitor as it is. */
 export class GuildApiError extends Error {

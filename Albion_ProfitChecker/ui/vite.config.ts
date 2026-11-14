@@ -25,9 +25,10 @@ function devApi(): Plugin {
       let guildDeps: Promise<Record<string, unknown>> | null = null;
       server.middlewares.use("/api/guild", async (req, res) => {
         guildDeps ??= (async () => {
-          const [gameinfo, { createMemoryGuildStore }, { createClient }, envJs] = await Promise.all([
+          const [gameinfo, { createMemoryGuildStore }, { loadValues }, { createClient }, envJs] = await Promise.all([
             import("./api/_lib/gameinfo.js"),
             import("./api/_lib/guildMemoryStore.js"),
+            import("./api/_lib/itemValue.js"),
             import("@supabase/supabase-js"),
             readFile(path.join(rootDir, "public/env.js"), "utf8")
           ]);
@@ -41,7 +42,8 @@ function devApi(): Plugin {
               return data?.user?.email_confirmed_at ? { id: data.user.id } : null;
             },
             now: () => new Date(),
-            cronSecret: "dev"
+            cronSecret: "dev",
+            values: loadValues
           };
         })();
         const url = new URL(req.url || "/", "http://localhost");

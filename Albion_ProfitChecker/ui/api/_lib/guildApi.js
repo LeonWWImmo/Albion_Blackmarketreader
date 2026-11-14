@@ -5,6 +5,7 @@
 //   now            () => Date
 //   cronSecret     CRON_SECRET, which Vercel Cron sends for the daily sync
 //   limiter        optional api/_lib/rateLimit.js limiter, keyed by request.client
+//   values         optional (region, itemIds) => { table, complete } (api/_lib/itemValue.js), for the killboard
 //
 //   GET  search?region=eu&q=angry        guilds whose name matches, best match first
 //   GET  guild?region=eu&slug=..&id=..   one guild: info, tracking, activity, recent fights (public, cached)
@@ -14,6 +15,7 @@
 //   POST unmark                          remove the mark
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day
 import { GameinfoError, isGuildId, isRegion } from "./gameinfo.js";
+import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
 
 /** The cron syncs a marked guild again when its last sync is older than this. */
@@ -102,8 +104,9 @@ export async function syncGuild({ store, gameinfo, guild, now }) {
   // ascending: the latest earlier day wins; days from an earlier, ended tracking are no comparison
   for (const row of recent) if (row.day < today && (!guild.tracked_since || row.day >= guild.tracked_since)) before.set(row.player_id, row);
   const plan = planSync({ guildId: guild.id, members, battles, players, before, today });
-  await store.savePlayers(plan.players);
+  // snapshots first: if they fail (e.g. a column missing), no join or leave is written without them
   await store.saveSnapshots(plan.snapshots);
+  await store.savePlayers(plan.players);
   const slug = info.name === guild.name ? guild.slug : await uniqueSlug(store, guild.region, info.name, guild.id);
   await store.saveGuild({ ...guildRow(info, guild.region, slug, members.length), last_synced_at: now.toISOString() });
 }
@@ -221,7 +224,13 @@ async function getGuildPage(deps, { region, slug, id }) {
   // untracked: today's roster as the only snapshot, for lifetime fame (no gains without history)
   const snapshots = tracked ? history[1] : members.map((member) => snapshotOf(resolved.id, member, today));
   const trackedSince = tracked ? row.tracked_since : null;
-  const activity = Object.fromEntries(PERIODS.map((periodDays) => [periodDays, buildActivity({ players, snapshots, today, periodDays, trackedSince })]));
+  const activity = buildActivity({ players, snapshots, today, trackedSince });
+  // where each member's fame came from (lifetime, from today's roster): the member's details
+  const roster = new Map(members.map((m) => [m.id, m]));
+  for (const member of activity.members) {
+    const live = roster.get(member.id);
+    member.details = live ? { pveZones: live.pveZones, resources: live.resources, killFame: live.killFame, deathFame: live.deathFame } : null;
+  }
   const urlSlug = row?.slug ?? (await untrackedSlug(deps, region, slug, resolved, info));
   return ok(
     {
@@ -250,7 +259,26 @@ async function getGuildPage(deps, { region, slug, id }) {
   );
 }
 
-async function getKillboard({ gameinfo }, { region, id }) {
+/** Every item id on the killboard, gear first (it decides most of a kill's value), bags after. */
+function killboardItemIds(events) {
+  const gear = events.flatMap((e) => [...Object.values(e.killer.gear), ...Object.values(e.victim.gear)].map((p) => p.type));
+  const bags = events.flatMap((e) => e.victim.inventory.map((p) => p.type));
+  return [...new Set([...gear, ...bags])];
+}
+
+/** An event with a market value on every item, each side's gear, the victim's bag and the total lost. */
+export function priceEvent(event, table) {
+  const priced = (p) => ({ ...p, value: unitValue(table, p.type, p.quality) * p.count });
+  const priceSide = (side) => {
+    const gear = Object.fromEntries(Object.entries(side.gear).map(([slot, p]) => [slot, priced(p)]));
+    return { ...side, gear, gearValue: Object.values(gear).reduce((t, p) => t + p.value, 0) };
+  };
+  const inventory = event.victim.inventory.map(priced).sort((a, b) => b.value - a.value);
+  const victim = { ...priceSide(event.victim), inventory, inventoryValue: inventory.reduce((t, p) => t + p.value, 0) };
+  return { ...event, killer: priceSide(event.killer), victim, value: victim.gearValue + victim.inventoryValue };
+}
+
+async function getKillboard({ gameinfo, values }, { region, id }) {
   if (!isGuildId(id)) return fail(400, "Pick a guild first.");
   let complete = true;
   const partial = () => {
@@ -264,12 +292,30 @@ async function getKillboard({ gameinfo }, { region, id }) {
   const deaths = new Map();
   for (const event of fightKills.flat()) if (event.victim.guildId === id) deaths.set(event.id, event);
   const newestFirst = (a, b) => b.time.localeCompare(a.time);
+  const shownKills = kills.filter((e) => e.killer.guildId === id).sort(newestFirst).slice(0, KILLBOARD_SHOWN);
+  const shownDeaths = [...deaths.values()].sort(newestFirst).slice(0, KILLBOARD_SHOWN);
+  // market values: one price request for the whole board; without prices the board still shows
+  let table = new Map();
+  let priced = false;
+  let pricesComplete = false;
+  if (values) {
+    try {
+      ({ table, complete: pricesComplete } = await values(region, killboardItemIds([...shownKills, ...shownDeaths])));
+      priced = true;
+    } catch (error) {
+      complete = false;
+      console.error("killboard prices failed", error);
+    }
+  }
   return ok(
     {
-      kills: kills.filter((e) => e.killer.guildId === id).sort(newestFirst).slice(0, KILLBOARD_SHOWN),
-      deaths: [...deaths.values()].sort(newestFirst).slice(0, KILLBOARD_SHOWN)
+      kills: shownKills.map((e) => priceEvent(e, table)),
+      deaths: shownDeaths.map((e) => priceEvent(e, table)),
+      priced,
+      // more items than the price lookup takes: the rest counts as 0
+      pricesComplete: priced && pricesComplete
     },
-    // without every fight the deaths are incomplete: not kept for everyone
+    // without every fight or the prices the board is incomplete: not kept for everyone
     complete ? PUBLIC_CACHE_S : 0
   );
 }

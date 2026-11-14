@@ -27,8 +27,46 @@ export function slugify(name) {
   return slug || "guild";
 }
 
-const FIELDS = ["pve", "kill_fame", "death_fame", "gathering", "crafting"];
-const total = (row) => FIELDS.reduce((sum, field) => sum + Number(row?.[field] ?? 0), 0);
+/** Every kind of fame Albion counts, with the snapshot column it is stored in. */
+export const KINDS = [
+  ["pve", "pve"],
+  ["pvp", "kill_fame"],
+  ["gathering", "gathering"],
+  ["crafting", "crafting"],
+  ["fishing", "fishing"],
+  ["farming", "farming"],
+  ["crystal", "crystal"]
+];
+/** Dying grows death fame: a sign of play, though not fame of one's own. */
+const PLAY_FIELDS = [...KINDS.map(([, column]) => column), "death_fame"];
+/** A value a snapshot really has: rows from before a kind was counted have it empty (null). */
+const known = (value) => value !== null && value !== undefined;
+
+/** Fame grew between two snapshots, in any kind both of them counted. */
+const grewBetween = (now, then) => PLAY_FIELDS.some((field) => known(now?.[field]) && known(then?.[field]) && Number(now[field]) > Number(then[field]));
+
+/** A snapshot row as { pve, pvp, ..., total } (total: every kind of fame, death fame not included). */
+export function fameOf(row) {
+  const fame = { total: 0 };
+  for (const [kind, column] of KINDS) {
+    fame[kind] = Number(row?.[column] ?? 0);
+    fame.total += fame[kind];
+  }
+  return fame;
+}
+
+/**
+ * The fame gained from `then` to `now` per kind; a kind one of them did not count yet is null, not
+ * "everything since 0". total: the kinds both counted.
+ */
+export function fameGain(now, then) {
+  const gain = { total: 0 };
+  for (const [kind, column] of KINDS) {
+    gain[kind] = known(now?.[column]) && known(then?.[column]) ? Math.max(0, Number(now[column]) - Number(then[column])) : null;
+    gain.total += gain[kind] ?? 0;
+  }
+  return gain;
+}
 
 /** A member from the killboard as a snapshot row. */
 export const snapshotOf = (guildId, member, day) => ({
@@ -39,7 +77,10 @@ export const snapshotOf = (guildId, member, day) => ({
   kill_fame: member.killFame,
   death_fame: member.deathFame,
   gathering: member.gathering,
-  crafting: member.crafting
+  crafting: member.crafting,
+  fishing: member.fishing ?? 0,
+  farming: member.farming ?? 0,
+  crystal: member.crystal ?? 0
 });
 
 /**
@@ -59,7 +100,7 @@ export function planSync({ guildId, members, battles, players, before, today }) 
     const prev = known.get(member.id);
     const stillHere = prev && !prev.left_on;
     const snapshot = snapshotOf(guildId, member, today);
-    const grew = before.has(member.id) && total(snapshot) > total(before.get(member.id));
+    const grew = before.has(member.id) && grewBetween(snapshot, before.get(member.id));
     const fight = lastFight.get(member.id) ?? null;
     return {
       guild_id: guildId,
@@ -92,13 +133,22 @@ export function statusOf(lastActive, today) {
   return days < QUIET_AFTER_DAYS ? "active" : days < INACTIVE_AFTER_DAYS ? "quiet" : "inactive";
 }
 
+/** The kind of fame a member earned most of in total ("pve", "gathering", ...), or null without any. */
+export function mainKind(totals) {
+  if (!totals?.total) return null;
+  let best = null;
+  for (const [kind] of KINDS) if (!best || totals[kind] > totals[best]) best = kind;
+  return best;
+}
+
 /**
- * The Activity page for one period: per current member the fame gained in `periodDays`, the daily
- * gains of the last SPARK_DAYS days and a status; plus who joined and who left in the period.
- * snapshots: rows of the last periodDays + SPARK_DAYS days. trackedSince: null when the guild is not
- * tracked (then there are no gains, only the status from Albion's stats time and fights).
+ * The Activity tab: per current member the fame gained in each period of PERIODS (every kind and
+ * their sum, null without two snapshots), the daily gains of the last SPARK_DAYS days, their total
+ * fame, main kind and status; plus who joined and who left within the longest period.
+ * snapshots: rows of the longest period and some days before it. trackedSince: null when the guild
+ * is not tracked (no gains then, the status comes from Albion's stats time and fights).
  */
-export function buildActivity({ players, snapshots, today, periodDays, trackedSince }) {
+export function buildActivity({ players, snapshots, today, trackedSince }) {
   const byPlayer = new Map();
   for (const row of snapshots) {
     // snapshots from an earlier, ended tracking would make a gain span a gap
@@ -106,23 +156,33 @@ export function buildActivity({ players, snapshots, today, periodDays, trackedSi
     if (!byPlayer.has(row.player_id)) byPlayer.set(row.player_id, new Map());
     byPlayer.get(row.player_id).set(row.day, row);
   }
-  const start = addDays(today, -periodDays);
+  const longest = Math.max(...PERIODS);
+  const since = addDays(today, -longest);
+  const trackedDays = trackedSince ? Math.max(0, daysBetween(trackedSince, today)) : 0;
   const members = players
     .filter((p) => !p.left_on)
     .map((p) => {
       const days = byPlayer.get(p.player_id) ?? new Map();
       const sorted = [...days.keys()].sort();
       const latest = days.get(sorted.at(-1));
-      // the snapshot from the start of the period, or the first one if tracking began later
-      const baseDay = [...sorted].reverse().find((d) => d <= start) ?? sorted[0];
-      const base = days.get(baseDay);
-      const gain = (field) => (latest && base && latest !== base ? Math.max(0, Number(latest[field]) - Number(base[field])) : null);
+      const gains = {};
+      for (const period of PERIODS) {
+        // the snapshot from the start of the period, or the first one if tracking began later
+        const start = addDays(today, -period);
+        const base = days.get([...sorted].reverse().find((d) => d <= start) ?? sorted[0]);
+        if (!latest || !base || latest === base) {
+          gains[period] = null;
+          continue;
+        }
+        gains[period] = fameGain(latest, base);
+      }
       const spark = Array.from({ length: SPARK_DAYS }, (_, i) => {
         const day = addDays(today, i - SPARK_DAYS + 1);
         const now = days.get(day);
         const prev = days.get(addDays(day, -1));
-        return now && prev ? Math.max(0, total(now) - total(prev)) : null;
+        return now && prev ? fameGain(now, prev).total : null;
       });
+      const totals = latest ? fameOf(latest) : null;
       const lastActive = lastActiveDay(p);
       return {
         id: p.player_id,
@@ -131,30 +191,30 @@ export function buildActivity({ players, snapshots, today, periodDays, trackedSi
         lastActive,
         lastFightAt: p.last_fight_at ?? null,
         joinedOn: p.joined_on ?? null,
-        isNew: Boolean(trackedSince && p.joined_on && p.joined_on > trackedSince && p.joined_on >= start),
-        pve: gain("pve"),
-        pvp: gain("kill_fame"),
-        gathering: gain("gathering"),
-        crafting: gain("crafting"),
-        lifetime: latest ? total(latest) : null,
-        // lifetime fame per kind, shown while there is no gain yet (tracking younger than a day)
-        totals: latest ? { pve: Number(latest.pve), pvp: Number(latest.kill_fame), gathering: Number(latest.gathering), crafting: Number(latest.crafting) } : null,
+        // joined after tracking started (the first snapshot lists everyone who was there already)
+        isNew: Boolean(trackedSince && p.joined_on && p.joined_on > trackedSince && p.joined_on >= since),
+        gains,
+        totals,
+        main: mainKind(totals),
         spark
       };
     })
-    .sort((a, b) => (b.pve ?? 0) + (b.pvp ?? 0) - ((a.pve ?? 0) + (a.pvp ?? 0)) || (b.lastActive ?? "").localeCompare(a.lastActive ?? "") || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) =>
+        (b.gains[PERIODS[0]]?.total ?? -1) - (a.gains[PERIODS[0]]?.total ?? -1) ||
+        (b.totals?.total ?? 0) - (a.totals?.total ?? 0) ||
+        a.name.localeCompare(b.name)
+    );
   const left = players
-    .filter((p) => p.left_on && p.left_on >= start)
+    .filter((p) => p.left_on && p.left_on >= since)
     .map((p) => ({ id: p.player_id, name: p.name, leftOn: p.left_on }))
     .sort((a, b) => b.leftOn.localeCompare(a.leftOn));
   const counts = { active: 0, quiet: 0, inactive: 0, unknown: 0 };
   for (const m of members) counts[m.status]++;
   return {
-    periodDays,
-    // gains cover fewer days while tracking is younger than the period
-    coveredDays: trackedSince ? Math.min(periodDays, Math.max(0, daysBetween(trackedSince, today))) : 0,
+    // gains cover fewer days while tracking is younger than a period
+    coveredDays: Object.fromEntries(PERIODS.map((period) => [period, Math.min(period, trackedDays)])),
     counts,
-    joined: members.filter((m) => m.isNew).length,
     members,
     left
   };

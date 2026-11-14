@@ -10,16 +10,19 @@ export const NOW = new Date("2026-11-14T12:00:00Z");
 
 export const member = (id, name, pve = 1000) => ({ id, name, pve, killFame: 10, deathFame: 0, gathering: 0, crafting: 0, statsAt: "2026-11-13T00:38:00Z" });
 
-const side = (id, name, guildId, mainHand = "T6_2H_BOW") => ({ id, name, guildId, guildName: guildId === GID ? "Angry fuzzies" : "Others", allianceName: null, itemPower: 1200, gear: { MainHand: { type: mainHand, quality: 2 } } });
+const side = (id, name, guildId, mainHand = "T6_2H_BOW") => ({ id, name, guildId, guildName: guildId === GID ? "Angry fuzzies" : "Others", allianceName: null, itemPower: 1200, gear: { MainHand: { type: mainHand, quality: 2, count: 1 } } });
 
 export const killEvent = (id, time, killerGuild, victimGuild, battleId = null) => ({
   id,
   time,
   fame: 50000,
   participants: 3,
+  groupSize: 2,
+  area: "OPEN_WORLD",
   battleId,
   killer: side(`k${id}`, `Killer${id}`, killerGuild),
-  victim: side(`v${id}`, `Victim${id}`, victimGuild, "T5_MAIN_SWORD")
+  victim: { ...side(`v${id}`, `Victim${id}`, victimGuild, "T5_MAIN_SWORD"), inventory: [{ type: "T4_RUNE", quality: 1, count: 10 }] },
+  helpers: [{ name: `Killer${id}`, guildName: null, itemPower: 1200, damage: 900, heal: 0 }]
 });
 
 function fakeGameinfo() {

@@ -4,7 +4,8 @@
 
 type Entry = { at: number; data: unknown };
 
-const PREFIX = "gd-cache:";
+/** Bump when an answer changes its shape: a stored copy of the old shape is then never read. */
+const PREFIX = "gd-cache:v3:";
 /** Entries bigger than this stay in memory only (a 300-member guild is ~150 KB). */
 const STORE_MAX_CHARS = 400_000;
 /** The memory keeps the most recently used entries only. */

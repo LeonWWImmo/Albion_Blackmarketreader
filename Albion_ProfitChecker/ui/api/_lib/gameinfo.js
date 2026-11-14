@@ -91,15 +91,36 @@ export function parseMembers(raw) {
     .filter((m) => typeof m?.Id === "string" && typeof m?.Name === "string")
     .map((m) => {
       const stats = m.LifetimeStatistics ?? {};
+      const pve = stats.PvE ?? {};
+      const gathered = stats.Gathering ?? {};
       return {
         id: m.Id,
         name: m.Name,
-        pve: num(stats.PvE?.Total),
+        pve: num(pve.Total),
         killFame: num(m.KillFame),
         deathFame: num(m.DeathFame),
-        gathering: num(stats.Gathering?.All?.Total),
+        gathering: num(gathered.All?.Total),
         crafting: num(stats.Crafting?.Total),
-        statsAt: stats.Timestamp && !Number.isNaN(Date.parse(stats.Timestamp)) ? stats.Timestamp : null
+        fishing: num(stats.FishingFame),
+        farming: num(stats.FarmingFame),
+        crystal: num(stats.CrystalLeague),
+        statsAt: stats.Timestamp && !Number.isNaN(Date.parse(stats.Timestamp)) ? stats.Timestamp : null,
+        // where the fame came from, for a member's details (lifetime, not stored)
+        pveZones: {
+          royal: num(pve.Royal),
+          outlands: num(pve.Outlands),
+          avalon: num(pve.Avalon),
+          hellgate: num(pve.Hellgate),
+          corrupted: num(pve.CorruptedDungeon),
+          mists: num(pve.Mists)
+        },
+        resources: {
+          fiber: num(gathered.Fiber?.Total),
+          hide: num(gathered.Hide?.Total),
+          ore: num(gathered.Ore?.Total),
+          rock: num(gathered.Rock?.Total),
+          wood: num(gathered.Wood?.Total)
+        }
       };
     });
 }
@@ -122,13 +143,17 @@ export function parseBattles(raw, guildId) {
 }
 
 /** The gear slots the killboard shows, in the order of Albion's own kill screen. */
-export const GEAR_SLOTS = ["MainHand", "OffHand", "Head", "Armor", "Shoes", "Cape", "Bag", "Mount"];
+export const GEAR_SLOTS = ["MainHand", "OffHand", "Head", "Armor", "Shoes", "Cape", "Bag", "Mount", "Potion", "Food"];
+/** At most this many stacks of the victim's bag are kept (a full bag has 48). */
+const INVENTORY_MAX = 48;
+
+const piece = (item) => ({ type: String(item.Type), quality: num(item.Quality) || 1, count: num(item.Count) || 1 });
 
 function side(raw) {
   const gear = {};
   for (const slot of GEAR_SLOTS) {
     const item = raw?.Equipment?.[slot];
-    if (item?.Type) gear[slot] = { type: String(item.Type), quality: num(item.Quality) || 1 };
+    if (item?.Type) gear[slot] = piece(item);
   }
   return {
     id: String(raw?.Id ?? ""),
@@ -151,10 +176,33 @@ export function parseEvents(raw) {
       time: e.TimeStamp,
       fame: num(e.TotalVictimKillFame),
       participants: num(e.numberOfParticipants) || (Array.isArray(e.Participants) ? e.Participants.length : 0),
+      groupSize: num(e.groupMemberCount) || null,
+      area: typeof e.KillArea === "string" && e.KillArea ? e.KillArea : null,
       battleId: num(e.BattleId) || null,
       killer: side(e.Killer),
-      victim: side(e.Victim)
+      victim: {
+        ...side(e.Victim),
+        // what the victim carried and dropped
+        inventory: (Array.isArray(e.Victim.Inventory) ? e.Victim.Inventory : []).filter((item) => item?.Type).slice(0, INVENTORY_MAX).map(piece)
+      },
+      ...helpersOf(e.Participants)
     }));
+}
+
+/** Kept per kill; a big fight's other helpers are summed up in `otherHelpers`. */
+const HELPERS_MAX = 10;
+
+/** Everyone who hit or healed for a kill, most damage and healing first. */
+function helpersOf(participants) {
+  const all = (Array.isArray(participants) ? participants : [])
+    .filter((p) => p?.Name)
+    .map((p) => ({ name: String(p.Name), guildName: p.GuildName || null, itemPower: Math.round(num(p.AverageItemPower)), damage: Math.round(num(p.DamageDone)), heal: Math.round(num(p.SupportHealingDone)) }))
+    .sort((a, b) => b.damage + b.heal - (a.damage + a.heal));
+  const rest = all.slice(HELPERS_MAX);
+  return {
+    helpers: all.slice(0, HELPERS_MAX),
+    otherHelpers: rest.length ? { count: rest.length, damage: rest.reduce((t, p) => t + p.damage, 0), heal: rest.reduce((t, p) => t + p.heal, 0) } : null
+  };
 }
 
 /** The guild's latest kills (Albion's guild feed has kills only, no deaths). */

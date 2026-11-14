@@ -18,10 +18,11 @@ export function GuildHeader({ data, tab, mine, onChanged }: Props) {
   return (
     <>
       <section className="gd-card gd-head">
-        <GuildCrest id={guild.id} name={guild.name} size={64} />
+        {/* the coat of arms as the card's emblem, behind the name, not an icon in front of it */}
+        <GuildCrest id={guild.id} name={guild.name} size={150} className="gd-head-crest" />
         <div>
           <p className="gd-kicker">GUILD · {guild.region === "eu" ? "EUROPE" : "AMERICA"}</p>
-          <h2>{guild.name}</h2>
+          <h2 className="gd-guild-name">{guild.name}</h2>
           <p className="gd-meta">
             <span>
               Alliance <b>{guild.allianceTag ?? "–"}</b>

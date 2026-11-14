@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap");
+
 /* ===========================================================================
    Guild — tools for guild leaders
 
@@ -324,18 +326,6 @@ a.gd-mine:hover {
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
 }
 
-.gd-crest-empty {
-  width: 56px;
-  height: 56px;
-  flex: none;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  font-size: 26px;
-  color: var(--gd-accent);
-  border: 1px dashed rgba(var(--gd-accent-rgb), 0.5);
-}
-
 .gd-head {
   display: flex;
   align-items: center;
@@ -546,19 +536,6 @@ a.gd-mine:hover {
   text-overflow: ellipsis;
 }
 
-.gd-avatar {
-  width: 34px;
-  height: 34px;
-  flex: none;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 14px;
-  background: rgba(var(--gd-accent-rgb), 0.14);
-  color: var(--gd-accent);
-}
-
 .gd-pill {
   display: inline-flex;
   align-items: center;
@@ -682,7 +659,7 @@ a.gd-row-link:hover {
     grid-template-columns: minmax(0, 1fr);
   }
   .gd-members .gd-row {
-    grid-template-columns: minmax(0, 1.6fr) 104px repeat(2, minmax(0, 0.8fr)) 100px;
+    grid-template-columns: minmax(0, 1.6fr) 104px repeat(3, minmax(0, 0.8fr)) 100px;
   }
   .gd-members .gd-col-wide {
     display: none;
@@ -954,5 +931,396 @@ a.gd-row-link:hover {
   .gd-gear .gd-noitem {
     width: 36px;
     height: 36px;
+  }
+}
+
+/* ------------------------------------------------------------------ guild name, header emblem */
+
+.gd-guild-name {
+  font-family: "Cinzel", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+h2.gd-guild-name {
+  font-size: 34px;
+  background: linear-gradient(180deg, #ffffff 15%, #d9cdfb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gd-head {
+  position: relative;
+  overflow: hidden;
+}
+
+.gd-head > :not(.gd-head-crest) {
+  position: relative;
+  z-index: 1;
+}
+
+.gd-head-crest {
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-8deg);
+  opacity: 0.22;
+  filter: none;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ activity: member rows and details */
+
+.gd-row-button {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--gd-line);
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+}
+
+.gd-row-button:hover,
+.gd-member.is-open .gd-row-button {
+  background: rgba(var(--gd-accent-rgb), 0.05);
+}
+
+.gd-who {
+  display: grid;
+  gap: 3px;
+}
+
+.gd-who small {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.gd-kind {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c8d2e0;
+}
+
+.gd-kind.is-pve { background: rgba(96, 165, 250, 0.14); color: #93c5fd; }
+.gd-kind.is-pvp { background: rgba(248, 113, 113, 0.14); color: #fca5a5; }
+.gd-kind.is-gathering { background: rgba(74, 222, 128, 0.13); color: #86efac; }
+.gd-kind.is-crafting { background: rgba(245, 196, 81, 0.14); color: #fcd34d; }
+.gd-kind.is-fishing { background: rgba(45, 212, 191, 0.14); color: #5eead4; }
+.gd-kind.is-farming { background: rgba(163, 230, 53, 0.14); color: #bef264; }
+.gd-kind.is-crystal { background: rgba(var(--gd-accent-rgb), 0.16); color: var(--gd-accent); }
+.gd-kind.is-new { background: rgba(var(--gd-accent-rgb), 0.18); color: #fff; }
+
+.gd-strong {
+  font-weight: 700;
+  color: var(--gd-text);
+}
+
+.gd-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  padding: 4px 18px 16px;
+  background: rgba(var(--gd-accent-rgb), 0.03);
+}
+
+.gd-detail-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--gd-line);
+}
+
+.gd-detail-card h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--gd-muted);
+  text-transform: uppercase;
+}
+
+.gd-fame-table {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  font-size: 13px;
+}
+
+.gd-fame-table small {
+  text-align: right;
+  color: var(--gd-muted);
+  font-size: 11px;
+}
+
+.gd-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.gd-bars li {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 8px;
+}
+
+.gd-bars i {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.gd-bars i b {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--gd-accent);
+}
+
+.gd-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.gd-facts dt {
+  color: var(--gd-muted);
+}
+
+.gd-facts dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ copy button */
+
+.gd-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--gd-accent-rgb), 0.45);
+  background: rgba(var(--gd-accent-rgb), 0.1);
+  color: #fff;
+  font-weight: 650;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.gd-copy:hover {
+  background: rgba(var(--gd-accent-rgb), 0.18);
+}
+
+.gd-copy svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gd-copy b {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--gd-red);
+  font-size: 12px;
+  text-align: center;
+}
+
+.gd-copy.is-copied {
+  border-color: rgba(74, 222, 128, 0.6);
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--gd-green);
+}
+
+/* ------------------------------------------------------------------ killboard: filters, values, details */
+
+.gd-list-tools {
+  padding-top: 0;
+}
+
+.gd-select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--gd-line);
+  background: #0b1016;
+  color: var(--gd-text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.gd-value {
+  color: var(--gd-gold);
+  font-size: 16px;
+}
+
+.gd-kill-detail {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 16px;
+}
+
+.gd-kill-builds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gd-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gd-kill-detail .gd-gear {
+  align-content: start;
+}
+
+.gd-item {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 46px;
+}
+
+.gd-item img {
+  width: 44px;
+  height: 44px;
+}
+
+.gd-item img {
+  border-radius: 10px;
+  background: #0d131b;
+}
+
+.gd-item i {
+  position: absolute;
+  top: 26px;
+  right: 2px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.75);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gd-item small {
+  font-size: 10px;
+  color: var(--gd-gold);
+}
+
+.gd-item.is-empty {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px dashed var(--gd-line);
+}
+
+.gd-helpers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.gd-helpers li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.gd-helpers li small {
+  display: block;
+  color: var(--gd-muted);
+  font-size: 11px;
+}
+
+.gd-helper-bars {
+  display: grid;
+  gap: 4px;
+}
+
+.gd-helper-bars > span {
+  display: grid;
+  gap: 2px;
+}
+
+.gd-helper-bars i {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.gd-helper-bars i.is-damage {
+  background: var(--gd-red);
+}
+
+.gd-helper-bars i.is-heal {
+  background: var(--gd-green);
+}
+
+.gd-kill-facts {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  grid-template-columns: auto 1fr auto 1fr;
+}
+
+@media (max-width: 900px) {
+  .gd-kill-builds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gd-kill-facts {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  h2.gd-guild-name {
+    font-size: 25px;
+  }
+  .gd-head-crest {
+    width: 110px;
+    height: 110px;
+    right: -14px;
+  }
+  .gd-details {
+    padding: 4px 12px 12px;
+  }
+  .gd-kill-detail {
+    padding: 0 12px 12px;
+  }
+  .gd-item {
+    width: 44px;
+  }
+  .gd-item img {
+    width: 40px;
+    height: 40px;
+  }
+  .gd-item i {
+    top: 24px;
   }
 }

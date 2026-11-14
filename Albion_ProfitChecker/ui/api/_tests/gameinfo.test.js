@@ -7,7 +7,14 @@ const rawMember = {
   Name: "Ann",
   KillFame: 500,
   DeathFame: 70,
-  LifetimeStatistics: { PvE: { Total: 1000 }, Gathering: { All: { Total: 30 } }, Crafting: { Total: 9 }, Timestamp: "2026-11-13T00:38:05Z" }
+  LifetimeStatistics: {
+    PvE: { Total: 1000, Avalon: 600, Mists: 400 },
+    Gathering: { All: { Total: 30 }, Ore: { Total: 30 } },
+    Crafting: { Total: 9 },
+    FishingFame: 4,
+    FarmingFame: 2,
+    Timestamp: "2026-11-13T00:38:05Z"
+  }
 };
 
 describe("parsers", () => {
@@ -30,14 +37,16 @@ describe("parsers", () => {
     expect(() => parseGuild({})).toThrow(GameinfoError);
   });
 
-  it("reads members with their lifetime fame and stats time", () => {
+  it("reads members with every kind of lifetime fame and the stats time", () => {
+    const zones = { royal: 0, outlands: 0, avalon: 0, hellgate: 0, corrupted: 0, mists: 0 };
+    const resources = { fiber: 0, hide: 0, ore: 0, rock: 0, wood: 0 };
     expect(parseMembers([rawMember, { Id: "p2", Name: "Bo", LifetimeStatistics: { Timestamp: "not a date" } }])).toEqual([
-      { id: "p1", name: "Ann", pve: 1000, killFame: 500, deathFame: 70, gathering: 30, crafting: 9, statsAt: "2026-11-13T00:38:05Z" },
-      { id: "p2", name: "Bo", pve: 0, killFame: 0, deathFame: 0, gathering: 0, crafting: 0, statsAt: null }
+      { id: "p1", name: "Ann", pve: 1000, killFame: 500, deathFame: 70, gathering: 30, crafting: 9, fishing: 4, farming: 2, crystal: 0, statsAt: "2026-11-13T00:38:05Z", pveZones: { ...zones, avalon: 600, mists: 400 }, resources: { ...resources, ore: 30 } },
+      { id: "p2", name: "Bo", pve: 0, killFame: 0, deathFame: 0, gathering: 0, crafting: 0, fishing: 0, farming: 0, crystal: 0, statsAt: null, pveZones: zones, resources }
     ]);
   });
 
-  it("cuts a killboard event down to names, guilds, item power and gear", () => {
+  it("cuts a killboard event down to names, guilds, gear, the victim's bag and who helped", () => {
     const fighter = (name, guild) => ({
       Id: `${name}-id`,
       Name: name,
@@ -45,19 +54,44 @@ describe("parsers", () => {
       GuildName: guild ?? "",
       AllianceName: "",
       AverageItemPower: 1254.7,
-      Equipment: { MainHand: { Type: "T6_2H_BOW@2", Quality: 4, ActiveSpells: [] }, OffHand: null, Potion: { Type: "T6_POTION_HEAL", Quality: 1 } },
-      Inventory: [{ Type: "T4_BAG" }]
+      Equipment: { MainHand: { Type: "T6_2H_BOW@2", Quality: 4, Count: 1, ActiveSpells: [] }, OffHand: null, Potion: { Type: "T6_POTION_HEAL", Quality: 0, Count: 5 } },
+      Inventory: [null, { Type: "T4_RUNE", Count: 112, Quality: 0 }]
     });
-    const raw = [{ EventId: 7, TimeStamp: "2026-11-14T10:00:00Z", TotalVictimKillFame: 999, numberOfParticipants: 3, BattleId: 5, Killer: fighter("Ann", "Fuzz"), Victim: fighter("Bo", null) }, { EventId: 8 }];
+    const raw = [
+      {
+        EventId: 7,
+        TimeStamp: "2026-11-14T10:00:00Z",
+        TotalVictimKillFame: 999,
+        numberOfParticipants: 3,
+        groupMemberCount: 2,
+        KillArea: "OPEN_WORLD",
+        BattleId: 5,
+        Killer: fighter("Ann", "Fuzz"),
+        Victim: fighter("Bo", null),
+        Participants: [
+          { Name: "Cy", GuildName: "Fuzz", AverageItemPower: 1100.4, DamageDone: 10.2, SupportHealingDone: 900 },
+          { Name: "Ann", GuildName: "Fuzz", AverageItemPower: 1254.7, DamageDone: 2983.6, SupportHealingDone: 0 }
+        ]
+      },
+      { EventId: 8 }
+    ];
+    const gear = { MainHand: { type: "T6_2H_BOW@2", quality: 4, count: 1 }, Potion: { type: "T6_POTION_HEAL", quality: 1, count: 5 } };
     expect(parseEvents(raw)).toEqual([
       {
         id: 7,
         time: "2026-11-14T10:00:00Z",
         fame: 999,
         participants: 3,
+        groupSize: 2,
+        area: "OPEN_WORLD",
         battleId: 5,
-        killer: { id: "Ann-id", name: "Ann", guildId: "Fuzz-id", guildName: "Fuzz", allianceName: null, itemPower: 1255, gear: { MainHand: { type: "T6_2H_BOW@2", quality: 4 } } },
-        victim: { id: "Bo-id", name: "Bo", guildId: null, guildName: null, allianceName: null, itemPower: 1255, gear: { MainHand: { type: "T6_2H_BOW@2", quality: 4 } } }
+        killer: { id: "Ann-id", name: "Ann", guildId: "Fuzz-id", guildName: "Fuzz", allianceName: null, itemPower: 1255, gear },
+        victim: { id: "Bo-id", name: "Bo", guildId: null, guildName: null, allianceName: null, itemPower: 1255, gear, inventory: [{ type: "T4_RUNE", quality: 1, count: 112 }] },
+        helpers: [
+          { name: "Ann", guildName: "Fuzz", itemPower: 1255, damage: 2984, heal: 0 },
+          { name: "Cy", guildName: "Fuzz", itemPower: 1100, damage: 10, heal: 900 }
+        ],
+        otherHelpers: null
       }
     ]);
   });

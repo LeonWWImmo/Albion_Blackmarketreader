@@ -34,11 +34,13 @@ describe("guild page", () => {
     expect(res.maxAge).toBe(300);
     expect(res.body.guild).toMatchObject({ id: GID, name: "Angry fuzzies", slug: "angry-fuzzies", memberCount: 2, allianceTag: "BOSSS" });
     expect(res.body.tracking).toEqual({ tracked: false, since: null, lastSyncedAt: null, markedBy: 0, canMark: true });
-    expect(res.body.activity[7].members.map((m) => [m.name, m.status])).toEqual([
+    expect(res.body.activity.members.map((m) => [m.name, m.status])).toEqual([
       ["Ann", "active"],
       ["Bo", "active"]
     ]);
-    expect(res.body.activity[7].members[0]).toMatchObject({ lifetime: 1010, pve: null }); // lifetime from today's roster, no gains yet
+    // totals from today's roster, no gains yet; where the fame came from rides along
+    expect(res.body.activity.members[0]).toMatchObject({ totals: { total: 1010, pve: 1000, pvp: 10 }, gains: { 7: null, 30: null }, main: "pve" });
+    expect(res.body.activity.members[0].details).toMatchObject({ killFame: 10, deathFame: 0 });
     expect(res.body.fights).toEqual([{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, fame: 900, ours: 1, kills: 2, deaths: 1 }]);
     // a signed-in visit gets the same public answer: nothing personal is in it
     expect(await call("guild", { token: "tok-ann", query: { region: "eu", slug: "angry-fuzzies" } })).toEqual(res);
@@ -73,7 +75,7 @@ describe("guild page", () => {
     };
     const byId = await call("guild", { query: { region: "eu", id: GID } });
     expect(byId).toMatchObject({ status: 200, maxAge: 0, body: { tracking: { tracked: false, canMark: false } } });
-    expect(byId.body.activity[7].members).toHaveLength(2);
+    expect(byId.body.activity.members).toHaveLength(2);
     spy.mockRestore();
   });
 
@@ -154,8 +156,8 @@ describe("marking a guild", () => {
     expect(store.guilds.get(GID).tracked_since).toBe("2026-11-24");
     const page = await call("guild", { query: { region: "eu", id: GID } });
     // the 11-14 snapshot of the earlier tracking is no start point for a gain
-    expect(page.body.activity[7]).toMatchObject({ coveredDays: 0 });
-    expect(page.body.activity[7].members.every((m) => m.pve === null)).toBe(true);
+    expect(page.body.activity.coveredDays).toEqual({ 7: 0, 30: 0 });
+    expect(page.body.activity.members.every((m) => m.gains[7] === null)).toBe(true);
   });
 
   it("gives a guild a different URL name when another stored guild has it", async () => {
@@ -186,8 +188,8 @@ describe("daily sync", () => {
     expect(players.a.last_gain_on).toBe("2026-11-15");
     expect(players.b.left_on).toBe("2026-11-15");
     const page = await call("guild", { query: { region: "eu", id: GID } });
-    expect(page.body.activity[7].members).toMatchObject([{ name: "Ann", pve: 600 }]);
-    expect(page.body.activity[7].left).toEqual([{ id: "b", name: "Bo", leftOn: "2026-11-15" }]);
+    expect(page.body.activity.members).toMatchObject([{ name: "Ann", gains: { 7: { pve: 600, total: 600 }, 30: { pve: 600 } } }]);
+    expect(page.body.activity.left).toEqual([{ id: "b", name: "Bo", leftOn: "2026-11-15" }]);
   });
 
   it("does not sync a guild nobody has marked", async () => {

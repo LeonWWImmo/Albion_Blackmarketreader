@@ -6,7 +6,6 @@ import { guildPath, normalizeQuery, searchGuilds, type GuildHit } from "./api";
 import { prefetchGuild } from "./core/guildData";
 import { GUILD_TOOLS } from "./core/tools";
 import { GuildShell } from "./GuildShell";
-import { GuildCrest } from "./ui/GuildCrest";
 import { useMyGuild } from "./useMyGuild";
 
 const SEARCH_DELAY_MS = 220;
@@ -60,18 +59,14 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
         <div className="gd-skeleton is-row" />
       ) : mine ? (
         <Link className="gd-card gd-mine" to={guildPath(mine)}>
-          <GuildCrest id={mine.id} name={mine.name} size={56} />
           <div>
-            <b>{mine.name}</b>
+            <b className="gd-guild-name">{mine.name}</b>
             <p className="gd-muted">Marked · {mine.region === "eu" ? "Europe" : "America"}</p>
           </div>
           <span className="gd-btn is-primary">Open</span>
         </Link>
       ) : (
         <div className="gd-card gd-mine">
-          <span className="gd-crest-empty" aria-hidden="true">
-            +
-          </span>
           <div>
             <b>Mark a guild</b>
             <p className="gd-muted">{token ? "Search a guild above and press “Mark” on its page." : "Sign in, then mark a guild. Looking at any guild works without an account."}</p>
@@ -215,9 +210,8 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
               onFocus={() => prefetchGuild(region, hit.slug, hit.id)}
               onTouchStart={() => prefetchGuild(region, hit.slug, hit.id)}
             >
-              <GuildCrest id={hit.id} name={hit.name} size={40} />
               <span>
-                <b>{hit.name}</b>
+                <b className="gd-guild-name">{hit.name}</b>
                 <small>
                   {hit.allianceName ? `Alliance ${hit.allianceName} · ` : ""}
                   {region === "eu" ? "Europe" : "America"}

@@ -1,45 +1,46 @@
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
 import { guildPath, type GuildPageData } from "../api";
-import { timeAgo } from "../core/view";
+import { joinedAndLeft, timeAgo } from "../core/view";
 import { TrackingNote } from "./TrackingNote";
 
 /** The guild at a glance: who is active, what needs attention, the latest fights. */
 export function OverviewTab({ data }: { data: GuildPageData }) {
   const { guild, tracking, fights } = data;
-  const week = data.activity["7"];
+  const activity = data.activity;
   const now = new Date();
+  const week = joinedAndLeft(activity, 7, now);
   const activityPath = guildPath(guild, "activity");
   const kills = fights.reduce((t, f) => t + f.kills, 0);
   const deaths = fights.reduce((t, f) => t + f.deaths, 0);
 
   const attention = [
-    week.counts.inactive ? { tone: "is-inactive", text: `${week.counts.inactive} member${week.counts.inactive === 1 ? "" : "s"} inactive for 14+ days`, to: activityPath } : null,
-    week.left.length ? { tone: "is-quiet", text: `${week.left.length} left the guild this week`, to: activityPath } : null,
+    activity.counts.inactive ? { tone: "is-inactive", text: `${activity.counts.inactive} member${activity.counts.inactive === 1 ? "" : "s"} inactive for 14+ days`, to: activityPath } : null,
+    week.left ? { tone: "is-quiet", text: `${week.left} left the guild this week`, to: activityPath } : null,
     week.joined ? { tone: "is-active", text: `${week.joined} joined this week`, to: activityPath } : null,
-    week.counts.unknown ? { tone: "", text: `${week.counts.unknown} without any activity data yet`, to: activityPath } : null
+    activity.counts.unknown ? { tone: "", text: `${activity.counts.unknown} without any activity data yet`, to: activityPath } : null
   ].filter((item): item is { tone: string; text: string; to: string } => item !== null);
 
   return (
     <>
-      <TrackingNote tracking={tracking} activity={week} />
+      <TrackingNote tracking={tracking} activity={activity} />
       <section className="gd-stats">
         <div className="gd-card gd-stat">
           <small>ACTIVE</small>
           <b className="is-green">
-            {week.counts.active}
+            {activity.counts.active}
             <em> / {guild.memberCount}</em>
           </b>
           <span>played in the last 3 days</span>
         </div>
         <div className="gd-card gd-stat">
           <small>QUIET</small>
-          <b className="is-gold">{week.counts.quiet}</b>
+          <b className="is-gold">{activity.counts.quiet}</b>
           <span>3 to 13 days</span>
         </div>
         <div className="gd-card gd-stat">
           <small>INACTIVE</small>
-          <b className="is-red">{week.counts.inactive}</b>
+          <b className="is-red">{activity.counts.inactive}</b>
           <span>14 days or more</span>
         </div>
         <div className="gd-card gd-stat">
