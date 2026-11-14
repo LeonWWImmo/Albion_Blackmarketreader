@@ -81,6 +81,7 @@ describe("buildActivity", () => {
     const snapshots = [snap("a", "2026-11-06", 1000), snap("a", "2026-11-07", 1100), snap("a", "2026-11-13", 1500, 20), snap("a", "2026-11-14", 1800, 50)];
     const a = buildActivity({ players: [player("a", "Ann", { last_gain_on: today })], snapshots, today, periodDays: 7, trackedSince: "2026-11-01" });
     expect(a.members[0]).toMatchObject({ pve: 700, pvp: 50, status: "active" }); // from 11-07 (the period start) to 11-14
+    expect(a.members[0].totals).toEqual({ pve: 1800, pvp: 50, gathering: 0, crafting: 0 });
     expect(a.members[0].spark.at(-1)).toBe(330); // 11-13 -> 11-14
     expect(a.members[0].spark.at(-2)).toBeNull(); // no 11-12 snapshot
     expect(a.coveredDays).toBe(7);

@@ -31,6 +31,12 @@ export function filterMembers(members: ActivityMember[], filter: MemberFilter): 
   return members.filter((m) => m.status === filter);
 }
 
+/** Members whose name contains `text`, ignoring case and extra spaces. */
+export function searchMembers(members: ActivityMember[], text: string): ActivityMember[] {
+  const needle = text.trim().replace(/\s+/g, " ").toLowerCase();
+  return needle ? members.filter((m) => m.name.toLowerCase().includes(needle)) : members;
+}
+
 /** The inactive members as a line to paste into Discord or the game. */
 export function kickListText(guildName: string, activity: Activity): string {
   const names = activity.members.filter((m) => m.status === "inactive").map((m) => m.name);

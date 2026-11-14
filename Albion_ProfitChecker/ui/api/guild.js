@@ -6,7 +6,7 @@ import { handleGuild } from "./_lib/guildApi.js";
 import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { clientAddress, createRateLimiter } from "./_lib/rateLimit.js";
 
-const limiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
+const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
 
 function readBody(raw) {
   const text = Buffer.isBuffer(raw) ? raw.toString("utf8") : raw;

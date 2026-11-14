@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameinfoError, clearGameinfoMemory, getMembers, parseBattles, parseGuild, parseMembers, parseSearch, searchGuilds } from "../_lib/gameinfo.js";
+import { GameinfoError, clearGameinfoMemory, getMembers, parseBattles, parseEvents, parseGuild, parseMembers, parseSearch, searchGuilds } from "../_lib/gameinfo.js";
 
 const GID = "RCp44ZeoSKKMAqC6HzLqLA";
 const rawMember = {
@@ -34,6 +34,31 @@ describe("parsers", () => {
     expect(parseMembers([rawMember, { Id: "p2", Name: "Bo", LifetimeStatistics: { Timestamp: "not a date" } }])).toEqual([
       { id: "p1", name: "Ann", pve: 1000, killFame: 500, deathFame: 70, gathering: 30, crafting: 9, statsAt: "2026-11-13T00:38:05Z" },
       { id: "p2", name: "Bo", pve: 0, killFame: 0, deathFame: 0, gathering: 0, crafting: 0, statsAt: null }
+    ]);
+  });
+
+  it("cuts a killboard event down to names, guilds, item power and gear", () => {
+    const fighter = (name, guild) => ({
+      Id: `${name}-id`,
+      Name: name,
+      GuildId: guild ? `${guild}-id` : "",
+      GuildName: guild ?? "",
+      AllianceName: "",
+      AverageItemPower: 1254.7,
+      Equipment: { MainHand: { Type: "T6_2H_BOW@2", Quality: 4, ActiveSpells: [] }, OffHand: null, Potion: { Type: "T6_POTION_HEAL", Quality: 1 } },
+      Inventory: [{ Type: "T4_BAG" }]
+    });
+    const raw = [{ EventId: 7, TimeStamp: "2026-11-14T10:00:00Z", TotalVictimKillFame: 999, numberOfParticipants: 3, BattleId: 5, Killer: fighter("Ann", "Fuzz"), Victim: fighter("Bo", null) }, { EventId: 8 }];
+    expect(parseEvents(raw)).toEqual([
+      {
+        id: 7,
+        time: "2026-11-14T10:00:00Z",
+        fame: 999,
+        participants: 3,
+        battleId: 5,
+        killer: { id: "Ann-id", name: "Ann", guildId: "Fuzz-id", guildName: "Fuzz", allianceName: null, itemPower: 1255, gear: { MainHand: { type: "T6_2H_BOW@2", quality: 4 } } },
+        victim: { id: "Bo-id", name: "Bo", guildId: null, guildName: null, allianceName: null, itemPower: 1255, gear: { MainHand: { type: "T6_2H_BOW@2", quality: 4 } } }
+      }
     ]);
   });
 

@@ -70,7 +70,9 @@ export function OverviewTab({ data }: { data: GuildPageData }) {
         <div className="gd-card">
           <div className="gd-list-head">
             <h2>Latest fights</h2>
-            <span className="gd-muted">from the killboard</span>
+            <Link className="gd-btn" to={guildPath(guild, "killboard")}>
+              Killboard →
+            </Link>
           </div>
           {fights.length ? (
             fights.map((fight) => (

@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Region } from "@shared/types";
 import { useSeo } from "../../shared/seo/useSeo";
-import { GuildApiError, fetchGuild, guildPath, type GuildPageData } from "./api";
+import { GuildApiError, guildPath, type GuildPageData } from "./api";
+import { cachedGuild, loadGuild } from "./core/guildData";
 import { isGuildTab, type GuildTab } from "./core/tools";
 import { GuildShell } from "./GuildShell";
 import { ActivityTab } from "./ui/ActivityTab";
 import { GuildHeader } from "./ui/GuildHeader";
+import { KillboardTab } from "./ui/KillboardTab";
 import { OverviewTab } from "./ui/OverviewTab";
-import { useAccessToken } from "./useAccessToken";
+import { useMyGuild } from "./useMyGuild";
 
 export function GuildPage() {
   return <GuildShell>{() => <GuildBody />}</GuildShell>;
@@ -24,42 +26,52 @@ function GuildBody() {
   const slug = params.slug ?? "";
   const tab: GuildTab = isGuildTab(params.tab) ? params.tab : "overview";
   const idFromSearch = (location.state as { id?: string } | null)?.id ?? null;
-  const { token, ready } = useAccessToken();
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const key = `${region}/${slug}`;
+  const [loaded, setLoaded] = useState<Loaded | null>(() => {
+    const hit = region ? cachedGuild(region, slug, idFromSearch) : null;
+    return hit ? { key, data: hit.data } : null;
+  });
   const [error, setError] = useState<GuildApiError | null>(null);
   const [version, setVersion] = useState(0);
-  const key = `${region}/${slug}`;
-  const data = loaded?.key === key ? loaded.data : null;
+  // never another guild's data under this address (two guilds can share a name)
+  const data = loaded?.key === key && (!idFromSearch || loaded.data.guild.id === idFromSearch) ? loaded.data : null;
+  // read by the redirect when an answer arrives: the tab the visitor is on by then
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const mine = useMyGuild();
 
   useSeo({
     title: data ? `${data.guild.name}: Albion Online guild activity | Blackmarket Reader` : "Albion Online guild | Blackmarket Reader",
-    description: data ? `Who is active in the Albion Online guild ${data.guild.name}: members, activity and recent fights.` : "Albion Online guild activity.",
+    description: data ? `Who is active in the Albion Online guild ${data.guild.name}: members, activity, kills and deaths.` : "Albion Online guild activity.",
     canonical: `https://blackmarketreader.com/guild/${region ?? "eu"}/${slug}`,
     noindex: true
   });
 
   useEffect(() => {
-    if (!ready || !region) return;
-    const controller = new AbortController();
+    if (!region) return;
+    let alive = true;
+    const cached = cachedGuild(region, slug, idFromSearch);
+    if (cached) setLoaded({ key: `${region}/${slug}`, data: cached.data });
+    // a fresh copy is shown as it is; an older one is shown and replaced when the new answer arrives
+    if (cached?.fresh && version === 0) return;
     setError(null);
-    fetchGuild(region, slug, idFromSearch, token, controller.signal)
+    loadGuild(region, slug, idFromSearch, version > 0)
       .then((next) => {
+        if (!alive) return;
         setLoaded({ key: `${region}/${next.guild.slug}`, data: next });
         // a renamed guild, or a name shared by two guilds: show the address that always finds it
-        if (next.guild.slug !== slug) navigate(guildPath(next.guild, tab), { replace: true, state: { id: next.guild.id } });
+        if (next.guild.slug !== slug) navigate(guildPath(next.guild, tabRef.current), { replace: true, state: { id: next.guild.id } });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted) return;
-        setError(err instanceof GuildApiError ? err : new GuildApiError("Something went wrong. Try again in a minute.", 0));
+        if (alive) setError(err instanceof GuildApiError ? err : new GuildApiError("Something went wrong. Try again in a minute.", 0));
       });
-    return () => controller.abort();
-    // `tab` only shapes the redirect address: switching tabs must not reload the guild
-  }, [region, slug, idFromSearch, token, ready, version]);
+    return () => {
+      alive = false;
+    };
+  }, [region, slug, idFromSearch, version]);
 
   if (!region) return <Problem text="Guild pages are on the Europe (eu) or America (us) server." />;
-  if (error && !data) {
-    return <Problem text={error.message} retry={error.status === 404 ? undefined : () => setVersion((v) => v + 1)} />;
-  }
+  if (error && !data) return <Problem text={error.message} retry={error.status === 404 ? undefined : () => setVersion((v) => v + 1)} />;
   if (!data) {
     return (
       <main className="gd" aria-busy="true">
@@ -70,8 +82,23 @@ function GuildBody() {
   }
   return (
     <main className="gd">
-      <GuildHeader data={data} tab={tab} token={token} onChanged={() => setVersion((v) => v + 1)} />
-      {tab === "activity" ? <ActivityTab data={data} /> : <OverviewTab data={data} />}
+      <GuildHeader
+        data={data}
+        tab={tab}
+        mine={mine}
+        onChanged={() => {
+          mine.reload();
+          setVersion((v) => v + 1);
+        }}
+      />
+      {/* keyed by guild: another guild starts with fresh tab state (search text, loaded killboard) */}
+      {tab === "activity" ? (
+        <ActivityTab key={data.guild.id} data={data} />
+      ) : tab === "killboard" ? (
+        <KillboardTab key={data.guild.id} data={data} />
+      ) : (
+        <OverviewTab data={data} />
+      )}
     </main>
   );
 }
@@ -82,12 +109,12 @@ function Problem({ text, retry }: { text: string; retry?: () => void }) {
       <p className="gd-error" role="alert">
         {text}
       </p>
-      <p>
+      <p className="gd-actions-row">
         {retry ? (
           <button type="button" className="gd-btn" onClick={retry}>
             Try again
           </button>
-        ) : null}{" "}
+        ) : null}
         <Link className="gd-btn" to="/guild">
           Search a guild
         </Link>

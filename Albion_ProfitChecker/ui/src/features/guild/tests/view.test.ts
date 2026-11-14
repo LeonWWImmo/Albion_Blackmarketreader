@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Activity, ActivityMember } from "../api";
 import { guildPath } from "../api";
 import { isGuildTab } from "../core/tools";
-import { daysAgo, filterMembers, kickListText, sparkHeights, timeAgo } from "../core/view";
+import { daysAgo, filterMembers, kickListText, searchMembers, sparkHeights, timeAgo } from "../core/view";
 
 const NOW = new Date("2026-11-14T15:00:00Z");
 const member = (name: string, status: ActivityMember["status"], isNew = false): ActivityMember => ({
@@ -18,6 +18,7 @@ const member = (name: string, status: ActivityMember["status"], isNew = false): 
   gathering: null,
   crafting: null,
   lifetime: null,
+  totals: null,
   spark: []
 });
 const activity = (members: ActivityMember[]): Activity => ({
@@ -45,6 +46,13 @@ describe("guild view helpers", () => {
     expect(filterMembers(list, "all")).toHaveLength(3);
     expect(filterMembers(list, "inactive").map((m) => m.name)).toEqual(["Bo"]);
     expect(filterMembers(list, "new").map((m) => m.name)).toEqual(["Ann"]);
+  });
+
+  it("finds members by name, ignoring case and extra spaces", () => {
+    const list = [member("KaitoAO", "active"), member("Kaiser Golz", "quiet"), member("Bo", "inactive")];
+    expect(searchMembers(list, "  kai ").map((m) => m.name)).toEqual(["KaitoAO", "Kaiser Golz"]);
+    expect(searchMembers(list, "kaiser   golz").map((m) => m.name)).toEqual(["Kaiser Golz"]);
+    expect(searchMembers(list, "")).toHaveLength(3);
   });
 
   it("writes the inactive list to paste", () => {

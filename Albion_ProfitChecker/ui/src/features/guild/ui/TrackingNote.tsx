@@ -1,20 +1,22 @@
 import type { Activity, GuildPageData } from "../api";
 
-const formatDay = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-
-/** One line on what the numbers are based on: tracked since when, or not tracked at all. */
+/** One line on what the fame numbers are: totals until a guild has two daily snapshots, then gains. */
 export function TrackingNote({ tracking, activity }: { tracking: GuildPageData["tracking"]; activity: Activity }) {
   if (!tracking.tracked) {
     return (
       <p className="gd-note">
-        This guild is not tracked yet. The status comes from Albion's statistics and the killboard. Fame gained per week starts once someone manages the guild here.
+        Nobody has marked this guild yet, so the fame columns show each member's total. Mark it and we save everyone's fame once a day: from the next day on you see how much
+        each member gained.
       </p>
     );
+  }
+  if (activity.coveredDays === 0) {
+    return <p className="gd-note">Marked today. We save every member's fame once a day: from tomorrow the columns show what each member gained. Until then: their total fame.</p>;
   }
   if (activity.coveredDays < activity.periodDays) {
     return (
       <p className="gd-note">
-        Tracked since {formatDay(tracking.since ?? "")}: fame gains cover {activity.coveredDays} day{activity.coveredDays === 1 ? "" : "s"} so far. A snapshot is taken every day.
+        Marked {activity.coveredDays} day{activity.coveredDays === 1 ? "" : "s"} ago: the fame gained covers {activity.coveredDays === 1 ? "that day" : `those ${activity.coveredDays} days`} so far.
       </p>
     );
   }

@@ -1,24 +1,26 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { GuildApiError, guildPath, manageGuild, releaseGuild, type GuildPageData } from "../api";
+import { GuildApiError, guildPath, markGuild, unmarkGuild, type GuildPageData } from "../api";
 import { GUILD_TABS, GUILD_TOOLS, type GuildTab } from "../core/tools";
 import { timeAgo } from "../core/view";
+import type { MyGuild } from "../useMyGuild";
+import { GuildCrest } from "./GuildCrest";
 
-type Props = { data: GuildPageData; tab: GuildTab; token: string | null; onChanged: () => void };
+type Props = { data: GuildPageData; tab: GuildTab; mine: MyGuild; onChanged: () => void };
 
-/** The guild's card (name, alliance, numbers, manage button) and its tabs. */
-export function GuildHeader({ data, tab, token, onChanged }: Props) {
+const TAB_KEYS = new Set<string>(GUILD_TABS.map((t) => t.key));
+
+/** The guild's card (crest, name, numbers, Mark button) and its tabs. */
+export function GuildHeader({ data, tab, mine, onChanged }: Props) {
   const { guild, tracking } = data;
   const now = new Date();
   return (
     <>
       <section className="gd-card gd-head">
-        <span className="gd-crest" aria-hidden="true">
-          {guild.name.slice(0, 1).toUpperCase()}
-        </span>
+        <GuildCrest id={guild.id} name={guild.name} size={64} />
         <div>
-          <p className="gd-kicker">GUILD · {guild.region.toUpperCase()}</p>
+          <p className="gd-kicker">GUILD · {guild.region === "eu" ? "EUROPE" : "AMERICA"}</p>
           <h2>{guild.name}</h2>
           <p className="gd-meta">
             <span>
@@ -37,12 +39,12 @@ export function GuildHeader({ data, tab, token, onChanged }: Props) {
             ) : null}
             {tracking.lastSyncedAt ? (
               <span>
-                Updated <b>{timeAgo(tracking.lastSyncedAt, now)}</b>
+                Snapshot <b>{timeAgo(tracking.lastSyncedAt, now)}</b>
               </span>
             ) : null}
           </p>
         </div>
-        <ManageButton data={data} token={token} onChanged={onChanged} />
+        <MarkButton data={data} mine={mine} onChanged={onChanged} />
       </section>
       <nav className="gd-tabs" aria-label="Guild tools">
         {GUILD_TABS.map((t) => (
@@ -50,7 +52,7 @@ export function GuildHeader({ data, tab, token, onChanged }: Props) {
             {t.label}
           </Link>
         ))}
-        {GUILD_TOOLS.filter((tool) => !tool.ready).map((tool) => (
+        {GUILD_TOOLS.filter((tool) => !tool.ready && !TAB_KEYS.has(tool.key)).map((tool) => (
           <span key={tool.key} className="gd-tab" aria-disabled="true">
             {tool.label}
             <span className="gd-soon">SOON</span>
@@ -61,11 +63,13 @@ export function GuildHeader({ data, tab, token, onChanged }: Props) {
   );
 }
 
-function ManageButton({ data, token, onChanged }: Omit<Props, "tab">) {
+function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
   const { pathname } = useLocation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { guild, tracking } = data;
+  const markedHere = mine.guild?.id === guild.id;
+  const others = Math.max(0, tracking.markedBy - (markedHere ? 1 : 0));
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -80,43 +84,40 @@ function ManageButton({ data, token, onChanged }: Omit<Props, "tab">) {
     }
   };
 
+  if (!tracking.canMark) return null;
+  const { token } = mine;
   let body;
-  if (tracking.managedByYou) {
-    body = (
-      <>
-        <span className="gd-pill is-violet">You manage this guild</span>
-        <button
-          type="button"
-          className="gd-btn"
-          disabled={busy}
-          onClick={() => {
-            if (token && window.confirm(`Stop managing ${guild.name}? Its history stays, and the guild is free for someone else to manage.`)) void run(() => releaseGuild(token));
-          }}
-        >
-          Stop managing
-        </button>
-      </>
-    );
-  } else if (tracking.managedByOther) {
-    body = <span className="gd-pill">Managed by another player</span>;
-  } else if (!tracking.canManage) {
+  if (!mine.loaded) {
     body = null;
   } else if (!token) {
     body = (
-      <Link className="gd-btn is-primary" to={`/login?next=${encodeURIComponent(pathname)}`}>
-        Sign in to manage
+      <Link className="gd-btn is-primary" to={`/login?next=${encodeURIComponent(pathname)}`} title="Marked guilds get a daily snapshot: fame gained per day and week">
+        ☆ Sign in to mark
       </Link>
+    );
+  } else if (markedHere) {
+    body = (
+      <button type="button" className="gd-btn is-marked" disabled={busy} onClick={() => void run(() => unmarkGuild(token))} title="Remove your mark">
+        ★ Marked
+      </button>
     );
   } else {
     body = (
-      <button type="button" className="gd-btn is-primary" disabled={busy} onClick={() => void run(() => manageGuild(token, guild.region, guild.id))}>
-        {busy ? "Starting…" : "Manage this guild"}
+      <button
+        type="button"
+        className="gd-btn is-primary"
+        disabled={busy}
+        onClick={() => void run(() => markGuild(token, guild.region, guild.id))}
+        title={mine.guild ? `You marked ${mine.guild.name}: marking this guild asks you to unmark that one first` : "Marked guilds get a daily snapshot: fame gained per day and week"}
+      >
+        {busy ? "Marking…" : "☆ Mark"}
       </button>
     );
   }
 
   return (
     <div className="gd-head-actions">
+      {others ? <span className="gd-pill">{others === 1 ? "1 other player marked it" : `${others} other players marked it`}</span> : null}
       {body}
       {error ? (
         <p className="gd-error" role="alert">

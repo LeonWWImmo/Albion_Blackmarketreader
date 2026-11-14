@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { GameinfoError } from "../_lib/gameinfo.js";
-import { STALE_MS } from "../_lib/guildApi.js";
+import { STALE_MS, normalizeQuery, rankGuilds } from "../_lib/guildApi.js";
 import { createMemoryGuildStore } from "../_lib/guildMemoryStore.js";
 import { GID, NOW, OTHER, member, setup } from "./guild-kit.js";
 
@@ -12,22 +12,36 @@ describe("search", () => {
     expect((await call("search", { query: { region: "asia", q: "angry" } })).status).toBe(400);
     expect((await call("search", { method: "POST", query: { region: "eu", q: "angry" } })).status).toBe(405);
   });
+
+  it("asks the killboard the same way however the name is typed", async () => {
+    const { call, deps } = setup();
+    await call("search", { query: { region: "eu", q: "  Angry   FUZZIES " } });
+    expect(deps.gameinfo.searchGuilds).toHaveBeenLastCalledWith("eu", "angry fuzzies");
+    expect(normalizeQuery("  Angry\tFuz ")).toBe("angry fuz");
+  });
+
+  it("puts the exact name first, then names that start with the query", () => {
+    const hits = [{ name: "The Angry Ones" }, { name: "Angry fuzzies 2" }, { name: "angry fuzzies" }, { name: "Angry Fuzzies Academy" }];
+    expect(rankGuilds(hits, "angry fuzzies").map((g) => g.name)).toEqual(["angry fuzzies", "Angry fuzzies 2", "Angry Fuzzies Academy", "The Angry Ones"]);
+  });
 });
 
 describe("guild page", () => {
-  it("shows a guild nobody tracks yet, found by its URL name, cached for everyone", async () => {
+  it("shows a guild nobody tracks yet, found by its URL name, the same for everyone and cached", async () => {
     const { call } = setup();
     const res = await call("guild", { query: { region: "eu", slug: "angry-fuzzies" } });
     expect(res.status).toBe(200);
     expect(res.maxAge).toBe(300);
     expect(res.body.guild).toMatchObject({ id: GID, name: "Angry fuzzies", slug: "angry-fuzzies", memberCount: 2, allianceTag: "BOSSS" });
-    expect(res.body.tracking).toMatchObject({ tracked: false, managedByYou: false, managedByOther: false, canManage: true });
+    expect(res.body.tracking).toEqual({ tracked: false, since: null, lastSyncedAt: null, markedBy: 0, canMark: true });
     expect(res.body.activity[7].members.map((m) => [m.name, m.status])).toEqual([
       ["Ann", "active"],
       ["Bo", "active"]
     ]);
     expect(res.body.activity[7].members[0]).toMatchObject({ lifetime: 1010, pve: null }); // lifetime from today's roster, no gains yet
     expect(res.body.fights).toEqual([{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, fame: 900, ours: 1, kills: 2, deaths: 1 }]);
+    // a signed-in visit gets the same public answer: nothing personal is in it
+    expect(await call("guild", { token: "tok-ann", query: { region: "eu", slug: "angry-fuzzies" } })).toEqual(res);
   });
 
   it("answers 404 for an unknown name or id and 400 for an unknown server", async () => {
@@ -44,86 +58,110 @@ describe("guild page", () => {
     expect(await call("guild", { query: { region: "eu", id: GID } })).toMatchObject({ status: 502, body: { error: expect.stringContaining("not answering") } });
   });
 
-  it("keeps the public page up when the database fails, without tracking or manage button", async () => {
+  it("keeps the public page up when the database fails, without tracking, mark button or cache", async () => {
     const store = createMemoryGuildStore();
-    const { call } = setup({ store });
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
+    const { call, markAs } = setup({ store });
+    await markAs("tok-ann");
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     store.getGuildBySlug = async () => {
       throw new Error("relation does not exist");
     };
     const bySlug = await call("guild", { query: { region: "eu", slug: "angry-fuzzies" } });
-    expect(bySlug.status).toBe(200);
-    expect(bySlug.body.tracking).toMatchObject({ tracked: false, canManage: false });
+    expect(bySlug).toMatchObject({ status: 200, maxAge: 0, body: { tracking: { tracked: false, canMark: false } } });
     store.getSnapshots = async () => {
       throw new Error("timeout");
     };
     const byId = await call("guild", { query: { region: "eu", id: GID } });
-    expect(byId.status).toBe(200);
-    expect(byId.body.tracking).toMatchObject({ tracked: false, canManage: false });
+    expect(byId).toMatchObject({ status: 200, maxAge: 0, body: { tracking: { tracked: false, canMark: false } } });
     expect(byId.body.activity[7].members).toHaveLength(2);
     spy.mockRestore();
   });
 
-  it("still works without a database: no tracking, no manage button", async () => {
-    const { call } = setup({ store: null });
+  it("still works without a database: no tracking, no mark button", async () => {
+    const { call, markAs } = setup({ store: null });
     const res = await call("guild", { query: { region: "eu", id: GID } });
     expect(res.status).toBe(200);
-    expect(res.body.tracking).toMatchObject({ tracked: false, canManage: false });
-    expect((await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } })).status).toBe(503);
+    expect(res.body.tracking).toMatchObject({ tracked: false, canMark: false });
+    expect((await markAs("tok-ann")).status).toBe(503);
   });
 });
 
-describe("managing a guild", () => {
-  it("needs a signed-in player", async () => {
-    const { call } = setup();
-    expect((await call("manage", { method: "POST", body: { region: "eu", id: GID } })).status).toBe(401);
-    expect((await call("manage", { method: "POST", token: "tok-unknown", body: { region: "eu", id: GID } })).status).toBe(401);
-    expect((await call("manage", { method: "GET", token: "tok-ann" })).status).toBe(405);
+describe("killboard", () => {
+  it("lists the guild's kills and the deaths from its latest fights, newest first, cached", async () => {
+    const { call, deps } = setup();
+    const res = await call("killboard", { query: { region: "eu", id: GID } });
+    expect(res.maxAge).toBe(300);
+    expect(res.body.kills.map((e) => e.id)).toEqual([12, 11]);
+    expect(res.body.deaths.map((e) => e.id)).toEqual([21]); // event 22 in the same fight was a kill of ours
+    expect(deps.gameinfo.getBattleEvents).toHaveBeenCalledWith("eu", 1);
+    expect((await call("killboard", { query: { region: "eu", id: "bad" } })).status).toBe(400);
   });
 
-  it("starts tracking with a first snapshot, and shows the guild as yours", async () => {
-    const { call, store } = setup();
-    const res = await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
-    expect(res).toMatchObject({ status: 200, body: { guild: { id: GID, region: "eu", slug: "angry-fuzzies", name: "Angry fuzzies" } } });
-    expect(store.guilds.get(GID)).toMatchObject({ manager_id: "user-ann", tracked_since: "2026-11-14", last_synced_at: NOW.toISOString(), member_count: 2 });
+  it("still shows the kills when a fight cannot be read", async () => {
+    const { call, deps } = setup();
+    deps.gameinfo.getBattleEvents.mockRejectedValue(new GameinfoError("down", 502));
+    const res = await call("killboard", { query: { region: "eu", id: GID } });
+    expect(res.status).toBe(200);
+    expect(res.body.deaths).toEqual([]);
+    expect(res.body.kills).toHaveLength(2);
+  });
+});
+
+describe("marking a guild", () => {
+  it("needs a signed-in player", async () => {
+    const { call, markAs } = setup();
+    expect((await call("mark", { method: "POST", body: { region: "eu", id: GID } })).status).toBe(401);
+    expect((await markAs("tok-unknown")).status).toBe(401);
+    expect((await call("mark", { method: "GET", token: "tok-ann" })).status).toBe(405);
+    expect((await call("mine", { method: "POST", token: "tok-ann" })).status).toBe(405);
+  });
+
+  it("starts tracking with a first snapshot", async () => {
+    const { call, store, markAs } = setup();
+    expect(await markAs("tok-ann")).toMatchObject({ status: 200, body: { guild: { id: GID, region: "eu", slug: "angry-fuzzies", name: "Angry fuzzies" } } });
+    expect(store.guilds.get(GID)).toMatchObject({ tracked_since: "2026-11-14", last_synced_at: NOW.toISOString(), member_count: 2 });
     expect(store.snapshots.size).toBe(2);
     expect([...store.players.values()].find((p) => p.player_id === "a").last_fight_at).toBe("2026-11-14T10:00:00Z");
-
-    const page = await call("guild", { token: "tok-ann", query: { region: "eu", slug: "angry-fuzzies" } });
-    expect(page.maxAge).toBe(0); // personal answer: never cached
-    expect(page.body.tracking).toMatchObject({ tracked: true, since: "2026-11-14", managedByYou: true, managedByOther: false });
-    const forBo = await call("guild", { token: "tok-bo", query: { region: "eu", slug: "angry-fuzzies" } });
-    expect(forBo.body.tracking).toMatchObject({ managedByYou: false, managedByOther: true });
+    const page = await call("guild", { query: { region: "eu", slug: "angry-fuzzies" } });
+    expect(page.body.tracking).toMatchObject({ tracked: true, since: "2026-11-14", markedBy: 1, canMark: true });
     expect(await call("mine", { token: "tok-ann" })).toMatchObject({ status: 200, body: { guild: { id: GID } } });
     expect(await call("mine", { token: "tok-bo" })).toMatchObject({ status: 200, body: { guild: null } });
     expect(await call("mine")).toMatchObject({ status: 200, body: { guild: null } });
   });
 
-  it("lets only one player manage a guild, and each player only one guild", async () => {
-    const { call } = setup();
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
-    expect(await call("manage", { method: "POST", token: "tok-bo", body: { region: "eu", id: GID } })).toMatchObject({ status: 409, body: { error: "Another player already manages this guild." } });
-    expect(await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: OTHER } })).toMatchObject({ status: 409, body: { error: expect.stringContaining("You already manage Angry fuzzies") } });
-    expect((await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } })).status).toBe(200); // same guild again: fine
-    expect((await call("manage", { method: "POST", token: "tok-bo", body: { region: "eu", id: "bad" } })).status).toBe(400);
+  it("lets any number of players mark the same guild, each one guild", async () => {
+    const { call, store, markAs } = setup();
+    await markAs("tok-ann");
+    expect((await markAs("tok-bo")).status).toBe(200);
+    expect(store.snapshots.size).toBe(2); // the second mark on the same day does not sync again
+    expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking.markedBy).toBe(2);
+    expect(await markAs("tok-ann", OTHER)).toMatchObject({ status: 409, body: { error: expect.stringContaining("You marked Angry fuzzies already") } });
+    expect((await markAs("tok-ann")).status).toBe(200); // the same guild again: fine
+    expect((await call("mark", { method: "POST", token: "tok-bo", body: { region: "eu", id: "bad" } })).status).toBe(400);
   });
 
-  it("frees the guild on release and keeps its history for the next manager", async () => {
-    const { call, store } = setup();
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
-    expect(await call("release", { method: "POST", token: "tok-ann" })).toMatchObject({ status: 200, body: { released: true } });
-    expect(store.guilds.get(GID).manager_id).toBeNull();
-    expect(await call("release", { method: "POST", token: "tok-ann" })).toMatchObject({ status: 200, body: { released: false } });
-    await call("manage", { method: "POST", token: "tok-bo", body: { region: "eu", id: GID } });
-    expect(store.guilds.get(GID)).toMatchObject({ manager_id: "user-bo", tracked_since: "2026-11-14" });
+  it("keeps tracking while anyone still has the guild marked, and starts over after nobody had", async () => {
+    const { call, store, markAs, deps } = setup();
+    await markAs("tok-ann");
+    await markAs("tok-bo");
+    expect(await call("unmark", { method: "POST", token: "tok-ann" })).toMatchObject({ status: 200, body: { unmarked: true } });
+    expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking).toMatchObject({ tracked: true, markedBy: 1 });
+    await call("unmark", { method: "POST", token: "tok-bo" });
+    expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking).toMatchObject({ tracked: false, markedBy: 0 });
+    expect(await call("unmark", { method: "POST", token: "tok-bo" })).toMatchObject({ body: { unmarked: false } });
+    deps.now = () => new Date("2026-11-24T12:00:00Z");
+    await markAs("tok-ann");
+    expect(store.guilds.get(GID).tracked_since).toBe("2026-11-24");
+    const page = await call("guild", { query: { region: "eu", id: GID } });
+    // the 11-14 snapshot of the earlier tracking is no start point for a gain
+    expect(page.body.activity[7]).toMatchObject({ coveredDays: 0 });
+    expect(page.body.activity[7].members.every((m) => m.pve === null)).toBe(true);
   });
 
-  it("gives a guild a different URL name when another guild already has it", async () => {
-    const { call, store } = setup();
-    store.guilds.set("Someoneelse0000000001", { id: "Someoneelse0000000001", region: "eu", slug: "angry-fuzzies", name: "Angry-Fuzzies", manager_id: null });
-    const res = await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
-    expect(res.body.guild.slug).toBe("angry-fuzzies-rcp44z");
+  it("gives a guild a different URL name when another stored guild has it", async () => {
+    const { store, markAs } = setup();
+    store.guilds.set("Someoneelse0000000001", { id: "Someoneelse0000000001", region: "eu", slug: "angry-fuzzies", name: "Angry-Fuzzies" });
+    expect((await markAs("tok-ann")).body.guild.slug).toBe("angry-fuzzies-rcp44z");
   });
 });
 
@@ -134,12 +172,12 @@ describe("daily sync", () => {
     expect((await call("sync")).status).toBe(401);
   });
 
-  it("syncs managed guilds whose last sync is old, and only those", async () => {
-    const { call, store, deps } = setup();
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
+  it("syncs marked guilds whose last sync is old, and only those", async () => {
+    const { call, store, deps, markAs } = setup();
+    await markAs("tok-ann");
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ status: 200, body: { synced: 0, failed: 0 } });
 
-    // a day later Ann's fame grew: the sync notes the gain and the page shows it
+    // a day later Ann's fame grew and Bo left: the sync notes both and the page shows them
     const tomorrow = new Date(NOW.getTime() + STALE_MS + 4 * 3600 * 1000);
     deps.now = () => tomorrow;
     deps.gameinfo.getMembers.mockResolvedValue([member("a", "Ann", 1600)]);
@@ -152,9 +190,17 @@ describe("daily sync", () => {
     expect(page.body.activity[7].left).toEqual([{ id: "b", name: "Bo", leftOn: "2026-11-15" }]);
   });
 
+  it("does not sync a guild nobody has marked", async () => {
+    const { call, markAs, deps } = setup();
+    await markAs("tok-ann");
+    await call("unmark", { method: "POST", token: "tok-ann" });
+    deps.now = () => new Date(NOW.getTime() + 2 * STALE_MS);
+    expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 0 } });
+  });
+
   it("counts a failed guild and goes on", async () => {
-    const { call, deps } = setup();
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
+    const { call, deps, markAs } = setup();
+    await markAs("tok-ann");
     deps.now = () => new Date(NOW.getTime() + STALE_MS + 1000);
     deps.gameinfo.getGuild.mockRejectedValueOnce(new GameinfoError("down", 502));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -162,16 +208,19 @@ describe("daily sync", () => {
     spy.mockRestore();
   });
 
-  it("syncs a stale managed guild when someone opens its page", async () => {
-    const { call, store, deps } = setup();
-    await call("manage", { method: "POST", token: "tok-ann", body: { region: "eu", id: GID } });
-    deps.now = () => new Date(NOW.getTime() + STALE_MS + 1000);
+  it("never writes on a visit, however old the last snapshot is", async () => {
+    const { call, store, deps, markAs } = setup();
+    await markAs("tok-ann");
+    const snapshots = store.snapshots.size;
+    deps.now = () => new Date(NOW.getTime() + 5 * 24 * 3600 * 1000);
     await call("guild", { query: { region: "eu", id: GID } });
-    expect(store.guilds.get(GID).last_synced_at).toBe(new Date(NOW.getTime() + STALE_MS + 1000).toISOString());
+    expect(store.guilds.get(GID).last_synced_at).toBe(NOW.toISOString());
+    expect(store.snapshots.size).toBe(snapshots);
   });
 });
 
 it("answers unknown actions with 404", async () => {
   const { call } = setup();
   expect((await call("nope")).status).toBe(404);
+  expect((await call("manage", { method: "POST", token: "tok-ann" })).status).toBe(404);
 });

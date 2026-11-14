@@ -1,15 +1,16 @@
-// The guild tables in Supabase (supabase/migrations/*_guild_tracking.sql), read and written with
-// the service role key: RLS gives the browser no access to them, everything goes through api/guild.js.
+// The guild tables in Supabase (supabase/migrations/*_guild_*.sql), read and written with the
+// service role key: RLS gives the browser no access to them, everything goes through api/guild.js.
 import { createClient } from "@supabase/supabase-js";
 
 const WRITE_CHUNK = 500;
 /** Supabase answers at most this many rows per request. */
 const PAGE = 1000;
 const UNIQUE_VIOLATION = "23505";
+const ID_CHUNK = 150;
 
 /** Throws on a Supabase error, returns the data otherwise. */
 function must({ data, error }) {
-  if (error) throw new Error(`database: ${error.message}`);
+  if (error) throw Object.assign(new Error(`database: ${error.message}`), { code: error.code });
   return data;
 }
 
@@ -24,46 +25,52 @@ async function allPages(query) {
 }
 
 export function createGuildStore(db) {
+  const getGuild = async (id) => must(await db.from("guilds").select("*").eq("id", id).maybeSingle());
   return {
-    async getGuild(id) {
-      return must(await db.from("guilds").select("*").eq("id", id).maybeSingle());
-    },
+    getGuild,
     async getGuildBySlug(region, slug) {
       return must(await db.from("guilds").select("*").eq("region", region).eq("slug", slug).maybeSingle());
-    },
-    async getManagedBy(userId) {
-      return must(await db.from("guilds").select("*").eq("manager_id", userId).maybeSingle());
-    },
-    async isSlugTaken(region, slug, exceptId) {
-      const rows = must(await db.from("guilds").select("id").eq("region", region).eq("slug", slug));
-      return rows.some((row) => row.id !== exceptId);
     },
     async saveGuild(row) {
       must(await db.from("guilds").upsert(row, { onConflict: "id" }));
     },
-    /**
-     * Sets the manager only while nobody has the guild; true when it worked. False too when this
-     * player manages another guild already (the unique index on manager_id, Postgres error 23505).
-     */
-    async claimGuild(id, userId, trackedSince) {
-      const result = await db.from("guilds").update({ manager_id: userId, tracked_since: trackedSince }).eq("id", id).is("manager_id", null).select("id");
+    async setTrackedSince(id, day) {
+      must(await db.from("guilds").update({ tracked_since: day }).eq("id", id));
+    },
+    /** The guild this player has marked, or null. */
+    async getMark(userId) {
+      const mark = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).maybeSingle());
+      return mark ? getGuild(mark.guild_id) : null;
+    },
+    async countMarks(guildId) {
+      const { count, error } = await db.from("guild_marks").select("user_id", { count: "exact", head: true }).eq("guild_id", guildId);
+      if (error) throw new Error(`database: ${error.message}`);
+      return count ?? 0;
+    },
+    /** False when the player has a guild marked already (one per player: the primary key). */
+    async addMark(userId, guildId) {
+      const result = await db.from("guild_marks").insert({ user_id: userId, guild_id: guildId });
       if (result.error?.code === UNIQUE_VIOLATION) return false;
-      return must(result).length === 1;
+      must(result);
+      return true;
     },
-    async releaseGuild(id, userId) {
-      must(await db.from("guilds").update({ manager_id: null }).eq("id", id).eq("manager_id", userId));
+    /** Removes the player's mark; the guild it was on, or null. */
+    async removeMark(userId) {
+      const rows = must(await db.from("guild_marks").delete().eq("user_id", userId).select("guild_id"));
+      return rows[0]?.guild_id ?? null;
     },
-    /** Managed guilds whose last sync is older than `before`, oldest first. */
+    /** Marked guilds whose last sync is older than `before`, oldest first. */
     async dueGuilds(before, limit) {
-      return must(
-        await db
-          .from("guilds")
-          .select("*")
-          .not("manager_id", "is", null)
-          .or(`last_synced_at.is.null,last_synced_at.lt."${before}"`)
-          .order("last_synced_at", { ascending: true, nullsFirst: true })
-          .limit(limit)
-      );
+      const marks = await allPages(() => db.from("guild_marks").select("guild_id").order("user_id", { ascending: true }));
+      const ids = [...new Set(marks.map((m) => m.guild_id))];
+      if (!ids.length) return [];
+      const guilds = [];
+      // the ids go into the URL: small chunks keep it far below proxy limits
+      for (let i = 0; i < ids.length; i += ID_CHUNK) guilds.push(...must(await db.from("guilds").select("*").in("id", ids.slice(i, i + ID_CHUNK))));
+      return guilds
+        .filter((g) => !g.last_synced_at || g.last_synced_at < before)
+        .sort((a, b) => (a.last_synced_at ?? "").localeCompare(b.last_synced_at ?? ""))
+        .slice(0, limit);
     },
     /** Everyone who has been in the guild since tracking started (members and those who left). */
     async getPlayers(guildId) {

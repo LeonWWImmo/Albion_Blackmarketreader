@@ -1,34 +1,41 @@
-// The guild store (api/_lib/guildStore.js) in memory, with the database's rules: one manager per
-// guild, one guild per manager. For tests and `npm run dev`, which has no database key.
+// The guild store (api/_lib/guildStore.js) in memory, with the database's rules: one marked guild per
+// player, any number of players per guild. For tests and `npm run dev`, which has no database key.
 export function createMemoryGuildStore() {
   const guilds = new Map();
+  const marks = new Map(); // user id -> guild id
   const players = new Map();
   const snapshots = new Map();
   const all = () => [...guilds.values()];
   return {
     guilds,
+    marks,
     players,
     snapshots,
     getGuild: async (id) => guilds.get(id) ?? null,
     getGuildBySlug: async (region, slug) => all().find((g) => g.region === region && g.slug === slug) ?? null,
-    getManagedBy: async (userId) => all().find((g) => g.manager_id === userId) ?? null,
-    isSlugTaken: async (region, slug, exceptId) => all().some((g) => g.region === region && g.slug === slug && g.id !== exceptId),
     saveGuild: async (row) => {
-      guilds.set(row.id, { manager_id: null, tracked_since: null, last_synced_at: null, ...guilds.get(row.id), ...row });
+      guilds.set(row.id, { tracked_since: null, last_synced_at: null, ...guilds.get(row.id), ...row });
     },
-    claimGuild: async (id, userId, trackedSince) => {
-      const guild = guilds.get(id);
-      if (!guild || guild.manager_id || all().some((g) => g.manager_id === userId)) return false;
-      guilds.set(id, { ...guild, manager_id: userId, tracked_since: trackedSince });
+    setTrackedSince: async (id, day) => {
+      guilds.set(id, { ...guilds.get(id), tracked_since: day });
+    },
+    getMark: async (userId) => (marks.has(userId) ? (guilds.get(marks.get(userId)) ?? null) : null),
+    countMarks: async (guildId) => [...marks.values()].filter((id) => id === guildId).length,
+    addMark: async (userId, guildId) => {
+      if (marks.has(userId)) return false;
+      marks.set(userId, guildId);
       return true;
     },
-    releaseGuild: async (id, userId) => {
-      const guild = guilds.get(id);
-      if (guild?.manager_id === userId) guilds.set(id, { ...guild, manager_id: null });
+    removeMark: async (userId) => {
+      const guildId = marks.get(userId) ?? null;
+      marks.delete(userId);
+      return guildId;
     },
     dueGuilds: async (before, limit) =>
-      all()
-        .filter((g) => g.manager_id && (!g.last_synced_at || g.last_synced_at < before))
+      [...new Set(marks.values())]
+        .map((id) => guilds.get(id))
+        .filter((g) => g && (!g.last_synced_at || g.last_synced_at < before))
+        .sort((a, b) => (a.last_synced_at ?? "").localeCompare(b.last_synced_at ?? ""))
         .slice(0, limit),
     getPlayers: async (guildId) => [...players.values()].filter((p) => p.guild_id === guildId),
     savePlayers: async (rows) => {

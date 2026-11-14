@@ -48,7 +48,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Tidier tool tabs: the four crafting tools now sit together under one Crafting menu, so the header fits on one line.
 - If a page cannot load (usually a weak connection), you now get a Reload button instead of an empty screen.
 - Price Checker: artefacts, resources, food, furniture and other items that only exist in Normal quality no longer show a quality picker, so you cannot end up on a quality nobody can sell.
-- New: Guild tools, first part. Search any guild and see which members are active, quiet or inactive, plus the guild's latest fights. Manage your guild to get a daily snapshot with the fame each member gained per week, who joined and who left. Regear, attendance, bank log and a weekly Discord report follow.
+- New: Guild tools, first part. Search any guild and see which members are active, quiet or inactive, and its latest kills and deaths with both players' full gear. Mark a guild to get a daily snapshot with the fame each member gained, who joined and who left. Regear, attendance, bank log and a weekly Discord report follow.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

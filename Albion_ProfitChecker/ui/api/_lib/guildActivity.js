@@ -137,6 +137,8 @@ export function buildActivity({ players, snapshots, today, periodDays, trackedSi
         gathering: gain("gathering"),
         crafting: gain("crafting"),
         lifetime: latest ? total(latest) : null,
+        // lifetime fame per kind, shown while there is no gain yet (tracking younger than a day)
+        totals: latest ? { pve: Number(latest.pve), pvp: Number(latest.kill_fame), gathering: Number(latest.gathering), crafting: Number(latest.crafting) } : null,
         spark
       };
     })

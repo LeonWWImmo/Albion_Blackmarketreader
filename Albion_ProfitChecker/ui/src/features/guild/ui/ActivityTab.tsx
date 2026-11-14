@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { shortPrice } from "../../price-checker/ui/format";
 import type { ActivityMember, GuildPageData } from "../api";
-import { STATUS_LABEL, daysAgo, filterMembers, kickListText, sparkHeights, type MemberFilter } from "../core/view";
+import { STATUS_LABEL, daysAgo, filterMembers, kickListText, searchMembers, sparkHeights, type MemberFilter } from "../core/view";
 import { TrackingNote } from "./TrackingNote";
 
 const SHOWN_AT_FIRST = 25;
 const STATUS_HINT = "Active: played in the last 3 days. Quiet: 3 to 13 days. Inactive: 14 days or more. Played = fame grew, Albion updated their statistics, or a guild fight.";
 
 const gain = (value: number | null) => (value === null ? "–" : value ? `+${shortPrice(value)}` : "0");
+const total = (value: number | undefined) => (value === undefined ? "–" : shortPrice(value));
 
-/** Every member with their status, the fame they gained and when they last played. */
+/** Every member with their status, the fame they gained (or their total, before there is a gain) and when they last played. */
 export function ActivityTab({ data }: { data: GuildPageData }) {
   const [period, setPeriod] = useState<"7" | "30">("7");
   const [filter, setFilter] = useState<MemberFilter>("all");
+  const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [copied, setCopied] = useState(false);
   const activity = data.activity[period];
-  const members = filterMembers(activity.members, filter);
-  const shown = showAll ? members : members.slice(0, SHOWN_AT_FIRST);
+  // no two snapshots yet: the columns show lifetime totals instead of gains
+  const totals = activity.coveredDays === 0;
+  const members = searchMembers(filterMembers(activity.members, filter), search);
+  const shown = showAll || search ? members : members.slice(0, SHOWN_AT_FIRST);
   const now = new Date();
 
   const filters: { key: MemberFilter; label: string; count: number }[] = [
@@ -67,6 +71,7 @@ export function ActivityTab({ data }: { data: GuildPageData }) {
 
       <section className="gd-card gd-members">
         <div className="gd-list-head">
+          <input className="gd-filter" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a member" aria-label="Find a member" />
           <div className="gd-chips" role="group" aria-label="Show">
             {filters.map((f) => (
               <button
@@ -97,19 +102,24 @@ export function ActivityTab({ data }: { data: GuildPageData }) {
         <div className="gd-row is-head">
           <span>MEMBER</span>
           <span title={STATUS_HINT}>STATUS ⓘ</span>
-          <span className="gd-num gd-col-mid">PVE FAME</span>
-          <span className="gd-num gd-col-mid">PVP FAME</span>
-          <span className="gd-num gd-col-wide">GATHERING</span>
+          <span className="gd-num gd-col-mid">{totals ? "PVE FAME (TOTAL)" : "PVE FAME"}</span>
+          <span className="gd-num gd-col-mid">{totals ? "PVP FAME (TOTAL)" : "PVP FAME"}</span>
+          <span className="gd-num gd-col-wide">{totals ? "GATHERING (TOTAL)" : "GATHERING"}</span>
           <span className="gd-col-wide">LAST 14 DAYS</span>
           <span className="gd-num">LAST PLAYED</span>
         </div>
         {shown.map((member) => (
-          <MemberRow key={member.id} member={member} now={now} />
+          <MemberRow key={member.id} member={member} totals={totals} now={now} />
         ))}
-        {members.length ? null : <p className="gd-empty">No member in this list.</p>}
+        {members.length ? null : <p className="gd-empty">{search ? `No member named “${search.trim()}”.` : "No member in this list."}</p>}
         <div className="gd-foot">
-          <span>Fame gained in the last {activity.periodDays} days, from a daily snapshot. “Last played”: fame grew, Albion updated their statistics, or a guild fight.</span>
-          {members.length > SHOWN_AT_FIRST && !showAll ? (
+          <span>
+            {totals
+              ? "Total fame of each member. From the day after a guild is marked: fame gained per day and week."
+              : `Fame gained in the last ${activity.periodDays} days, from one snapshot a day.`}{" "}
+            “Last played”: fame grew, Albion updated their statistics, or a guild fight.
+          </span>
+          {members.length > shown.length ? (
             <button type="button" className="gd-btn" onClick={() => setShowAll(true)}>
               Show all {members.length}
             </button>
@@ -136,7 +146,7 @@ export function ActivityTab({ data }: { data: GuildPageData }) {
   );
 }
 
-function MemberRow({ member, now }: { member: ActivityMember; now: Date }) {
+function MemberRow({ member, totals, now }: { member: ActivityMember; totals: boolean; now: Date }) {
   return (
     <div className="gd-row">
       <div className="gd-who">
@@ -145,15 +155,15 @@ function MemberRow({ member, now }: { member: ActivityMember; now: Date }) {
         </span>
         <div>
           <b>{member.name}</b>
-          <small>{member.isNew ? "new member" : member.lifetime !== null ? `${shortPrice(member.lifetime)} lifetime fame` : " "}</small>
+          <small>{member.isNew ? "new member" : member.lifetime !== null ? `${shortPrice(member.lifetime)} fame in total` : " "}</small>
         </div>
       </div>
       <span>
         <span className={`gd-pill is-${member.status}`}>{STATUS_LABEL[member.status]}</span>
       </span>
-      <span className="gd-num gd-col-mid">{gain(member.pve)}</span>
-      <span className="gd-num gd-col-mid">{gain(member.pvp)}</span>
-      <span className="gd-num gd-col-wide">{gain(member.gathering)}</span>
+      <span className="gd-num gd-col-mid">{totals ? total(member.totals?.pve) : gain(member.pve)}</span>
+      <span className="gd-num gd-col-mid">{totals ? total(member.totals?.pvp) : gain(member.pvp)}</span>
+      <span className="gd-num gd-col-wide">{totals ? total(member.totals?.gathering) : gain(member.gathering)}</span>
       <span className="gd-spark gd-col-wide" aria-hidden="true">
         {sparkHeights(member.spark).map((h, i) => (
           <i key={i} className={h === null ? "is-none" : h === 0 ? "is-zero" : ""} style={h ? { height: `${h}%` } : undefined} />

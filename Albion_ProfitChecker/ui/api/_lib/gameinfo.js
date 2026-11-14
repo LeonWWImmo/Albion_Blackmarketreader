@@ -121,6 +121,52 @@ export function parseBattles(raw, guildId) {
     }));
 }
 
+/** The gear slots the killboard shows, in the order of Albion's own kill screen. */
+export const GEAR_SLOTS = ["MainHand", "OffHand", "Head", "Armor", "Shoes", "Cape", "Bag", "Mount"];
+
+function side(raw) {
+  const gear = {};
+  for (const slot of GEAR_SLOTS) {
+    const item = raw?.Equipment?.[slot];
+    if (item?.Type) gear[slot] = { type: String(item.Type), quality: num(item.Quality) || 1 };
+  }
+  return {
+    id: String(raw?.Id ?? ""),
+    name: String(raw?.Name ?? ""),
+    guildId: raw?.GuildId || null,
+    guildName: raw?.GuildName || null,
+    allianceName: raw?.AllianceName || null,
+    itemPower: Math.round(num(raw?.AverageItemPower)),
+    gear
+  };
+}
+
+/** Killboard events cut down to what the guild killboard shows (Albion sends ~14 KB per event). */
+export function parseEvents(raw) {
+  if (!Array.isArray(raw)) throw new GameinfoError("unexpected answer from Albion's killboard", 502);
+  return raw
+    .filter((e) => e && e.EventId && e.TimeStamp && e.Killer && e.Victim)
+    .map((e) => ({
+      id: num(e.EventId),
+      time: e.TimeStamp,
+      fame: num(e.TotalVictimKillFame),
+      participants: num(e.numberOfParticipants) || (Array.isArray(e.Participants) ? e.Participants.length : 0),
+      battleId: num(e.BattleId) || null,
+      killer: side(e.Killer),
+      victim: side(e.Victim)
+    }));
+}
+
+/** The guild's latest kills (Albion's guild feed has kills only, no deaths). */
+export async function getGuildKills(region, id) {
+  return remembered(`kills:${region}:${id}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/events?limit=51&offset=0&guildId=${id}`)));
+}
+
+/** Every kill of one fight, both sides. */
+export async function getBattleEvents(region, battleId) {
+  return remembered(`battle:${region}:${battleId}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/events/battle/${battleId}?offset=0&limit=51`)));
+}
+
 export async function searchGuilds(region, query) {
   const q = String(query ?? "").trim();
   return remembered(`search:${region}:${q.toLowerCase()}`, async () => parseSearch(await fetchJson(`${HOSTS[region]}/search?q=${encodeURIComponent(q)}`)));

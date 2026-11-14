@@ -6,24 +6,29 @@
 //   cronSecret     CRON_SECRET, which Vercel Cron sends for the daily sync
 //   limiter        optional api/_lib/rateLimit.js limiter, keyed by request.client
 //
-//   GET  search?region=eu&q=angry      guilds whose name matches
-//   GET  guild?region=eu&slug=..&id=.. one guild: info, tracking, activity, recent fights
-//   GET  mine                          the guild the signed-in player manages
-//   POST manage {region, id}           start managing (and tracking) a guild
-//   POST release                       stop managing it
-//   GET  sync                          Vercel Cron: snapshot every managed guild once a day
+//   GET  search?region=eu&q=angry        guilds whose name matches, best match first
+//   GET  guild?region=eu&slug=..&id=..   one guild: info, tracking, activity, recent fights (public, cached)
+//   GET  killboard?region=eu&id=..       the guild's latest kills and deaths (public, cached)
+//   GET  mine                            the guild the signed-in player has marked
+//   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
+//   POST unmark                          remove the mark
+//   GET  sync                            Vercel Cron: snapshot every marked guild once a day
 import { GameinfoError, isGuildId, isRegion } from "./gameinfo.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
 
-/** A managed guild is synced again when its last sync is older than this. */
+/** The cron syncs a marked guild again when its last sync is older than this. */
 export const STALE_MS = 20 * 3600 * 1000;
 // one guild can take ~17 s when the killboard is slow (2 tries of 8 s): stop starting new ones
 // early enough to stay inside the function's 60 s
 const SYNC_BUDGET_MS = 30_000;
 const SYNC_BATCH = 40;
 const FIGHTS_SHOWN = 8;
+const KILLBOARD_SHOWN = 25;
+/** Recent fights with our deaths whose kills are read for the killboard's deaths. */
+const DEATH_FIGHTS = 4;
 const PUBLIC_CACHE_S = 300;
 const SEARCH_CACHE_S = 600;
+const SEARCH_SHOWN = 10;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
@@ -33,17 +38,41 @@ const ROSTER_DROP_MIN = 10;
 
 const ok = (body, maxAge = 0) => ({ status: 200, body, maxAge });
 const fail = (status, error) => ({ status, body: { error }, maxAge: 0 });
+const NOT_FOUND = "No guild with that name on this server.";
+const UNIQUE_VIOLATION = "23505";
 
 const guildRef = (row) => ({ id: row.id, region: row.region, slug: row.slug, name: row.name });
 
 /** The bit of the id a URL name gets when another guild has the same name: 6 letters or digits. */
 export const slugSuffix = (id) => id.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toLowerCase();
 
-/** The URL part for a guild: its slugified name, with a bit of the id when another guild has it. */
+/** "angry fuzzies" for "  Angry   Fuzzies ": one search, one cache entry, whatever the typing. */
+export const normalizeQuery = (q) => String(q ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+
+/** Exact name first, then names starting with the query, then the rest, each alphabetically. */
+export function rankGuilds(guilds, query) {
+  const rank = (name) => (name.toLowerCase() === query ? 0 : name.toLowerCase().startsWith(query) ? 1 : 2);
+  return [...guilds].sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
+}
+
+/** The URL part for a guild: its slugified name, with a bit of the id when another stored guild has it. */
 async function uniqueSlug(store, region, name, id) {
   const slug = slugify(name);
-  return (await store.isSlugTaken(region, slug, id)) ? `${slug}-${slugSuffix(id)}` : slug;
+  const owner = await store.getGuildBySlug(region, slug);
+  return owner && owner.id !== id ? `${slug}-${slugSuffix(id)}` : slug;
 }
+
+const guildRow = (info, region, slug, memberCount) => ({
+  id: info.id,
+  region,
+  name: info.name,
+  slug,
+  alliance_tag: info.allianceTag,
+  founded_at: info.foundedAt,
+  member_count: memberCount,
+  kill_fame: info.killFame,
+  death_fame: info.deathFame
+});
 
 /**
  * Today's roster, refused when it looks broken: empty, or less than half of the stored one while
@@ -59,19 +88,7 @@ async function trustedMembers(gameinfo, guild, players) {
   return again;
 }
 
-const guildRow = (info, region, slug, memberCount) => ({
-  id: info.id,
-  region,
-  name: info.name,
-  slug,
-  alliance_tag: info.allianceTag,
-  founded_at: info.foundedAt,
-  member_count: memberCount,
-  kill_fame: info.killFame,
-  death_fame: info.deathFame
-});
-
-/** One daily snapshot of a managed guild: roster, fame, fights. */
+/** One daily snapshot of a marked guild: roster, fame, fights. */
 export async function syncGuild({ store, gameinfo, guild, now }) {
   const today = dayOf(now);
   const [info, battles, players, recent] = await Promise.all([
@@ -82,37 +99,13 @@ export async function syncGuild({ store, gameinfo, guild, now }) {
   ]);
   const members = await trustedMembers(gameinfo, guild, players);
   const before = new Map();
-  for (const row of recent) if (row.day < today) before.set(row.player_id, row); // ascending: the latest earlier day wins
+  // ascending: the latest earlier day wins; days from an earlier, ended tracking are no comparison
+  for (const row of recent) if (row.day < today && (!guild.tracked_since || row.day >= guild.tracked_since)) before.set(row.player_id, row);
   const plan = planSync({ guildId: guild.id, members, battles, players, before, today });
   await store.savePlayers(plan.players);
   await store.saveSnapshots(plan.snapshots);
   const slug = info.name === guild.name ? guild.slug : await uniqueSlug(store, guild.region, info.name, guild.id);
   await store.saveGuild({ ...guildRow(info, guild.region, slug, members.length), last_synced_at: now.toISOString() });
-}
-
-const isStale = (row, now) => !row.last_synced_at || now - Date.parse(row.last_synced_at) > STALE_MS;
-
-async function resolveGuild({ store, gameinfo }, region, slug, id) {
-  // without a working database the guild is still found through the killboard search
-  const stored = await tryStore(store, () => (isGuildId(id) ? store.getGuild(id) : SLUG.test(slug ?? "") ? store.getGuildBySlug(region, slug) : null));
-  const storeOk = Boolean(store) && stored.ok;
-  if (isGuildId(id)) return { id, row: stored.value?.region === region ? stored.value : null, storeOk };
-  if (!SLUG.test(slug ?? "")) return null;
-  if (stored.value) return { id: stored.value.id, row: stored.value, storeOk };
-  const exact = (await gameinfo.searchGuilds(region, slug.replace(/-/g, " "))).find((g) => slugify(g.name) === slug);
-  if (exact) return { id: exact.id, row: null, storeOk };
-  // "<name>-<6 letters of the id>": the address of a guild whose name another guild has too
-  const suffixed = /^(.+)-([a-z0-9]{6})$/.exec(slug);
-  if (!suffixed) return null;
-  const [, base, suffix] = suffixed;
-  const hit = (await gameinfo.searchGuilds(region, base.replace(/-/g, " "))).find((g) => slugify(g.name) === base && slugSuffix(g.id) === suffix);
-  return hit ? { id: hit.id, row: null, storeOk } : null;
-}
-
-/** The address of a guild nobody tracks: its name, unless a tracked guild has that address already. */
-async function untrackedSlug(store, region, name, id) {
-  const taken = await tryStore(store, () => store.isSlugTaken(region, slugify(name), id));
-  return taken.value ? `${slugify(name)}-${slugSuffix(id)}` : slugify(name);
 }
 
 /** A database read that must not take the public guild page down: logged, and `ok: false`, when it fails. */
@@ -126,30 +119,96 @@ async function tryStore(store, read) {
   }
 }
 
-async function getGuildPage(deps, { region, slug, id }, token) {
+/** The guild behind an address: by id when the page knows it, else by URL name (stored, then the killboard search). */
+async function resolveGuild({ store, gameinfo }, region, slug, id) {
+  const byId = isGuildId(id);
+  const bySlug = SLUG.test(slug ?? "");
+  if (!byId && !bySlug) return null;
+  // both stored lookups at once: the second also tells whether this URL name belongs to another guild
+  const [idRow, slugRow] = await Promise.all([
+    byId ? tryStore(store, () => store.getGuild(id)) : { ok: true, value: null },
+    bySlug ? tryStore(store, () => store.getGuildBySlug(region, slug)) : { ok: true, value: null }
+  ]);
+  const storeOk = Boolean(store) && idRow.ok && slugRow.ok;
+  if (byId) return { id, row: idRow.value?.region === region ? idRow.value : null, slugOwner: slugRow.value, storeOk };
+  if (slugRow.value) return { id: slugRow.value.id, row: slugRow.value, slugOwner: slugRow.value, storeOk };
+  const hits = await gameinfo.searchGuilds(region, normalizeQuery(slug.replace(/-/g, " ")));
+  // two guilds with this name: the first one; its page then sends the visitor to its own address
+  const exact = hits.find((g) => slugify(g.name) === slug);
+  if (exact) return { id: exact.id, row: null, slugOwner: null, storeOk };
+  // "<name>-<6 letters of the id>": the address of a guild whose name another guild has too
+  const suffixed = /^(.+)-([a-z0-9]{6})$/.exec(slug);
+  if (!suffixed) return null;
+  const [, base, suffix] = suffixed;
+  const baseHits = await gameinfo.searchGuilds(region, normalizeQuery(base.replace(/-/g, " ")));
+  const hit = baseHits.find((g) => slugify(g.name) === base && slugSuffix(g.id) === suffix);
+  return hit ? { id: hit.id, row: null, slugOwner: null, storeOk } : null;
+}
+
+/**
+ * The address of a guild that is not stored: its name, or name + id bit when another guild has that
+ * name too (a stored one, or a second one on the killboard). Always the same answer for the same
+ * guild, from any entry point, so its page never bounces between two addresses.
+ */
+async function untrackedSlug({ store, gameinfo }, region, urlSlug, resolved, info) {
+  const nameSlug = slugify(info.name);
+  const [owner, hits] = await Promise.all([
+    // the lookup for the visited address already answers this when the address is the plain name
+    urlSlug === nameSlug ? resolved.slugOwner : tryStore(store, () => store.getGuildBySlug(region, nameSlug)).then((r) => r.value),
+    gameinfo.searchGuilds(region, normalizeQuery(info.name)).catch(() => [])
+  ]);
+  const twin = (owner && owner.id !== info.id) || hits.some((g) => g.id !== info.id && slugify(g.name) === nameSlug);
+  return twin ? `${nameSlug}-${slugSuffix(info.id)}` : nameSlug;
+}
+
+/** Search hits with their addresses: a name two hits share gets the id bit, like untrackedSlug. */
+export function withSlugs(hits) {
+  const count = new Map();
+  for (const g of hits) count.set(slugify(g.name), (count.get(slugify(g.name)) ?? 0) + 1);
+  return hits.map((g) => {
+    const slug = slugify(g.name);
+    return { ...g, slug: count.get(slug) > 1 ? `${slug}-${slugSuffix(g.id)}` : slug };
+  });
+}
+
+const fightsOf = (battles) =>
+  battles
+    .filter((b) => b.ours.length)
+    .slice(0, FIGHTS_SHOWN)
+    .map((b) => ({
+      id: b.id,
+      startTime: b.startTime,
+      players: b.players,
+      fame: b.fame,
+      ours: b.ours.length,
+      kills: b.ours.reduce((t, p) => t + p.kills, 0),
+      deaths: b.ours.reduce((t, p) => t + p.deaths, 0)
+    }));
+
+/**
+ * The public guild page. The same answer for everyone, so the CDN keeps it: no personal parts, and
+ * a visit never writes (the daily cron and a mark take the snapshots). An answer missing a part
+ * (database or fights) is not kept, so the next visitor gets the whole page again.
+ */
+async function getGuildPage(deps, { region, slug, id }) {
   const { store, gameinfo } = deps;
-  const now = deps.now();
   const resolved = await resolveGuild(deps, region, slug, id);
-  if (!resolved) return fail(404, "No guild with that name on this server.");
-  const [info, members, battles, user] = await Promise.all([
+  if (!resolved) return fail(404, NOT_FOUND);
+  let fightsOk = true;
+  const [info, members, battles, markCount] = await Promise.all([
     gameinfo.getGuild(region, resolved.id),
     gameinfo.getMembers(region, resolved.id),
-    gameinfo.getBattles(region, resolved.id).catch(() => []),
-    token ? deps.userFromToken(token) : null
+    gameinfo.getBattles(region, resolved.id).catch(() => {
+      fightsOk = false;
+      return [];
+    }),
+    resolved.storeOk && resolved.row ? tryStore(store, () => store.countMarks(resolved.id)) : { ok: resolved.storeOk, value: 0 }
   ]);
-  let row = resolved.row;
-  if (row?.manager_id && isStale(row, now)) {
-    try {
-      await syncGuild({ store, gameinfo, guild: row, now });
-      row = await store.getGuild(row.id);
-    } catch (error) {
-      console.error("guild sync on visit failed", row.id, error);
-    }
-  }
-  const today = dayOf(now);
-  let storeOk = resolved.storeOk;
+  let storeOk = resolved.storeOk && markCount.ok;
+  const row = resolved.row;
+  const today = dayOf(deps.now());
   let history = null;
-  if (storeOk && row?.manager_id) {
+  if (storeOk && markCount.value > 0) {
     // the longest period plus some slack, never from before tracking started
     const windowStart = addDays(today, -(Math.max(...PERIODS) + BASELINE_SLACK_DAYS));
     const fromDay = row.tracked_since && row.tracked_since > windowStart ? row.tracked_since : windowStart;
@@ -163,25 +222,14 @@ async function getGuildPage(deps, { region, slug, id }, token) {
   const snapshots = tracked ? history[1] : members.map((member) => snapshotOf(resolved.id, member, today));
   const trackedSince = tracked ? row.tracked_since : null;
   const activity = Object.fromEntries(PERIODS.map((periodDays) => [periodDays, buildActivity({ players, snapshots, today, periodDays, trackedSince })]));
-  const fights = battles
-    .filter((b) => b.ours.length)
-    .slice(0, FIGHTS_SHOWN)
-    .map((b) => ({
-      id: b.id,
-      startTime: b.startTime,
-      players: b.players,
-      fame: b.fame,
-      ours: b.ours.length,
-      kills: b.ours.reduce((t, p) => t + p.kills, 0),
-      deaths: b.ours.reduce((t, p) => t + p.deaths, 0)
-    }));
+  const urlSlug = row?.slug ?? (await untrackedSlug(deps, region, slug, resolved, info));
   return ok(
     {
       guild: {
         id: info.id,
         region,
         name: info.name,
-        slug: row?.slug ?? (await untrackedSlug(store, region, info.name, info.id)),
+        slug: urlSlug,
         allianceTag: info.allianceTag,
         foundedAt: info.foundedAt,
         killFame: info.killFame,
@@ -192,39 +240,80 @@ async function getGuildPage(deps, { region, slug, id }, token) {
         tracked,
         since: trackedSince,
         lastSyncedAt: tracked ? row.last_synced_at : null,
-        managedByYou: Boolean(user && row?.manager_id === user.id),
-        managedByOther: Boolean(row?.manager_id && row.manager_id !== user?.id),
-        canManage: storeOk
+        markedBy: tracked ? markCount.value : 0,
+        canMark: storeOk
       },
       activity,
-      fights
+      fights: fightsOf(battles)
     },
-    // personal answers, and answers without the database, are never cached for everyone
-    token || !storeOk ? 0 : PUBLIC_CACHE_S
+    storeOk && fightsOk ? PUBLIC_CACHE_S : 0
   );
 }
 
-async function manage(deps, user, body) {
+async function getKillboard({ gameinfo }, { region, id }) {
+  if (!isGuildId(id)) return fail(400, "Pick a guild first.");
+  let complete = true;
+  const partial = () => {
+    complete = false;
+    return [];
+  };
+  const [kills, battles] = await Promise.all([gameinfo.getGuildKills(region, id), gameinfo.getBattles(region, id).catch(partial)]);
+  // Albion's guild feed has kills only: deaths come from the kills of the latest fights we lost people in
+  const lost = battles.filter((b) => b.ours.some((p) => p.deaths > 0)).slice(0, DEATH_FIGHTS);
+  const fightKills = await Promise.all(lost.map((b) => gameinfo.getBattleEvents(region, b.id).catch(partial)));
+  const deaths = new Map();
+  for (const event of fightKills.flat()) if (event.victim.guildId === id) deaths.set(event.id, event);
+  const newestFirst = (a, b) => b.time.localeCompare(a.time);
+  return ok(
+    {
+      kills: kills.filter((e) => e.killer.guildId === id).sort(newestFirst).slice(0, KILLBOARD_SHOWN),
+      deaths: [...deaths.values()].sort(newestFirst).slice(0, KILLBOARD_SHOWN)
+    },
+    // without every fight the deaths are incomplete: not kept for everyone
+    complete ? PUBLIC_CACHE_S : 0
+  );
+}
+
+/** Stores a guild's row; when another guild took the same address a moment ago, with the id bit. */
+async function saveGuildRow(store, region, info, memberCount, existing) {
+  const slug = existing?.slug ?? (await uniqueSlug(store, region, info.name, info.id));
+  try {
+    await store.saveGuild(guildRow(info, region, slug, memberCount));
+  } catch (error) {
+    if (existing || error?.code !== UNIQUE_VIOLATION) throw error;
+    await store.saveGuild(guildRow(info, region, `${slugify(info.name)}-${slugSuffix(info.id)}`, memberCount));
+  }
+}
+
+async function mark(deps, user, body) {
   const { store, gameinfo } = deps;
   const region = String(body?.region ?? "");
   const id = String(body?.id ?? "");
   if (!isRegion(region) || !isGuildId(id)) return fail(400, "Pick a guild first.");
-  const mine = await store.getManagedBy(user.id);
-  if (mine?.id === id) return ok({ guild: guildRef(mine) });
-  if (mine) return fail(409, `You already manage ${mine.name}. Stop managing it first.`);
-  const existing = await store.getGuild(id);
-  if (existing?.manager_id) return fail(409, "Another player already manages this guild.");
+  const current = await store.getMark(user.id);
+  if (current?.id === id) return ok({ guild: guildRef(current) });
+  if (current) return fail(409, `You marked ${current.name} already. Unmark it first.`);
   const now = deps.now();
-  const [info, members] = await Promise.all([gameinfo.getGuild(region, id), gameinfo.getMembers(region, id)]);
-  const slug = await uniqueSlug(store, region, info.name, id);
-  await store.saveGuild(guildRow(info, region, slug, members.length));
-  // tracking starts over: gains must not span the time nobody managed the guild
-  if (!(await store.claimGuild(id, user.id, dayOf(now)))) {
-    const other = await store.getManagedBy(user.id);
-    return fail(409, other && other.id !== id ? `You already manage ${other.name}. Stop managing it first.` : "Another player already manages this guild.");
+  const today = dayOf(now);
+  // whether anyone had it marked is read before this mark: two first marks at once both start tracking today
+  const [info, members, existing, markedBefore] = await Promise.all([gameinfo.getGuild(region, id), gameinfo.getMembers(region, id), store.getGuild(id), store.countMarks(id)]);
+  await saveGuildRow(store, region, info, members.length, existing);
+  if (!(await store.addMark(user.id, id))) {
+    const other = await store.getMark(user.id);
+    if (other?.id === id) return ok({ guild: guildRef(other) }); // a second click that was faster
+    return fail(409, other ? `You marked ${other.name} already. Unmark it first.` : "Try again in a moment.");
   }
+  // nobody had it marked: tracking starts anew, gains must not span the time without snapshots
+  if (markedBefore === 0) await store.setTrackedSince(id, today);
   const row = await store.getGuild(id);
-  await syncGuild({ store, gameinfo, guild: row, now });
+  if (markedBefore === 0 || !row.last_synced_at || dayOf(row.last_synced_at) !== today) {
+    try {
+      await syncGuild({ store, gameinfo, guild: row, now });
+    } catch (error) {
+      // the mark stands; the daily run takes the first snapshot
+      console.error("first snapshot after a mark failed", id, error);
+    }
+  }
   return ok({ guild: guildRef(row) });
 }
 
@@ -249,46 +338,43 @@ async function syncDue(deps) {
   return ok(result);
 }
 
+const GET_ACTIONS = new Set(["search", "guild", "killboard", "mine", "sync"]);
+const POST_ACTIONS = new Set(["mark", "unmark"]);
+
 export async function handleGuild(action, request, deps) {
   const { method, query = {}, body, token, authorization, client } = request;
+  if (!GET_ACTIONS.has(action) && !POST_ACTIONS.has(action)) return fail(404, "Unknown guild action.");
+  if (method !== (POST_ACTIONS.has(action) ? "POST" : "GET")) return fail(405, "Method not allowed");
   const region = String(query.region ?? "").toLowerCase();
   // every action but the cron can reach Albion's killboard: limited per visitor
   if (action !== "sync" && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
   try {
-    if (action === "search") {
-      if (method !== "GET") return fail(405, "Method not allowed");
-      const q = String(query.q ?? "").trim();
-      if (!isRegion(region) || q.length < 2 || q.length > 40) return fail(400, "Type at least 2 letters of the guild name.");
-      const guilds = (await deps.gameinfo.searchGuilds(region, q)).slice(0, 10).map((g) => ({ ...g, slug: slugify(g.name) }));
-      return ok({ guilds }, SEARCH_CACHE_S);
-    }
-    if (action === "guild") {
-      if (method !== "GET") return fail(405, "Method not allowed");
-      if (!isRegion(region)) return fail(400, "Unknown server.");
-      return await getGuildPage(deps, { region, slug: String(query.slug ?? ""), id: String(query.id ?? "") }, token);
-    }
     if (action === "sync") {
       if (!deps.cronSecret || authorization !== `Bearer ${deps.cronSecret}`) return fail(401, "Unauthorized");
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await syncDue(deps);
     }
-    if (action === "mine" || action === "manage" || action === "release") {
-      if (method !== (action === "mine" ? "GET" : "POST")) return fail(405, "Method not allowed");
-      const user = token ? await deps.userFromToken(token) : null;
-      if (action === "mine") {
-        const row = user && deps.store ? await deps.store.getManagedBy(user.id) : null;
-        return ok({ guild: row ? guildRef(row) : null });
-      }
-      if (!user) return fail(401, "Sign in to manage a guild.");
-      if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
-      if (action === "manage") return await manage(deps, user, body);
-      const mine = await deps.store.getManagedBy(user.id);
-      if (mine) await deps.store.releaseGuild(mine.id, user.id);
-      return ok({ released: Boolean(mine) });
+    if (action === "search" || action === "guild" || action === "killboard") {
+      if (!isRegion(region)) return fail(400, "Unknown server.");
+      if (action === "guild") return await getGuildPage(deps, { region, slug: String(query.slug ?? ""), id: String(query.id ?? "") });
+      if (action === "killboard") return await getKillboard(deps, { region, id: String(query.id ?? "") });
+      const q = normalizeQuery(query.q);
+      if (q.length < 2 || q.length > 40) return fail(400, "Type at least 2 letters of the guild name.");
+      const guilds = withSlugs(rankGuilds(await deps.gameinfo.searchGuilds(region, q), q).slice(0, SEARCH_SHOWN));
+      return ok({ guilds }, SEARCH_CACHE_S);
     }
-    return fail(404, "Unknown guild action.");
+    // mine, mark, unmark: the signed-in player
+    const user = token ? await deps.userFromToken(token) : null;
+    if (action === "mine") {
+      const row = user && deps.store ? await deps.store.getMark(user.id) : null;
+      return ok({ guild: row ? guildRef(row) : null });
+    }
+    if (!user) return fail(401, "Sign in to mark a guild.");
+    if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
+    if (action === "mark") return await mark(deps, user, body);
+    return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });
   } catch (error) {
-    if (error instanceof GameinfoError) return fail(error.status, error.status === 404 ? "No guild with that name on this server." : "Albion's killboard is not answering right now. Try again in a minute.");
+    if (error instanceof GameinfoError) return fail(error.status, error.status === 404 ? NOT_FOUND : "Albion's killboard is not answering right now. Try again in a minute.");
     console.error("guild api", action, error);
     return fail(500, "Something went wrong. Try again in a minute.");
   }
