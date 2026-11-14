@@ -45,6 +45,7 @@ const TOOL_LINKS = [
   { href: "/gold-tracker", label: "Gold Tracker" },
   { href: "/loot-split", label: "Loot Split" },
   { href: "/prices", label: "Price Checker" },
+  { href: "/guild", label: "Guild Tools" },
 ];
 
 /**
@@ -158,6 +159,16 @@ const ROUTES = [
     ogImage: `${SITE}/picture/price-checker-preview.png`,
     intro:
       "Search any of the 3,700+ items traded in Albion Online and see its price in every royal city, Caerleon, Brecilien and the Black Market: the cheapest sell order to buy from, the best buy order to sell into straight away, whether a flip pays after tax, the price history, items sold per day and how long ago each price was seen.",
+  },
+  {
+    path: "guild",
+    title: "Albion Online Guild Tools: Activity, Regear and Attendance | Blackmarket Reader",
+    description:
+      "Free Albion Online guild tools: see which members are active, quiet or inactive, follow your guild's fights and, soon, regear, attendance and the guild bank, straight from the killboard.",
+    keywords: "Albion Online guild tools, Albion guild activity, Albion inactive members, Albion regear, Albion guild management",
+    h1: "Albion Online Guild Tools",
+    intro:
+      "Find any Albion Online guild and see every member's status: active, quiet or inactive, from Albion's own statistics and the killboard, plus the guild's latest fights. Manage your guild here and a daily snapshot shows the fame each member gained per week, who joined and who left. Regear, attendance, the guild bank log and a weekly Discord report are on the way.",
   },
   {
     path: "community",

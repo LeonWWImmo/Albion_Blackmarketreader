@@ -23,6 +23,8 @@ const GoldTrackerPage = lazy(() => import("./features/gold-tracker").then((m) =>
 const LootSplitPage = lazy(() => import("./features/loot-split").then((m) => ({ default: m.LootSplitPage })));
 const PriceCheckerPage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.PriceCheckerPage })));
 const ItemPricePage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.ItemPricePage })));
+const GuildStartPage = lazy(() => import("./features/guild").then((m) => ({ default: m.GuildStartPage })));
+const GuildPage = lazy(() => import("./features/guild").then((m) => ({ default: m.GuildPage })));
 
 export function App() {
   const { pathname } = useLocation();
@@ -45,6 +47,9 @@ export function App() {
           <Route path="/loot-split" element={<LootSplitPage />} />
           <Route path="/prices" element={<PriceCheckerPage />} />
           <Route path="/prices/:slug" element={<ItemPricePage />} />
+          <Route path="/guild" element={<GuildStartPage />} />
+          <Route path="/guild/:region/:slug" element={<GuildPage />} />
+          <Route path="/guild/:region/:slug/:tab" element={<GuildPage />} />
           <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />
           <Route path="/Blackmarket-Crafter/index.html" element={<Navigate to="/bm-crafter" replace />} />
           <Route path="/crafting-calculator/index.html" element={<Navigate to="/crafting-calculator" replace />} />

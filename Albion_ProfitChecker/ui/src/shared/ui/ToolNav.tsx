@@ -14,7 +14,8 @@ export const TOOL_TABS: ReadonlyArray<Tab> = [
   { to: "/food-potion-crafter", label: "Food & Potion Crafter", hint: "Cooking and alchemy profit", crafting: true },
   { to: "/prices", label: "Price Checker" },
   { to: "/gold-tracker", label: "Gold Tracker" },
-  { to: "/loot-split", label: "Loot Split" }
+  { to: "/loot-split", label: "Loot Split" },
+  { to: "/guild", label: "Guild" }
 ];
 
 const CRAFTING = TOOL_TABS.filter((tab) => tab.crafting);
