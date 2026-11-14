@@ -15,13 +15,9 @@ const ALLOWED_NEXT_PATHS = new Set([
   "/gold-tracker",
   "/loot-split",
   "/prices",
-  "/guild",
   "/community",
   "/legal"
 ]);
-// pages below a tool, allowed as patterns: Price Checker items (/prices/adepts-bag) and guild pages
-// (/guild/eu/angry-fuzzies, /guild/eu/angry-fuzzies/activity)
-const ALLOWED_NEXT_PATTERNS = [/^\/prices\/[a-z0-9-]{1,160}$/, /^\/guild\/(eu|us)\/[a-z0-9-]{1,90}(\/[a-z]{1,20})?$/];
 
 function getSafeNextPath(value: string | null): string | null {
   if (!value) return null;
@@ -34,7 +30,8 @@ function getSafeNextPath(value: string | null): string | null {
   try {
     const url = new URL(trimmed, window.location.origin);
     if (url.origin !== window.location.origin) return null;
-    if (!ALLOWED_NEXT_PATHS.has(url.pathname) && !ALLOWED_NEXT_PATTERNS.some((pattern) => pattern.test(url.pathname))) return null;
+    // item pages of the Price Checker (/prices/adepts-bag) are allowed as a pattern
+    if (!ALLOWED_NEXT_PATHS.has(url.pathname) && !/^\/prices\/[a-z0-9-]{1,160}$/.test(url.pathname)) return null;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return null;
