@@ -69,6 +69,10 @@
     {
       "path": "/api/cron/health-check",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/guild/sync",
+      "schedule": "30 3 * * *"
     }
   ],
   "rewrites": [
@@ -79,6 +83,10 @@
     {
       "source": "/prices/:slug",
       "destination": "/api/seo/price-page?slug=:slug"
+    },
+    {
+      "source": "/api/guild/:action",
+      "destination": "/api/guild?action=:action"
     },
     {
       "source": "/(.*)",
@@ -169,5 +177,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/guild.js": {
+      "maxDuration": 60
+    }
+  }
 }
