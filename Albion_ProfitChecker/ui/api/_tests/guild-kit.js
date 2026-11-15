@@ -41,6 +41,31 @@ function fakeGameinfo() {
     getBattles: vi.fn(async () => [{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, kills: 5, fame: 900, ours: [{ id: "a", name: "Ann", kills: 2, deaths: 1, killFame: 300 }] }]),
     getGuildKills: vi.fn(async () => [killEvent(11, "2026-11-14T09:00:00Z", GID, "x"), killEvent(12, "2026-11-14T11:00:00Z", GID, "x")]),
     getPlayerDeaths: vi.fn(async () => []),
+    getBattleReport: vi.fn(async (region, battleId) => ({
+      battle: {
+        id: Number(battleId),
+        startTime: "2026-11-14T10:00:00Z",
+        endTime: "2026-11-14T10:20:00Z",
+        kills: 2,
+        fame: 100000,
+        players: [
+          { id: "k21", name: "Killer21", guildId: "x", guildName: "Others", allianceId: "AX", allianceName: "AX", kills: 1, deaths: 0, killFame: 50000 },
+          { id: "k22", name: "Killer22", guildId: GID, guildName: "Angry fuzzies", allianceId: "AB", allianceName: "BOSSS", kills: 1, deaths: 0, killFame: 60000 },
+          { id: "v21", name: "Victim21", guildId: GID, guildName: "Angry fuzzies", allianceId: "AB", allianceName: "BOSSS", kills: 0, deaths: 1, killFame: 0 }
+        ],
+        guilds: [
+          { id: "x", name: "Others", allianceName: "AX", kills: 1, deaths: 1, killFame: 50000 },
+          { id: GID, name: "Angry fuzzies", allianceName: "BOSSS", kills: 1, deaths: 1, killFame: 60000 }
+        ],
+        alliances: [
+          { id: "AX", name: "AX", kills: 1, deaths: 1, killFame: 50000 },
+          { id: "AB", name: "BOSSS", kills: 1, deaths: 1, killFame: 60000 }
+        ]
+      },
+      events: [killEvent(21, "2026-11-14T10:01:00Z", "x", GID, Number(battleId)), killEvent(22, "2026-11-14T10:02:00Z", GID, "x", Number(battleId))],
+      stats: { k22: { damage: 900, assists: 3, healAssists: 1, itemPower: 1300, weapon: { type: "T6_2H_BOW", quality: 2 } } },
+      complete: true
+    })),
     getBattleEvents: vi.fn(async (region, battleId) => [killEvent(21, "2026-11-14T10:01:00Z", "x", GID, battleId), killEvent(22, "2026-11-14T10:02:00Z", GID, "x", battleId)])
   };
 }
@@ -51,7 +76,8 @@ export function setup({ store = createMemoryGuildStore() } = {}) {
     gameinfo: fakeGameinfo(),
     userFromToken: async (token) => ({ "tok-ann": { id: "user-ann" }, "tok-bo": { id: "user-bo" } })[token] ?? null,
     now: () => NOW,
-    cronSecret: "cron-123"
+    cronSecret: "cron-123",
+    discord: { check: vi.fn(async () => "Guild news"), post: vi.fn(async () => "ok") }
   };
   const call = (action, { method = "GET", query = {}, body = null, token = null, authorization = null, client = "1.2.3.4" } = {}) =>
     handleGuild(action, { method, query, body, token, authorization: authorization ?? (token ? `Bearer ${token}` : ""), client }, deps);

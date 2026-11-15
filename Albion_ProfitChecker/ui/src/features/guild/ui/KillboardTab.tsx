@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import type { Region } from "@shared/types";
 import { shortPrice } from "../../price-checker/ui/format";
-import { GuildApiError, itemIcon, type Fighter, type GearSlot, type GuildPageData, type KillEvent, type Killboard, type PricedItem } from "../api";
+import { GuildApiError, battlePath, itemIcon, type Fighter, type GearSlot, type GuildPageData, type KillEvent, type Killboard, type PricedItem } from "../api";
 import { cachedKillboard, loadKillboard } from "../core/guildData";
 import { areaLabel, timeAgo } from "../core/view";
 
@@ -156,7 +158,7 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
         {events.length ? (
           <ul className="gd-kills">
             {events.map((event) => (
-              <KillRow key={event.id} event={event} guildId={id} />
+              <KillRow key={event.id} event={event} guildId={id} region={region} />
             ))}
           </ul>
         ) : (
@@ -175,16 +177,21 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
   );
 }
 
-function KillRow({ event, guildId }: { event: KillEvent; guildId: string }) {
+/**
+ * One kill, opened for the builds, the bag and who helped. Read from `guildId`'s side (its kills
+ * green, its deaths red), or neutral without one; `region` adds a link to the fight's report.
+ */
+export function KillRow({ event, guildId, region }: { event: KillEvent; guildId: string | null; region?: Region }) {
   const [open, setOpen] = useState(false);
-  const ourKill = event.killer.guildId === guildId;
+  const ourKill = Boolean(guildId) && event.killer.guildId === guildId;
+  const ourDeath = Boolean(guildId) && event.victim.guildId === guildId;
   const now = new Date();
   return (
-    <li className={`gd-kill${ourKill ? " is-kill" : " is-death"}`}>
+    <li className={`gd-kill${ourDeath ? " is-death" : ourKill ? " is-kill" : " is-neutral"}`}>
       <button type="button" className="gd-kill-row" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <FighterCell fighter={event.killer} ours={event.killer.guildId === guildId} />
+        <FighterCell fighter={event.killer} ours={Boolean(guildId) && event.killer.guildId === guildId} />
         <span className="gd-kill-mid">
-          <b>{ourKill ? "KILL" : "DEATH"}</b>
+          <b>{ourDeath ? "DEATH" : "KILL"}</b>
           {event.value > 0 ? <strong className="gd-value">{shortPrice(event.value)}</strong> : null}
           <small>
             {shortPrice(event.fame)} fame · {timeAgo(event.time, now)}
@@ -194,14 +201,14 @@ function KillRow({ event, guildId }: { event: KillEvent; guildId: string }) {
             {event.participants > 1 ? ` · ${event.participants} involved` : ""}
           </small>
         </span>
-        <FighterCell fighter={event.victim} ours={event.victim.guildId === guildId} right />
+        <FighterCell fighter={event.victim} ours={ourDeath} right />
       </button>
-      {open ? <KillDetails event={event} /> : null}
+      {open ? <KillDetails event={event} reportLink={region && event.battleId ? battlePath(region, event.battleId, guildId ?? undefined) : null} /> : null}
     </li>
   );
 }
 
-function FighterCell({ fighter, ours, right = false }: { fighter: Fighter; ours: boolean; right?: boolean }) {
+export function FighterCell({ fighter, ours, right = false }: { fighter: Fighter; ours: boolean; right?: boolean }) {
   const weapon = fighter.gear.MainHand;
   return (
     <span className={`gd-fighter${right ? " is-right" : ""}${ours ? " is-ours" : ""}`}>
@@ -218,7 +225,7 @@ function FighterCell({ fighter, ours, right = false }: { fighter: Fighter; ours:
   );
 }
 
-function KillDetails({ event }: { event: KillEvent }) {
+function KillDetails({ event, reportLink }: { event: KillEvent; reportLink: string | null }) {
   const damage = event.helpers.reduce((t, h) => t + h.damage, 0);
   const heal = event.helpers.reduce((t, h) => t + h.heal, 0);
   return (
@@ -300,6 +307,14 @@ function KillDetails({ event }: { event: KillEvent }) {
         <dd>{event.groupSize ? `${event.groupSize} in the killer's party` : "–"}</dd>
         <dt>Silver lost</dt>
         <dd>{event.value > 0 ? `${shortPrice(event.value)} (gear ${shortPrice(event.victim.gearValue)}, bag ${shortPrice(event.victim.inventoryValue)})` : "–"}</dd>
+        {reportLink ? (
+          <>
+            <dt>Fight</dt>
+            <dd>
+              <Link to={reportLink}>Battle report →</Link>
+            </dd>
+          </>
+        ) : null}
       </dl>
     </div>
   );

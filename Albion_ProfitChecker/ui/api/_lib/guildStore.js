@@ -91,6 +91,26 @@ export function createGuildStore(db) {
       for (let i = 0; i < rows.length; i += WRITE_CHUNK) {
         must(await db.from("guild_snapshots").upsert(rows.slice(i, i + WRITE_CHUNK), { onConflict: "guild_id,player_id,day" }));
       }
+    },
+    /** The player's Discord webhook ({ url, name, last_sent_on }), or null. */
+    async getWebhook(userId) {
+      return must(await db.from("guild_webhooks").select("*").eq("user_id", userId).maybeSingle());
+    },
+    async saveWebhook(userId, url, name) {
+      must(await db.from("guild_webhooks").upsert({ user_id: userId, url, name, last_sent_on: null }, { onConflict: "user_id" }));
+    },
+    async removeWebhook(userId) {
+      return must(await db.from("guild_webhooks").delete().eq("user_id", userId).select("user_id")).length > 0;
+    },
+    /** The webhooks of the players who have this guild marked. */
+    async webhooksOfGuild(guildId) {
+      const ids = must(await db.from("guild_marks").select("user_id").eq("guild_id", guildId)).map((m) => m.user_id);
+      const hooks = [];
+      for (let i = 0; i < ids.length; i += ID_CHUNK) hooks.push(...must(await db.from("guild_webhooks").select("*").in("user_id", ids.slice(i, i + ID_CHUNK))));
+      return hooks;
+    },
+    async setWebhookSent(userId, day) {
+      must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId));
     }
   };
 }

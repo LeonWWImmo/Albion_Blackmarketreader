@@ -3,6 +3,7 @@
 import { sendResult } from "./_lib/aodp.js";
 import * as gameinfo from "./_lib/gameinfo.js";
 import { handleGuild } from "./_lib/guildApi.js";
+import { checkWebhook, postWebhook } from "./_lib/guildDiscord.js";
 import { loadValues } from "./_lib/itemValue.js";
 import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { clientAddress, createRateLimiter } from "./_lib/rateLimit.js";
@@ -40,7 +41,8 @@ export default async function handler(req, res) {
       now: () => new Date(),
       cronSecret: process.env.CRON_SECRET,
       limiter,
-      values: loadValues
+      values: loadValues,
+      discord: { check: checkWebhook, post: postWebhook }
     }
   );
   sendResult(res, result);

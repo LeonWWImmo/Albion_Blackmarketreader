@@ -5,12 +5,14 @@ export function createMemoryGuildStore() {
   const marks = new Map(); // user id -> guild id
   const players = new Map();
   const snapshots = new Map();
+  const webhooks = new Map(); // user id -> { user_id, url, name, last_sent_on }
   const all = () => [...guilds.values()];
   return {
     guilds,
     marks,
     players,
     snapshots,
+    webhooks,
     getGuild: async (id) => guilds.get(id) ?? null,
     getGuildBySlug: async (region, slug) => all().find((g) => g.region === region && g.slug === slug) ?? null,
     saveGuild: async (row) => {
@@ -45,6 +47,15 @@ export function createMemoryGuildStore() {
       [...snapshots.values()].filter((s) => s.guild_id === guildId && s.day >= fromDay).sort((a, b) => a.day.localeCompare(b.day)),
     saveSnapshots: async (rows) => {
       for (const row of rows) snapshots.set(`${row.guild_id}:${row.player_id}:${row.day}`, row);
+    },
+    getWebhook: async (userId) => webhooks.get(userId) ?? null,
+    saveWebhook: async (userId, url, name) => {
+      webhooks.set(userId, { user_id: userId, url, name, last_sent_on: null });
+    },
+    removeWebhook: async (userId) => webhooks.delete(userId),
+    webhooksOfGuild: async (guildId) => [...webhooks.values()].filter((w) => marks.get(w.user_id) === guildId),
+    setWebhookSent: async (userId, day) => {
+      if (webhooks.has(userId)) webhooks.set(userId, { ...webhooks.get(userId), last_sent_on: day });
     }
   };
 }

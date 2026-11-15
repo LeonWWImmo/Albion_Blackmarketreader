@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Activity, ActivityMember } from "../api";
-import { guildPath } from "../api";
+import { battlePath, guildPath, slugOf } from "../api";
 import { isGuildTab } from "../core/tools";
 import { areaLabel, daysAgo, filterMembers, joinedAndLeft, kickListText, searchMembers, shareBars, sparkHeights, timeAgo } from "../core/view";
 
@@ -88,6 +88,10 @@ describe("guild view helpers", () => {
     expect(guildPath({ region: "us", slug: "x" }, "activity")).toBe("/guild/us/x/activity");
     expect(guildPath({ region: "us", slug: "x" }, "overview")).toBe("/guild/us/x");
     expect(isGuildTab("killboard")).toBe(true);
-    expect(isGuildTab("regear")).toBe(false);
+    expect(isGuildTab("regear")).toBe(true);
+    expect(isGuildTab("battle")).toBe(false);
+    expect(battlePath("eu", 123)).toBe("/guild/battle/eu/123");
+    expect(battlePath("us", 7, "a-b_c")).toBe("/guild/battle/us/7?guild=a-b_c");
+    expect(slugOf("  Ångry Füzzies 2! ")).toBe("angry-fuzzies-2");
   });
 });

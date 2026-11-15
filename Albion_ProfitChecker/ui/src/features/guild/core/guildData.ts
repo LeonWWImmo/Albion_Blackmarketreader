@@ -2,7 +2,7 @@
 // one shows at once and is replaced when the new answer arrives (see GuildPage). Entries are kept by
 // guild id when it is known (two guilds can share a name), and by address for links without one.
 import type { Region } from "@shared/types";
-import { fetchGuild, fetchKillboard, type GuildPageData, type Killboard } from "../api";
+import { fetchBattle, fetchFights, fetchGuild, fetchKillboard, type AttendanceFight, type BattleReport, type GuildPageData, type Killboard } from "../api";
 import { forget, loadOnce, peek, remember } from "./cache";
 
 /** Younger than this, a cached answer is not asked again. */
@@ -46,3 +46,22 @@ export function cachedKillboard(region: Region, id: string): Killboard | null {
 }
 
 export const loadKillboard = (region: Region, id: string) => loadOnce(killboardKey(region, id), () => fetchKillboard(region, id));
+
+const battleKey = (region: Region, id: number) => `battle:${region}:${id}`;
+
+export function cachedBattle(region: Region, id: number): BattleReport | null {
+  const hit = peek<BattleReport>(battleKey(region, id));
+  return hit && hit.age < MAX_AGE_MS ? hit.data : null;
+}
+
+export const loadBattle = (region: Region, id: number) => loadOnce(battleKey(region, id), () => fetchBattle(region, id));
+
+const fightsKey = (region: Region, id: string) => `fights:${region}:${id}`;
+type Fights = { fights: AttendanceFight[]; days: number; complete: boolean };
+
+export function cachedFights(region: Region, id: string): Fights | null {
+  const hit = peek<Fights>(fightsKey(region, id));
+  return hit && hit.age < MAX_AGE_MS ? hit.data : null;
+}
+
+export const loadFights = (region: Region, id: string) => loadOnce(fightsKey(region, id), () => fetchFights(region, id));

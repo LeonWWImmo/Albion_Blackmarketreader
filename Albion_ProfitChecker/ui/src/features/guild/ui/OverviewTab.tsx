@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { guildPath, type GuildPageData } from "../api";
+import { battlePath, guildPath, type GuildPageData } from "../api";
 import { joinedAndLeft, timeAgo } from "../core/view";
 import { TrackingNote } from "./TrackingNote";
 
@@ -77,7 +77,7 @@ export function OverviewTab({ data }: { data: GuildPageData }) {
           </div>
           {fights.length ? (
             fights.map((fight) => (
-              <div key={fight.id} className="gd-row">
+              <Link key={fight.id} className="gd-row gd-row-link" to={battlePath(guild.region, fight.id, guild.id)} title="Battle report">
                 <div>
                   <b>
                     {fight.players} players · {shortPrice(fight.fame)} fame
@@ -88,7 +88,7 @@ export function OverviewTab({ data }: { data: GuildPageData }) {
                 <span className={`gd-num ${fight.kills >= fight.deaths ? "is-green" : "is-red"}`} title="kills / deaths">
                   {fight.kills} / {fight.deaths}
                 </span>
-              </div>
+              </Link>
             ))
           ) : (
             <p className="gd-empty">No fights on the killboard lately.</p>

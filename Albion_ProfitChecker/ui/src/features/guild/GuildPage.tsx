@@ -7,9 +7,13 @@ import { cachedGuild, loadGuild } from "./core/guildData";
 import { isGuildTab, type GuildTab } from "./core/tools";
 import { GuildShell } from "./GuildShell";
 import { ActivityTab } from "./ui/ActivityTab";
+import { AttendanceTab } from "./ui/AttendanceTab";
+import { BankLogTab } from "./ui/BankLogTab";
+import { DiscordTab } from "./ui/DiscordTab";
 import { GuildHeader } from "./ui/GuildHeader";
 import { KillboardTab } from "./ui/KillboardTab";
 import { OverviewTab } from "./ui/OverviewTab";
+import { RegearTab } from "./ui/RegearTab";
 import { useMyGuild } from "./useMyGuild";
 
 export function GuildPage() {
@@ -96,6 +100,14 @@ function GuildBody() {
         <ActivityTab key={data.guild.id} data={data} />
       ) : tab === "killboard" ? (
         <KillboardTab key={data.guild.id} data={data} />
+      ) : tab === "attendance" ? (
+        <AttendanceTab key={data.guild.id} data={data} />
+      ) : tab === "regear" ? (
+        <RegearTab key={data.guild.id} data={data} />
+      ) : tab === "bank" ? (
+        <BankLogTab key={data.guild.id} data={data} />
+      ) : tab === "discord" ? (
+        <DiscordTab key={data.guild.id} data={data} mine={mine} />
       ) : (
         <OverviewTab data={data} />
       )}

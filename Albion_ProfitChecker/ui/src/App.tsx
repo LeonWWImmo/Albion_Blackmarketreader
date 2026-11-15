@@ -25,6 +25,7 @@ const PriceCheckerPage = lazy(() => import("./features/price-checker").then((m) 
 const ItemPricePage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.ItemPricePage })));
 const GuildStartPage = lazy(() => import("./features/guild").then((m) => ({ default: m.GuildStartPage })));
 const GuildPage = lazy(() => import("./features/guild").then((m) => ({ default: m.GuildPage })));
+const BattlePage = lazy(() => import("./features/guild").then((m) => ({ default: m.BattlePage })));
 
 export function App() {
   const { pathname } = useLocation();
@@ -48,6 +49,7 @@ export function App() {
           <Route path="/prices" element={<PriceCheckerPage />} />
           <Route path="/prices/:slug" element={<ItemPricePage />} />
           <Route path="/guild" element={<GuildStartPage />} />
+          <Route path="/guild/battle/:region/:id" element={<BattlePage />} />
           <Route path="/guild/:region/:slug" element={<GuildPage />} />
           <Route path="/guild/:region/:slug/:tab" element={<GuildPage />} />
           <Route path="/Blackmarket-Crafter" element={<Navigate to="/bm-crafter" replace />} />

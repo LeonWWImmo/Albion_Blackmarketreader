@@ -9,6 +9,7 @@ import { groupTrips, mergeLogs, netStacks, parseLootLog, type LogEntry } from ".
 import { decodeSplit, encodeSplit } from "./core/share";
 import { EXAMPLE_LOG } from "./core/example";
 import { inRange, tripRange, type Range } from "./core/timeline";
+import { loadNames, loadPrices } from "./core/market";
 import {
   MARKETS,
   ROUTE_LABEL,
@@ -33,7 +34,6 @@ type Player = { name: string; share: number; repair: number; added?: boolean };
 const QUALITY = ["", "Normal", "Good", "Outstanding", "Excellent", "Masterpiece"];
 const ROUTES: Route[] = ["bm", "buy", "sell"];
 const SHOWN_TILES = 24;
-const PRICE_CHUNK = 300;
 const PLAYER_COLORS = ["#f5c451", "#7dd3fc", "#a78bfa", "#4ade80", "#fb7185", "#fdba74", "#5eead4", "#f0abfc"];
 
 const fmt = (n: number) => Math.round(n).toLocaleString("de-DE");
@@ -63,26 +63,6 @@ function useCountUp(target: number) {
     return () => cancelAnimationFrame(frame);
   }, [target]);
   return shown;
-}
-
-let namesCache: Promise<Record<string, string>> | null = null;
-const loadNames = () =>
-  (namesCache ??= fetch(assetUrl("data/item-names-en.json")).then((r) => {
-    if (!r.ok) throw new Error(String(r.status));
-    return r.json();
-  }).catch((error) => {
-    namesCache = null;
-    throw error;
-  }));
-
-async function loadPrices(region: Region, ids: string[]): Promise<PriceTable> {
-  const table: PriceTable = {};
-  for (let i = 0; i < ids.length; i += PRICE_CHUNK) {
-    const res = await fetch(`/api/aodp/prices?region=${region}&ids=${encodeURIComponent(ids.slice(i, i + PRICE_CHUNK).join(","))}`);
-    if (!res.ok) throw new Error(String(res.status));
-    Object.assign(table, (await res.json()).prices);
-  }
-  return table;
 }
 
 /** Repairs typed the way players say them: 50k, 1.2m or 75000. */

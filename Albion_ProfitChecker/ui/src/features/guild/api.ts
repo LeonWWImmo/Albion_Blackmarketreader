@@ -103,6 +103,49 @@ export type KillEvent = {
 /** priced: values could load; pricesComplete: every item got a price lookup (very full boards may not). */
 export type Killboard = { kills: KillEvent[]; deaths: KillEvent[]; priced: boolean; pricesComplete: boolean };
 
+/** A side of a fight as Albion sums it, with how many of its players were there. */
+export type BattleSide = { id: string; name: string; kills: number; deaths: number; killFame: number; players: number };
+export type BattleGuild = BattleSide & { allianceName: string | null };
+/** A player in a fight: Albion's kills, deaths and kill fame; damage to the players who died, assists and heal assists from the kills. */
+export type BattlePlayer = {
+  id: string;
+  name: string;
+  guildId: string | null;
+  guildName: string | null;
+  allianceId: string | null;
+  allianceName: string | null;
+  kills: number;
+  deaths: number;
+  killFame: number;
+  damage: number;
+  assists: number;
+  healAssists: number;
+  itemPower: number;
+  weapon: { type: string; quality: number } | null;
+};
+/** complete: every kill of the fight could be read. */
+export type BattleReport = {
+  battle: { id: number; startTime: string; endTime: string; kills: number; fame: number; players: number };
+  alliances: BattleSide[];
+  guilds: BattleGuild[];
+  players: BattlePlayer[];
+  kills: KillEvent[];
+  complete: boolean;
+  priced: boolean;
+  pricesComplete: boolean;
+};
+/** One of the guild's listed fights with who of the guild was there. */
+export type AttendanceFight = {
+  id: number;
+  startTime: string;
+  players: number;
+  kills: number;
+  fame: number;
+  ours: { id: string; name: string; kills: number; deaths: number; killFame: number }[];
+};
+/** The signed-in player's Discord webhook: only its name, never its link. */
+export type DiscordHook = { name: string; lastSentOn: string | null };
+
 /** An answer the API gave with an error text, shown to the visitor as it is. */
 export class GuildApiError extends Error {
   constructor(
@@ -137,6 +180,18 @@ export const fetchTopGuilds = (region: Region, range: TopRange) => call<{ guilds
 
 export const fetchKillboard = (region: Region, id: string, signal?: AbortSignal) => call<Killboard>(`killboard?region=${region}&id=${encodeURIComponent(id)}`, { signal });
 
+export const fetchBattle = (region: Region, id: number | string, signal?: AbortSignal) => call<BattleReport>(`battle?region=${region}&id=${encodeURIComponent(String(id))}`, { signal });
+
+/** The listed fights of the last `days`; complete: the days are covered and every page loaded. */
+export const fetchFights = (region: Region, id: string, signal?: AbortSignal) =>
+  call<{ fights: AttendanceFight[]; days: number; complete: boolean }>(`fights?region=${region}&id=${encodeURIComponent(id)}`, { signal });
+
+export const fetchHook = (token: string) => call<{ hook: DiscordHook | null }>("hook", { token }).then((r) => r.hook);
+
+export const saveHook = (token: string, url: string) => call<{ hook: DiscordHook }>("hook-save", { token, method: "POST", body: { url } }).then((r) => r.hook);
+
+export const removeHook = (token: string) => call<{ removed: boolean }>("hook-remove", { token, method: "POST", body: {} });
+
 export const fetchMyGuild = (token: string) => call<{ guild: GuildRef | null }>("mine", { token }).then((r) => r.guild);
 
 export const markGuild = (token: string, region: Region, id: string) => call<{ guild: GuildRef }>("mark", { token, method: "POST", body: { region, id } }).then((r) => r.guild);
@@ -145,6 +200,18 @@ export const unmarkGuild = (token: string) => call<{ unmarked: boolean }>("unmar
 
 /** /guild/eu/angry-fuzzies, with the tab: /guild/eu/angry-fuzzies/activity */
 export const guildPath = (ref: { region: Region; slug: string }, tab?: string) => `/guild/${ref.region}/${ref.slug}${tab && tab !== "overview" ? `/${tab}` : ""}`;
+
+/** A fight's report page; `guildId` reads it from that guild's side (its kills green, its deaths red). */
+export const battlePath = (region: Region, id: number, guildId?: string) => `/guild/battle/${region}/${id}${guildId ? `?guild=${encodeURIComponent(guildId)}` : ""}`;
+
+/** A guild's address from its name alone (the guild page moves on to its real one when they differ). */
+export const slugOf = (name: string) =>
+  name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 /** An item's picture from Albion's own image server (not our bandwidth), small enough for a list. */
 export const itemIcon = (type: string, quality = 1, size = 64) =>

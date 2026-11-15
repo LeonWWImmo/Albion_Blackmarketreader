@@ -268,6 +268,140 @@ export async function getMembers(region, id, { fresh = false } = {}) {
   return remembered(`members:${region}:${id}`, async () => parseMembers(await fetchJson(`${HOSTS[region]}/guilds/${id}/members`)), fresh);
 }
 
+const BATTLE_ID = /^[1-9]\d{0,14}$/;
+export const isBattleId = (value) => BATTLE_ID.test(String(value ?? ""));
+/** Kills per page of a fight's kill list (Albion's own limit). */
+const BATTLE_PAGE = 51;
+/** Pages read for one battle report: ~800 kills, more than the biggest fights of a week have. */
+export const BATTLE_PAGES_MAX = 16;
+/** Pages asked at once: Albion answers 502 when asked for too many. */
+const BATTLE_PAGES_AT_ONCE = 4;
+/**
+ * No new pages are started after this long: a slow killboard (2 tries of 8 s per page) must not run
+ * the function past its 60 s. The report is then incomplete.
+ */
+export const PAGES_BUDGET_MS = 20_000;
+
+/** One fight's totals and every player, guild and alliance in it, as Albion sums them. */
+export function parseBattle(raw) {
+  if (!raw?.id || !raw.players || !raw.startTime) throw new GameinfoError("unexpected answer from Albion's killboard", 502);
+  const totals = (x) => ({ kills: num(x.kills), deaths: num(x.deaths), killFame: num(x.killFame) });
+  return {
+    id: num(raw.id),
+    startTime: raw.startTime,
+    endTime: raw.endTime || raw.startTime,
+    kills: num(raw.totalKills),
+    fame: num(raw.totalFame),
+    players: Object.values(raw.players)
+      .filter((p) => p?.id && p?.name)
+      .map((p) => ({ id: String(p.id), name: String(p.name), guildId: p.guildId || null, guildName: p.guildName || null, allianceId: p.allianceId || null, allianceName: p.allianceName || null, ...totals(p) })),
+    guilds: Object.values(raw.guilds ?? {})
+      .filter((g) => g?.id && g?.name)
+      .map((g) => ({ id: String(g.id), name: String(g.name), allianceName: g.alliance || null, ...totals(g) })),
+    alliances: Object.values(raw.alliances ?? {})
+      .filter((a) => a?.id && a?.name)
+      .map((a) => ({ id: String(a.id), name: String(a.name), ...totals(a) }))
+  };
+}
+
+const emptyStats = () => ({ damage: 0, assists: 0, healAssists: 0, itemPower: 0, weapon: null });
+
+/**
+ * Per player of one page of kills: damage done to the players who died, kills helped with (assists)
+ * and kills helped by healing, and the build they were seen in (weapon, item power). Albion's
+ * healing number per kill covers the whole time before it, so overlapping kills count it again and
+ * again: it is not summed, only whether there was any.
+ */
+export function fighterStatsOf(rawEvents) {
+  const stats = {};
+  const seen = (p) => {
+    if (!p?.Id) return null;
+    const s = (stats[p.Id] ??= emptyStats());
+    s.itemPower = Math.max(s.itemPower, Math.round(num(p.AverageItemPower)));
+    if (p.Equipment?.MainHand?.Type) s.weapon = { type: String(p.Equipment.MainHand.Type), quality: num(p.Equipment.MainHand.Quality) || 1 };
+    return s;
+  };
+  for (const e of Array.isArray(rawEvents) ? rawEvents : []) {
+    seen(e?.Killer);
+    seen(e?.Victim);
+    for (const p of Array.isArray(e?.Participants) ? e.Participants : []) {
+      const s = seen(p);
+      if (!s) continue;
+      s.damage += Math.round(num(p.DamageDone));
+      if (p.Id !== e.Killer?.Id) s.assists++;
+      if (num(p.SupportHealingDone) > 0) s.healAssists++;
+    }
+  }
+  return stats;
+}
+
+/** Adds one page's fighter stats to the running totals. */
+function addStats(total, page) {
+  for (const [id, s] of Object.entries(page)) {
+    const t = (total[id] ??= emptyStats());
+    t.damage += s.damage;
+    t.assists += s.assists;
+    t.healAssists += s.healAssists;
+    t.itemPower = Math.max(t.itemPower, s.itemPower);
+    t.weapon = s.weapon ?? t.weapon;
+  }
+  return total;
+}
+
+/**
+ * One page of a fight's kills, cut down, with the fighter stats of each kill (by kill id: the pages
+ * of a running fight can shift, a kill on two pages must count once). A failed page is not remembered.
+ */
+function getBattlePage(region, battleId, page) {
+  return remembered(`battlepage:${region}:${battleId}:${page}`, async () => {
+    const raw = await fetchJson(`${HOSTS[region]}/events/battle/${battleId}?offset=${page * BATTLE_PAGE}&limit=${BATTLE_PAGE}`);
+    const statsByKill = {};
+    for (const e of Array.isArray(raw) ? raw : []) if (e?.EventId) statsByKill[e.EventId] = fighterStatsOf([e]);
+    return { events: parseEvents(raw), statsByKill };
+  });
+}
+
+/**
+ * Everything for a battle report: the fight's totals, every kill and every fighter's damage and
+ * healing. `complete` is false when a page of kills did not load or the fight has more than
+ * BATTLE_PAGES_MAX pages.
+ */
+export async function getBattleReport(region, battleId) {
+  const started = Date.now();
+  const battle = await remembered(`battleinfo:${region}:${battleId}`, async () => parseBattle(await fetchJson(`${HOSTS[region]}/battles/${battleId}`)));
+  const wanted = Math.max(1, Math.ceil(battle.kills / BATTLE_PAGE));
+  const pages = Math.min(wanted, BATTLE_PAGES_MAX);
+  let complete = wanted <= BATTLE_PAGES_MAX;
+  const loaded = [];
+  for (let first = 0; first < pages; first += BATTLE_PAGES_AT_ONCE) {
+    if (Date.now() - started > PAGES_BUDGET_MS) {
+      complete = false;
+      break;
+    }
+    const batch = Array.from({ length: Math.min(BATTLE_PAGES_AT_ONCE, pages - first) }, (_, i) =>
+      getBattlePage(region, battleId, first + i).catch(() => {
+        complete = false;
+        return { events: [], statsByKill: {} };
+      })
+    );
+    loaded.push(...(await Promise.all(batch)));
+  }
+  const events = new Map();
+  for (const page of loaded) for (const e of page.events) events.set(e.id, e);
+  // a fight a few minutes old may have its kills listed before Albion has them ready
+  if (battle.kills > 0 && !events.size) complete = false;
+  const stats = {};
+  const counted = new Set();
+  for (const page of loaded) {
+    for (const [killId, perKill] of Object.entries(page.statsByKill)) {
+      if (counted.has(killId)) continue;
+      counted.add(killId);
+      addStats(stats, perKill);
+    }
+  }
+  return { battle, events: [...events.values()], stats, complete };
+}
+
 /** The guild's most recent fights, newest first (one page of 50). */
 export async function getBattles(region, id, offset = 0) {
   return remembered(`battles:${region}:${id}:${offset}`, async () =>

@@ -6,16 +6,23 @@
 //   cronSecret     CRON_SECRET, which Vercel Cron sends for the daily sync
 //   limiter        optional api/_lib/rateLimit.js limiter, keyed by request.client
 //   values         optional (region, itemIds) => { table, complete } (api/_lib/itemValue.js), for the killboard
+//   discord        optional { check(url), post(url, payload) } (api/_lib/guildDiscord.js), for the Discord report
 //
 //   GET  search?region=eu&q=angry        guilds whose name matches, best match first, with their kill fame
 //   GET  top?region=eu&range=week        the 5 guilds with the most kill fame this week or month
 //   GET  guild?region=eu&slug=..&id=..   one guild: info, tracking, activity, recent fights (public, cached)
 //   GET  killboard?region=eu&id=..       the guild's latest kills and deaths (public, cached)
+//   GET  battle?region=eu&id=123         one fight: alliances, guilds, players with damage and healing, every kill
+//   GET  fights?region=eu&id=..          the guild's listed fights with who of us was there (attendance)
+//   GET  hook                            the name of the signed-in player's Discord webhook
+//   POST hook-save {url}                 set it (checked with Discord, then a first message is posted)
+//   POST hook-remove                     remove it
 //   GET  mine                            the guild the signed-in player has marked
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
 //   POST unmark                          remove the mark
-//   GET  sync                            Vercel Cron: snapshot every marked guild once a day
-import { GameinfoError, TOP_RANGES, isGuildId, isRegion } from "./gameinfo.js";
+//   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
+import { GameinfoError, PAGES_BUDGET_MS, TOP_RANGES, isBattleId, isGuildId, isRegion } from "./gameinfo.js";
+import { dailyReport, isWebhookUrl } from "./guildDiscord.js";
 import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
 
@@ -24,6 +31,8 @@ export const STALE_MS = 20 * 3600 * 1000;
 // one guild can take ~17 s when the killboard is slow (2 tries of 8 s): stop starting new ones
 // early enough to stay inside the function's 60 s
 const SYNC_BUDGET_MS = 30_000;
+/** Discord reports are not started after this long (a slow Discord must not cut the run off). */
+const REPORT_BUDGET_MS = 45_000;
 const SYNC_BATCH = 40;
 const FIGHTS_SHOWN = 8;
 const KILLBOARD_SHOWN = 25;
@@ -41,6 +50,20 @@ const SEARCH_SHOWN = 10;
 const FAME_WAIT_MS = 800;
 const TOP_SHOWN = 5;
 const TOP_CACHE_S = 1800;
+/** A fight that ended this long ago no longer changes: its report is kept for hours. */
+const BATTLE_DONE_MS = 30 * 60_000;
+const BATTLE_DONE_CACHE_S = 6 * 3600;
+const BATTLE_RUNNING_CACHE_S = 120;
+/**
+ * Attendance reads the guild's listed fights back this far. A busy guild has ~100 a day, small ones
+ * included, so a longer time would take too many pages.
+ */
+const ATTENDANCE_DAYS = 7;
+/** At most this many pages of 50 fights (~8 days of a very busy guild), this many at once. */
+const ATTENDANCE_PAGES = 16;
+const ATTENDANCE_AT_ONCE = 4;
+const FIGHTS_PAGE = 50;
+const FIGHTS_CACHE_S = 600;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
@@ -374,6 +397,102 @@ async function getKillboard({ gameinfo, values }, { region, id }) {
   );
 }
 
+/** Players per guild or alliance id. */
+function countBy(players, key) {
+  const counts = new Map();
+  for (const p of players) if (p[key]) counts.set(p[key], (counts.get(p[key]) ?? 0) + 1);
+  return counts;
+}
+
+const byKillFame = (a, b) => b.killFame - a.killFame || b.kills - a.kills;
+
+/**
+ * One fight's report: every alliance, guild and player with kills, deaths and kill fame (Albion's
+ * sums), each player's damage and assists towards the kills, and every kill with its value.
+ */
+async function getBattleReport({ gameinfo, values, now }, { region, id }) {
+  if (!isBattleId(id)) return fail(400, "Pick a fight first.");
+  const { battle, events, stats, complete } = await gameinfo.getBattleReport(region, id);
+  const perGuild = countBy(battle.players, "guildId");
+  const perAlliance = countBy(battle.players, "allianceId");
+  const players = battle.players
+    .map((p) => {
+      const s = stats[p.id];
+      return { ...p, damage: s?.damage ?? 0, assists: s?.assists ?? 0, healAssists: s?.healAssists ?? 0, itemPower: s?.itemPower ?? 0, weapon: s?.weapon ?? null };
+    })
+    .sort(byKillFame);
+  let table = new Map();
+  let priced = false;
+  let pricesComplete = false;
+  if (values) {
+    try {
+      ({ table, complete: pricesComplete } = await values(region, killboardItemIds(events)));
+      priced = true;
+    } catch (error) {
+      console.error("battle prices failed", error);
+    }
+  }
+  const done = now() - Date.parse(battle.endTime) > BATTLE_DONE_MS;
+  const keep = complete && (priced || !values);
+  return ok(
+    {
+      battle: { id: battle.id, startTime: battle.startTime, endTime: battle.endTime, kills: battle.kills, fame: battle.fame, players: battle.players.length },
+      alliances: battle.alliances.map((a) => ({ ...a, players: perAlliance.get(a.id) ?? 0 })).sort(byKillFame),
+      guilds: battle.guilds.map((g) => ({ ...g, players: perGuild.get(g.id) ?? 0 })).sort(byKillFame),
+      players,
+      kills: [...events].sort((a, b) => b.time.localeCompare(a.time)).map((e) => priceEvent(e, table)),
+      complete,
+      priced,
+      pricesComplete: priced && pricesComplete
+    },
+    keep ? (done ? BATTLE_DONE_CACHE_S : BATTLE_RUNNING_CACHE_S) : 0
+  );
+}
+
+/**
+ * The guild's listed fights of the last ATTENDANCE_DAYS, newest first, each with who of the guild
+ * was there: for attendance. `complete`: the days are covered and no page failed.
+ */
+async function getFights({ gameinfo, now }, { region, id }) {
+  if (!isGuildId(id)) return fail(400, "Pick a guild first.");
+  const since = new Date(now().getTime() - ATTENDANCE_DAYS * 86_400_000).toISOString();
+  const all = [];
+  let complete = false;
+  let failed = false;
+  const started = Date.now();
+  for (let first = 0; first < ATTENDANCE_PAGES && !complete && !failed; first += ATTENDANCE_AT_ONCE) {
+    // a slow killboard: what has loaded so far, not the function's time limit
+    if (first > 0 && Date.now() - started > PAGES_BUDGET_MS) {
+      failed = true;
+      break;
+    }
+    const pages = await Promise.all(
+      Array.from({ length: Math.min(ATTENDANCE_AT_ONCE, ATTENDANCE_PAGES - first) }, (_, i) => {
+        const page = gameinfo.getBattles(region, id, (first + i) * FIGHTS_PAGE);
+        // the first page must load; a later one missing leaves the older fights out
+        return first + i === 0
+          ? page
+          : page.catch(() => {
+              failed = true;
+              return [];
+            });
+      })
+    );
+    for (const page of pages) {
+      all.push(...page);
+      // the end of the list, or back far enough
+      if (page.length < FIGHTS_PAGE || page.some((b) => b.startTime < since)) complete = true;
+    }
+  }
+  const seen = new Set();
+  const fights = all
+    .filter((b) => b.startTime >= since && b.ours.length && !seen.has(b.id) && seen.add(b.id))
+    .sort((a, b) => b.startTime.localeCompare(a.startTime))
+    .map((b) => ({ id: b.id, startTime: b.startTime, players: b.players, kills: b.kills, fame: b.fame, ours: b.ours }));
+  const whole = complete && !failed;
+  return ok({ fights, days: ATTENDANCE_DAYS, complete: whole }, whole ? FIGHTS_CACHE_S : 0);
+}
+
 /** Stores a guild's row; when another guild took the same address a moment ago, with the id bit. */
 async function saveGuildRow(store, region, info, memberCount, existing) {
   const slug = existing?.slug ?? (await uniqueSlug(store, region, info.name, info.id));
@@ -423,7 +542,7 @@ async function syncDue(deps) {
   const { store, gameinfo } = deps;
   const started = Date.now();
   const due = await store.dueGuilds(new Date(deps.now() - STALE_MS).toISOString(), SYNC_BATCH);
-  const result = { synced: 0, failed: 0, waiting: 0 };
+  const result = { synced: 0, failed: 0, waiting: 0, reports: 0 };
   for (const guild of due) {
     if (Date.now() - started > SYNC_BUDGET_MS) {
       result.waiting++;
@@ -435,13 +554,66 @@ async function syncDue(deps) {
     } catch (error) {
       result.failed++;
       console.error("guild sync failed", guild.id, error);
+      continue;
+    }
+    try {
+      if (Date.now() - started < REPORT_BUDGET_MS) result.reports += await postReports(deps, guild, started);
+    } catch (error) {
+      console.error("guild reports failed", guild.id, error);
     }
   }
   return ok(result);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "mine", "sync"]);
-const POST_ACTIONS = new Set(["mark", "unmark"]);
+/** Posts today's report of a freshly synced guild to its players' Discord webhooks; how many went out. */
+async function postReports(deps, guild, started) {
+  const { store, discord } = deps;
+  if (!discord) return 0;
+  const now = deps.now();
+  const today = dayOf(now);
+  const hooks = (await store.webhooksOfGuild(guild.id)).filter((h) => h.last_sent_on !== today);
+  if (!hooks.length) return 0;
+  const page = await getGuildPage(deps, { region: guild.region, slug: guild.slug, id: guild.id });
+  if (page.status !== 200) return 0;
+  let sent = 0;
+  for (const hook of hooks) {
+    // the rest goes out tomorrow, with the joins and leaves of both days
+    if (Date.now() - started > REPORT_BUDGET_MS) break;
+    // joins and leaves since the last report, at most a week back: a missed day is not lost
+    const since = hook.last_sent_on && hook.last_sent_on > addDays(today, -7) ? addDays(hook.last_sent_on, 1) : addDays(today, -1);
+    const outcome = await discord.post(hook.url, dailyReport(page.body, since, now));
+    if (outcome === "ok") {
+      await store.setWebhookSent(hook.user_id, today);
+      sent++;
+    } else if (outcome === "gone") {
+      await store.removeWebhook(hook.user_id);
+    }
+  }
+  return sent;
+}
+
+/** Sets the player's Discord webhook: checked with Discord, then greeted. Only its name goes back. */
+async function saveHook(deps, user, body) {
+  const { store, discord } = deps;
+  const url = String(body?.url ?? "").trim();
+  if (!isWebhookUrl(url)) return fail(400, "Paste a Discord webhook link: Server settings → Integrations → Webhooks → Copy Webhook URL.");
+  const guild = await store.getMark(user.id);
+  if (!guild) return fail(409, "Mark your guild first: the report is about the guild you marked.");
+  const name = await discord.check(url);
+  if (!name) return fail(400, "Discord does not know this webhook. Copy its link again.");
+  const hello = await discord.post(url, {
+    username: "Blackmarket Reader",
+    allowed_mentions: { parse: [] },
+    content: `Connected: the daily report of **${guild.name}** comes here every day after the guild snapshot (around 03:30 UTC).`
+  });
+  if (hello !== "ok") return fail(502, "Discord did not take the first message. Try again in a minute.");
+  await store.saveWebhook(user.id, url, name);
+  return ok({ hook: { name, lastSentOn: null } });
+}
+
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync"]);
+const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove"]);
+const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 
 export async function handleGuild(action, request, deps) {
   const { method, query = {}, body, token, authorization, client } = request;
@@ -456,10 +628,12 @@ export async function handleGuild(action, request, deps) {
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await syncDue(deps);
     }
-    if (action === "search" || action === "top" || action === "guild" || action === "killboard") {
+    if (PUBLIC_ACTIONS.has(action)) {
       if (!isRegion(region)) return fail(400, "Unknown server.");
       if (action === "guild") return await getGuildPage(deps, { region, slug: String(query.slug ?? ""), id: String(query.id ?? "") });
       if (action === "killboard") return await getKillboard(deps, { region, id: String(query.id ?? "") });
+      if (action === "battle") return await getBattleReport(deps, { region, id: String(query.id ?? "") });
+      if (action === "fights") return await getFights(deps, { region, id: String(query.id ?? "") });
       if (action === "top") {
         const range = String(query.range ?? "");
         if (!TOP_RANGES.includes(range)) return fail(400, "Unknown time range.");
@@ -473,16 +647,23 @@ export async function handleGuild(action, request, deps) {
       // a hit without its fame is not kept for long: the next search fills it in
       return ok({ guilds }, guilds.some((g) => g.killFame === null) ? 60 : SEARCH_CACHE_S);
     }
-    // mine, mark, unmark: the signed-in player
+    // mine, mark, unmark, hook: the signed-in player
     const user = token ? await deps.userFromToken(token) : null;
     if (action === "mine") {
       const row = user && deps.store ? await deps.store.getMark(user.id) : null;
       return ok({ guild: row ? guildRef(row) : null });
     }
-    if (!user) return fail(401, "Sign in to mark a guild.");
+    if (!user) return fail(401, action.startsWith("hook") ? "Sign in to set up the Discord report." : "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
     if (action === "mark") return await mark(deps, user, body);
-    return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });
+    if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });
+    if (action === "hook") {
+      const hook = await deps.store.getWebhook(user.id);
+      return ok({ hook: hook ? { name: hook.name ?? "Discord webhook", lastSentOn: hook.last_sent_on } : null });
+    }
+    if (!deps.discord) return fail(503, "The Discord report is not set up yet.");
+    if (action === "hook-save") return await saveHook(deps, user, body);
+    return ok({ removed: await deps.store.removeWebhook(user.id) });
   } catch (error) {
     if (error instanceof GameinfoError) return fail(error.status, error.status === 404 ? NOT_FOUND : "Albion's killboard is not answering right now. Try again in a minute.");
     console.error("guild api", action, error);
