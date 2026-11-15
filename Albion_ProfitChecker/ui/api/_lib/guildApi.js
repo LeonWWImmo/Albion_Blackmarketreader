@@ -151,17 +151,22 @@ async function resolveGuild({ store, gameinfo }, region, slug, id) {
   const storeOk = Boolean(store) && idRow.ok && slugRow.ok;
   if (byId) return { id, row: idRow.value?.region === region ? idRow.value : null, slugOwner: slugRow.value, storeOk };
   if (slugRow.value) return { id: slugRow.value.id, row: slugRow.value, slugOwner: slugRow.value, storeOk };
+  // found by name on the killboard: it may still be stored, under its other address
+  const found = async (foundId) => {
+    const stored = store ? await tryStore(store, () => store.getGuild(foundId)) : { ok: false, value: null };
+    return { id: foundId, row: stored.value?.region === region ? stored.value : null, slugOwner: null, storeOk: storeOk && stored.ok };
+  };
   const hits = await gameinfo.searchGuilds(region, normalizeQuery(slug.replace(/-/g, " ")));
   // two guilds with this name: the first one; its page then sends the visitor to its own address
   const exact = hits.find((g) => slugify(g.name) === slug);
-  if (exact) return { id: exact.id, row: null, slugOwner: null, storeOk };
+  if (exact) return found(exact.id);
   // "<name>-<6 letters of the id>": the address of a guild whose name another guild has too
   const suffixed = /^(.+)-([a-z0-9]{6})$/.exec(slug);
   if (!suffixed) return null;
   const [, base, suffix] = suffixed;
   const baseHits = await gameinfo.searchGuilds(region, normalizeQuery(base.replace(/-/g, " ")));
   const hit = baseHits.find((g) => slugify(g.name) === base && slugSuffix(g.id) === suffix);
-  return hit ? { id: hit.id, row: null, slugOwner: null, storeOk } : null;
+  return hit ? found(hit.id) : null;
 }
 
 /**
@@ -398,10 +403,12 @@ async function mark(deps, user, body) {
     if (other?.id === id) return ok({ guild: guildRef(other) }); // a second click that was faster
     return fail(409, other ? `You marked ${other.name} already. Unmark it first.` : "Try again in a moment.");
   }
-  // nobody had it marked: tracking starts anew, gains must not span the time without snapshots
-  if (markedBefore === 0) await store.setTrackedSince(id, today);
+  // nobody had it marked (before, or any more besides this mark): tracking starts anew, gains must
+  // not span the time without snapshots
+  const first = markedBefore === 0 || (await store.countMarks(id)) === 1;
+  if (first) await store.setTrackedSince(id, today);
   const row = await store.getGuild(id);
-  if (markedBefore === 0 || !row.last_synced_at || dayOf(row.last_synced_at) !== today) {
+  if (first || !row.last_synced_at || dayOf(row.last_synced_at) !== today) {
     try {
       await syncGuild({ store, gameinfo, guild: row, now });
     } catch (error) {

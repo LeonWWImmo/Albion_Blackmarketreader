@@ -29,6 +29,21 @@ describe("addresses of guilds that share a name", () => {
   });
 });
 
+describe("a stored guild opened by a copied address", () => {
+  it("keeps its marks when the address has the id bit and the page sends no id", async () => {
+    const { call, deps, markAs } = setup();
+    expect((await markAs("tok-ann")).status).toBe(200);
+    // a twin shows up on the killboard: search hits get the id bit, the stored guild keeps its address
+    deps.gameinfo.searchGuilds.mockResolvedValue([
+      { id: GID, name: "Angry fuzzies", allianceName: null, killFame: 0, deathFame: 0 },
+      { id: TWIN, name: "Angry Fuzzies", allianceName: null, killFame: 0, deathFame: 0 }
+    ]);
+    const page = await call("guild", { query: { region: "eu", slug: "angry-fuzzies-rcp44z" } });
+    expect(page.body.guild.id).toBe(GID);
+    expect(page.body.tracking.markedBy).toBe(1);
+  });
+});
+
 describe("answers that are not kept for everyone", () => {
   it("does not cache a guild page whose fights could not be read", async () => {
     const { call, deps } = setup();
@@ -46,6 +61,20 @@ describe("answers that are not kept for everyone", () => {
 });
 
 describe("marks", () => {
+  it("starts tracking anew when the only other marker unmarks while this mark is made", async () => {
+    const { store, markAs } = setup();
+    expect((await markAs("tok-ann")).status).toBe(200);
+    store.setTrackedSince = vi.fn(store.setTrackedSince.bind(store));
+    // counted before Bo's mark: Ann's; then Ann unmarks before Bo's mark is saved
+    const realAdd = store.addMark.bind(store);
+    store.addMark = async (userId, guildId) => {
+      await store.removeMark("user-ann");
+      return realAdd(userId, guildId);
+    };
+    expect((await markAs("tok-bo")).status).toBe(200);
+    expect(store.setTrackedSince).toHaveBeenCalled();
+  });
+
   it("answers a double click on Mark with ok, not an error", async () => {
     const { store, markAs } = setup();
     const realGetMark = store.getMark;
