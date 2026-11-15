@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameinfoError, clearGameinfoMemory, getMembers, parseBattles, parseEvents, parseGuild, parseMembers, parseSearch, searchGuilds } from "../_lib/gameinfo.js";
+import { GameinfoError, clearGameinfoMemory, getMembers, getTopGuilds, parseBattles, parseEvents, parseGuild, parseMembers, parseSearch, searchGuilds } from "../_lib/gameinfo.js";
 
 const GID = "RCp44ZeoSKKMAqC6HzLqLA";
 const rawMember = {
@@ -152,6 +152,18 @@ describe("requests", () => {
     await expect(getMembers("eu", GID)).rejects.toMatchObject({ status: 502 });
     await expect(getMembers("eu", GID)).rejects.toMatchObject({ status: 502 });
     expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("reads the period's two pages of biggest fights for the top guilds, once", async () => {
+    const page = [{ guilds: { [GID]: { id: GID, name: "Angry fuzzies", alliance: "", killFame: 5, kills: 1, deaths: 0 } } }];
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(page), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await getTopGuilds("eu", "week")).toMatchObject([{ id: GID, killFame: 10, fights: 2 }]);
+    await getTopGuilds("eu", "week");
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "https://gameinfo-ams.albiononline.com/api/gameinfo/battles?limit=51&offset=0&sort=totalfame&range=week",
+      "https://gameinfo-ams.albiononline.com/api/gameinfo/battles?limit=51&offset=51&sort=totalfame&range=week"
+    ]);
   });
 
   it("answers an unknown guild with 404 right away", async () => {

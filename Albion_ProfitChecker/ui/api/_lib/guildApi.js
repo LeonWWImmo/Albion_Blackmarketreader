@@ -7,14 +7,15 @@
 //   limiter        optional api/_lib/rateLimit.js limiter, keyed by request.client
 //   values         optional (region, itemIds) => { table, complete } (api/_lib/itemValue.js), for the killboard
 //
-//   GET  search?region=eu&q=angry        guilds whose name matches, best match first
+//   GET  search?region=eu&q=angry        guilds whose name matches, best match first, with their kill fame
+//   GET  top?region=eu&range=week        the 5 guilds with the most kill fame this week or month
 //   GET  guild?region=eu&slug=..&id=..   one guild: info, tracking, activity, recent fights (public, cached)
 //   GET  killboard?region=eu&id=..       the guild's latest kills and deaths (public, cached)
 //   GET  mine                            the guild the signed-in player has marked
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
 //   POST unmark                          remove the mark
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day
-import { GameinfoError, isGuildId, isRegion } from "./gameinfo.js";
+import { GameinfoError, TOP_RANGES, isGuildId, isRegion } from "./gameinfo.js";
 import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
 
@@ -31,6 +32,10 @@ const DEATH_FIGHTS = 4;
 const PUBLIC_CACHE_S = 300;
 const SEARCH_CACHE_S = 600;
 const SEARCH_SHOWN = 10;
+/** A search hit whose fame takes longer than this is shown without it. */
+const FAME_WAIT_MS = 1500;
+const TOP_SHOWN = 5;
+const TOP_CACHE_S = 1800;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
@@ -172,6 +177,26 @@ export function withSlugs(hits) {
     const slug = slugify(g.name);
     return { ...g, slug: count.get(slug) > 1 ? `${slug}-${slugSuffix(g.id)}` : slug };
   });
+}
+
+/** The promise's answer, or null when it takes longer than `ms` or fails. */
+function within(promise, ms) {
+  let timer;
+  const late = new Promise((resolve) => (timer = setTimeout(() => resolve(null), ms)));
+  return Promise.race([promise.catch(() => null), late]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Albion's search sends no fame: each hit's comes from its guild info, all read at once (the answer
+ * is also kept for the guild's page, which opens faster then). A slow one is left out, not waited for.
+ */
+async function withFame(gameinfo, region, hits) {
+  return Promise.all(
+    hits.map(async (g) => {
+      const info = await within(gameinfo.getGuild(region, g.id), FAME_WAIT_MS);
+      return { ...g, killFame: info ? info.killFame : null, deathFame: info ? info.deathFame : null };
+    })
+  );
 }
 
 const fightsOf = (battles) =>
@@ -384,7 +409,7 @@ async function syncDue(deps) {
   return ok(result);
 }
 
-const GET_ACTIONS = new Set(["search", "guild", "killboard", "mine", "sync"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "mine", "sync"]);
 const POST_ACTIONS = new Set(["mark", "unmark"]);
 
 export async function handleGuild(action, request, deps) {
@@ -400,14 +425,22 @@ export async function handleGuild(action, request, deps) {
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await syncDue(deps);
     }
-    if (action === "search" || action === "guild" || action === "killboard") {
+    if (action === "search" || action === "top" || action === "guild" || action === "killboard") {
       if (!isRegion(region)) return fail(400, "Unknown server.");
       if (action === "guild") return await getGuildPage(deps, { region, slug: String(query.slug ?? ""), id: String(query.id ?? "") });
       if (action === "killboard") return await getKillboard(deps, { region, id: String(query.id ?? "") });
+      if (action === "top") {
+        const range = String(query.range ?? "");
+        if (!TOP_RANGES.includes(range)) return fail(400, "Unknown time range.");
+        const guilds = withSlugs((await deps.gameinfo.getTopGuilds(region, range)).slice(0, TOP_SHOWN));
+        return ok({ range, guilds }, TOP_CACHE_S);
+      }
       const q = normalizeQuery(query.q);
       if (q.length < 2 || q.length > 40) return fail(400, "Type at least 2 letters of the guild name.");
-      const guilds = withSlugs(rankGuilds(await deps.gameinfo.searchGuilds(region, q), q).slice(0, SEARCH_SHOWN));
-      return ok({ guilds }, SEARCH_CACHE_S);
+      const hits = withSlugs(rankGuilds(await deps.gameinfo.searchGuilds(region, q), q).slice(0, SEARCH_SHOWN));
+      const guilds = await withFame(deps.gameinfo, region, hits);
+      // a hit without its fame is not kept for long: the next search fills it in
+      return ok({ guilds }, guilds.some((g) => g.killFame === null) ? 60 : SEARCH_CACHE_S);
     }
     // mine, mark, unmark: the signed-in player
     const user = token ? await deps.userFromToken(token) : null;

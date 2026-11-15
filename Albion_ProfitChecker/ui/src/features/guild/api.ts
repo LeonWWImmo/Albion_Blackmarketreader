@@ -3,7 +3,12 @@
 // keep them; only mine / mark / unmark carry the player's token.
 import type { Region } from "@shared/types";
 
-export type GuildHit = { id: string; name: string; slug: string; allianceName: string | null; killFame: number; deathFame: number };
+/** killFame and deathFame are null when the guild's info did not load in time. */
+export type GuildHit = { id: string; name: string; slug: string; allianceName: string | null; killFame: number | null; deathFame: number | null };
+/** Albion's ranges: "week" since Monday, "month" since the 1st. */
+export type TopRange = "week" | "month";
+/** A guild's kill fame, kills and deaths summed over the period's ~100 biggest fights. */
+export type TopGuild = { id: string; name: string; slug: string; allianceTag: string | null; killFame: number; kills: number; deaths: number; fights: number };
 export type GuildRef = { id: string; region: Region; slug: string; name: string };
 export type MemberStatus = "active" | "quiet" | "inactive" | "unknown";
 /** Every kind of fame Albion counts, and their sum. */
@@ -127,6 +132,8 @@ export const searchGuilds = (region: Region, q: string, signal?: AbortSignal) =>
 /** `fresh` skips the CDN copy, right after marking or unmarking. */
 export const fetchGuild = (region: Region, slug: string, id: string | null, { signal, fresh = false }: { signal?: AbortSignal; fresh?: boolean } = {}) =>
   call<GuildPageData>(`guild?region=${region}&slug=${encodeURIComponent(slug)}${id ? `&id=${encodeURIComponent(id)}` : ""}${fresh ? `&t=${Date.now()}` : ""}`, { signal });
+
+export const fetchTopGuilds = (region: Region, range: TopRange) => call<{ guilds: TopGuild[] }>(`top?region=${region}&range=${range}`).then((r) => r.guilds);
 
 export const fetchKillboard = (region: Region, id: string, signal?: AbortSignal) => call<Killboard>(`killboard?region=${region}&id=${encodeURIComponent(id)}`, { signal });
 

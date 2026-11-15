@@ -33,6 +33,10 @@ function fakeGameinfo() {
       if (id === OTHER) return { id, name: "ROMULUS", allianceTag: null, foundedAt: null, killFame: 0, deathFame: 5 };
       throw new GameinfoError("not found", 404);
     }),
+    getTopGuilds: vi.fn(async () => [
+      { id: GID, name: "Angry fuzzies", allianceTag: "BOSSS", killFame: 900, kills: 9, deaths: 2, fights: 3 },
+      { id: OTHER, name: "ROMULUS", allianceTag: null, killFame: 500, kills: 5, deaths: 7, fights: 2 }
+    ]),
     getMembers: vi.fn(async () => [member("a", "Ann"), member("b", "Bo")]),
     getBattles: vi.fn(async () => [{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, kills: 5, fame: 900, ours: [{ id: "a", name: "Ann", kills: 2, deaths: 1, killFame: 300 }] }]),
     getGuildKills: vi.fn(async () => [killEvent(11, "2026-11-14T09:00:00Z", GID, "x"), killEvent(12, "2026-11-14T11:00:00Z", GID, "x")]),

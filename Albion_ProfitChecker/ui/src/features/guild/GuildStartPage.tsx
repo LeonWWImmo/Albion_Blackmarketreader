@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Region } from "@shared/types";
 import { useSeo } from "../../shared/seo/useSeo";
-import { guildPath, normalizeQuery, searchGuilds, type GuildHit } from "./api";
+import { shortPrice } from "../price-checker/ui/format";
+import { fetchTopGuilds, guildPath, normalizeQuery, searchGuilds, type GuildHit, type TopGuild, type TopRange } from "./api";
+import { loadOnce, peek } from "./core/cache";
 import { prefetchGuild } from "./core/guildData";
 import { GUILD_TOOLS } from "./core/tools";
 import { GuildShell } from "./GuildShell";
@@ -14,6 +16,33 @@ const HOVER_PREFETCH_MS = 200;
 /** Search answers of this visit: typing back to an earlier query shows it at once. */
 const searchCache = new Map<string, GuildHit[]>();
 const SEARCH_CACHE_MAX = 50;
+/** Search filter on the guild's lifetime kill fame. */
+const FAME_FILTERS = [
+  { min: 0, label: "Any" },
+  { min: 1e7, label: "10m+" },
+  { min: 1e8, label: "100m+" },
+  { min: 1e9, label: "1b+" }
+];
+const TOP_RANGES: { key: TopRange; label: string; note: string }[] = [
+  { key: "week", label: "This week", note: "since Monday" },
+  { key: "month", label: "This month", note: "since the 1st" }
+];
+/** The top list changes slowly: a copy younger than this is not asked again. */
+const TOP_FRESH_MS = 10 * 60_000;
+const serverName = (region: Region) => (region === "eu" ? "Europe" : "America");
+
+/** Loads a guild ahead when a pointer rests on its link (passing over does not). */
+function useHoverPrefetch(region: Region) {
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  return {
+    start: (slug: string, id: string) => {
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => prefetchGuild(region, slug, id), HOVER_PREFETCH_MS);
+    },
+    end: () => window.clearTimeout(timer.current)
+  };
+}
 
 function rememberSearch(key: string, hits: GuildHit[]) {
   searchCache.delete(key);
@@ -50,6 +79,8 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
       </section>
 
       <GuildSearch region={region} setRegion={setRegion} />
+
+      <TopGuilds region={region} />
 
       <div className="gd-section-title">
         <h2>Your guild</h2>
@@ -105,6 +136,7 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [active, setActive] = useState(0);
+  const [minFame, setMinFame] = useState(0);
   const q = normalizeQuery(query);
   const cacheKey = `${region}:${q}`;
 
@@ -145,14 +177,10 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   }, [q, region, cacheKey]);
 
   const open = (hit: GuildHit) => navigate(guildPath({ region, slug: hit.slug }), { state: { id: hit.id } });
-  const hoverTimer = useRef<number | undefined>(undefined);
-  const hoverStart = (hit: GuildHit) => {
-    window.clearTimeout(hoverTimer.current);
-    hoverTimer.current = window.setTimeout(() => prefetchGuild(region, hit.slug, hit.id), HOVER_PREFETCH_MS);
-  };
-  const hoverEnd = () => window.clearTimeout(hoverTimer.current);
-  useEffect(() => () => window.clearTimeout(hoverTimer.current), []);
-  const shown = q.length >= 2 ? hits : null;
+  const hover = useHoverPrefetch(region);
+  const found = q.length >= 2 ? hits : null;
+  const shown = found && minFame ? found.filter((hit) => (hit.killFame ?? 0) >= minFame) : found;
+  const fameFilter = FAME_FILTERS.find((f) => f.min === minFame) ?? FAME_FILTERS[0];
   const optionId = (i: number) => `${listId}-${i}`;
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -190,8 +218,35 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
           ))}
         </div>
       </div>
+      <div className="gd-fame-filter">
+        <span>Kill fame</span>
+        <div className="gd-chips" role="group" aria-label="Kill fame">
+          {FAME_FILTERS.map((f) => (
+            <button
+              key={f.min}
+              type="button"
+              className={`gd-chip${f.min === minFame ? " is-on" : ""}`}
+              aria-pressed={f.min === minFame}
+              onClick={() => {
+                setMinFame(f.min);
+                setActive(0);
+              }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="gd-search-state" aria-live="polite">
-        {loading ? "Searching…" : !error && shown && !shown.length ? `No guild with that name on the ${region === "eu" ? "Europe" : "America"} server.` : ""}
+        {loading
+          ? "Searching…"
+          : error || !found
+            ? ""
+            : !found.length
+              ? `No guild with that name on the ${serverName(region)} server.`
+              : !shown?.length
+                ? `None of the ${found.length} guilds found has ${fameFilter.label} kill fame. Albion's search shows the first 10 names only: type more of the name.`
+                : ""}
       </p>
       {error ? <p className="gd-error">{error}</p> : null}
       {shown?.length ? (
@@ -205,8 +260,8 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
               className={`gd-hit${i === active ? " is-active" : ""}`}
               to={guildPath({ region, slug: hit.slug })}
               state={{ id: hit.id }}
-              onPointerEnter={() => hoverStart(hit)}
-              onPointerLeave={hoverEnd}
+              onPointerEnter={() => hover.start(hit.slug, hit.id)}
+              onPointerLeave={hover.end}
               onFocus={() => prefetchGuild(region, hit.slug, hit.id)}
               onTouchStart={() => prefetchGuild(region, hit.slug, hit.id)}
             >
@@ -214,7 +269,8 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
                 <b className="gd-guild-name">{hit.name}</b>
                 <small>
                   {hit.allianceName ? `Alliance ${hit.allianceName} · ` : ""}
-                  {region === "eu" ? "Europe" : "America"}
+                  {hit.killFame !== null ? `${shortPrice(hit.killFame)} kill fame · ` : ""}
+                  {serverName(region)}
                 </small>
               </span>
               <span className="gd-btn">Open</span>
@@ -222,6 +278,85 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
           ))}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+/** The guilds with the most kill fame this week or month: one click opens their page. */
+function TopGuilds({ region }: { region: Region }) {
+  const [range, setRange] = useState<TopRange>("week");
+  const [, setVersion] = useState(0);
+  const [error, setError] = useState("");
+  const hover = useHoverPrefetch(region);
+  const key = `top:${region}:${range}`;
+
+  useEffect(() => {
+    setError("");
+    if ((peek(key)?.age ?? Infinity) < TOP_FRESH_MS) return;
+    let live = true;
+    loadOnce(key, () => fetchTopGuilds(region, range))
+      .then(() => live && setVersion((v) => v + 1))
+      .catch((err: unknown) => live && setError(err instanceof Error ? err.message : "The top guilds could not load."));
+    return () => {
+      live = false;
+    };
+  }, [key, region, range]);
+
+  // an older copy shows at once while the new one loads
+  const guilds = peek<TopGuild[]>(key)?.data ?? null;
+  const current = TOP_RANGES.find((r) => r.key === range) ?? TOP_RANGES[0];
+
+  return (
+    <section aria-label="Top guilds">
+      <div className="gd-section-title">
+        <h2>Top guilds</h2>
+        <div className="gd-chips" role="group" aria-label="Time range">
+          {TOP_RANGES.map((r) => (
+            <button key={r.key} type="button" className={`gd-chip${r.key === range ? " is-on" : ""}`} aria-pressed={r.key === range} onClick={() => setRange(r.key)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {guilds?.length ? (
+        <ol className="gd-card gd-top">
+          {guilds.map((g, i) => (
+            <li key={g.id}>
+              <Link
+                className="gd-top-row"
+                to={guildPath({ region, slug: g.slug })}
+                state={{ id: g.id }}
+                onPointerEnter={() => hover.start(g.slug, g.id)}
+                onPointerLeave={hover.end}
+                onFocus={() => prefetchGuild(region, g.slug, g.id)}
+                onTouchStart={() => prefetchGuild(region, g.slug, g.id)}
+              >
+                <span className="gd-top-rank">{i + 1}</span>
+                <span className="gd-top-name">
+                  <b className="gd-guild-name">{g.name}</b>
+                  <small>
+                    {g.allianceTag ? `[${g.allianceTag}] · ` : ""}
+                    {g.kills.toLocaleString("en-US")} kills · {g.deaths.toLocaleString("en-US")} deaths
+                  </small>
+                </span>
+                <span className="gd-top-fame">
+                  <b>{shortPrice(g.killFame)}</b>
+                  <small>kill fame</small>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      ) : error ? (
+        <p className="gd-error">{error}</p>
+      ) : guilds ? (
+        <p className="gd-card gd-muted gd-top-empty">No big fights on the {serverName(region)} server {current.note} yet.</p>
+      ) : (
+        <div className="gd-skeleton is-row" />
+      )}
+      <p className="gd-top-note">
+        {serverName(region)} server, {current.label.toLowerCase()} ({current.note}): kill fame in the ~100 biggest fights on Albion's killboard.
+      </p>
     </section>
   );
 }

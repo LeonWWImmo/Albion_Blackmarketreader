@@ -205,6 +205,40 @@ function helpersOf(participants) {
   };
 }
 
+/** Albion's own top lists answer empty: the top guilds are summed up from the period's biggest fights. */
+export const TOP_RANGES = ["week", "month"];
+/** Pages of 51 fights read, biggest first: the ~100 biggest fights of the period. */
+const TOP_PAGES = 2;
+const TOP_KEPT = 10;
+
+/** Kill fame, kills and deaths per guild over the given fights, most kill fame first. */
+export function topGuildsOf(battles) {
+  const byGuild = new Map();
+  for (const battle of battles) {
+    for (const g of Object.values(battle?.guilds ?? {})) {
+      if (!isGuildId(g?.id) || typeof g.name !== "string") continue;
+      const total = byGuild.get(g.id) ?? { id: g.id, name: g.name, allianceTag: g.alliance || null, killFame: 0, kills: 0, deaths: 0, fights: 0 };
+      total.killFame += num(g.killFame);
+      total.kills += num(g.kills);
+      total.deaths += num(g.deaths);
+      total.fights++;
+      byGuild.set(g.id, total);
+    }
+  }
+  return [...byGuild.values()].sort((a, b) => b.killFame - a.killFame);
+}
+
+/** The guilds with the most kill fame this week (since Monday) or this month (since the 1st), as Albion counts them. */
+export async function getTopGuilds(region, range) {
+  return remembered(`top:${region}:${range}`, async () => {
+    const pages = await Promise.all(
+      Array.from({ length: TOP_PAGES }, (_, i) => fetchJson(`${HOSTS[region]}/battles?limit=51&offset=${i * 51}&sort=totalfame&range=${range}`))
+    );
+    if (!pages.every(Array.isArray)) throw new GameinfoError("unexpected answer from Albion's killboard", 502);
+    return topGuildsOf(pages.flat()).slice(0, TOP_KEPT);
+  });
+}
+
 /** The guild's latest kills (Albion's guild feed has kills only, no deaths). */
 export async function getGuildKills(region, id) {
   return remembered(`kills:${region}:${id}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/events?limit=51&offset=0&guildId=${id}`)));
