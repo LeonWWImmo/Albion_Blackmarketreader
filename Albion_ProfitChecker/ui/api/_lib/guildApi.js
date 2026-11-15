@@ -38,7 +38,7 @@ const PUBLIC_CACHE_S = 300;
 const SEARCH_CACHE_S = 600;
 const SEARCH_SHOWN = 10;
 /** A search hit whose fame takes longer than this is shown without it. */
-const FAME_WAIT_MS = 1500;
+const FAME_WAIT_MS = 800;
 const TOP_SHOWN = 5;
 const TOP_CACHE_S = 1800;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
@@ -62,9 +62,15 @@ export const slugSuffix = (id) => id.replace(/[^A-Za-z0-9]/g, "").slice(0, 6).to
 export const normalizeQuery = (q) => String(q ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 
 /** Exact name first, then names starting with the query, then the rest, each alphabetically. */
+const matchRank = (name, query) => (name.toLowerCase() === query ? 0 : name.toLowerCase().startsWith(query) ? 1 : 2);
+
 export function rankGuilds(guilds, query) {
-  const rank = (name) => (name.toLowerCase() === query ? 0 : name.toLowerCase().startsWith(query) ? 1 : 2);
-  return [...guilds].sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
+  return [...guilds].sort((a, b) => matchRank(a.name, query) - matchRank(b.name, query) || a.name.localeCompare(b.name));
+}
+
+/** Within the same name match, the guild with the most kill fame first (unknown fame after known). */
+export function rankByFame(guilds, query) {
+  return [...guilds].sort((a, b) => matchRank(a.name, query) - matchRank(b.name, query) || (b.killFame ?? -1) - (a.killFame ?? -1));
 }
 
 /** The URL part for a guild: its slugified name, with a bit of the id when another stored guild has it. */
@@ -456,7 +462,7 @@ export async function handleGuild(action, request, deps) {
       const q = normalizeQuery(query.q);
       if (q.length < 2 || q.length > 40) return fail(400, "Type at least 2 letters of the guild name.");
       const hits = withSlugs(rankGuilds(await deps.gameinfo.searchGuilds(region, q), q).slice(0, SEARCH_SHOWN));
-      const guilds = await withFame(deps.gameinfo, region, hits);
+      const guilds = rankByFame(await withFame(deps.gameinfo, region, hits), q);
       // a hit without its fame is not kept for long: the next search fills it in
       return ok({ guilds }, guilds.some((g) => g.killFame === null) ? 60 : SEARCH_CACHE_S);
     }

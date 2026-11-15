@@ -10,12 +10,14 @@ import { GUILD_TOOLS } from "./core/tools";
 import { GuildShell } from "./GuildShell";
 import { useMyGuild } from "./useMyGuild";
 
-const SEARCH_DELAY_MS = 220;
+const SEARCH_DELAY_MS = 150;
 /** A pointer resting this long on a result loads that guild ahead; passing over does not. */
 const HOVER_PREFETCH_MS = 200;
 /** Search answers of this visit: typing back to an earlier query shows it at once. */
 const searchCache = new Map<string, GuildHit[]>();
 const SEARCH_CACHE_MAX = 50;
+/** Albion's search answers at most this many guilds: a shorter answer holds every guild with that name. */
+const SEARCH_FULL = 10;
 /** Search filter on the guild's lifetime kill fame. */
 const FAME_FILTERS = [
   { min: 0, label: "Any" },
@@ -49,6 +51,25 @@ function rememberSearch(key: string, hits: GuildHit[]) {
   searchCache.set(key, hits);
   while (searchCache.size > SEARCH_CACHE_MAX) searchCache.delete(searchCache.keys().next().value as string);
 }
+
+/**
+ * The answer for "volans b" read from the one for "volans" when that one is complete (fewer than
+ * Albion's 10): every guild named "…volans b…" is named "…volans…" too. Null when no such answer.
+ */
+function fromShorterSearch(region: Region, q: string): { hits: GuildHit[]; complete: boolean } | null {
+  for (let len = q.length - 1; len >= 2; len--) {
+    const shorter = searchCache.get(`${region}:${q.slice(0, len)}`);
+    if (!shorter) continue;
+    const named = (hit: GuildHit) => normalizeQuery(hit.name);
+    const rank = (hit: GuildHit) => (named(hit) === q ? 0 : named(hit).startsWith(q) ? 1 : 2);
+    const hits = shorter.filter((hit) => named(hit).includes(q)).sort((a, b) => rank(a) - rank(b));
+    return { hits, complete: shorter.length < SEARCH_FULL };
+  }
+  return null;
+}
+
+/** A guild with no kill and no death fame at all: often a bank or alt guild of a bigger one. */
+const neverFought = (hit: GuildHit) => hit.killFame === 0 && hit.deathFame === 0;
 
 export function GuildStartPage() {
   useSeo({
@@ -137,12 +158,14 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const [error, setError] = useState("");
   const [active, setActive] = useState(0);
   const [minFame, setMinFame] = useState(0);
+  const [showQuiet, setShowQuiet] = useState(false);
   const q = normalizeQuery(query);
   const cacheKey = `${region}:${q}`;
 
   useEffect(() => {
     setError("");
     setActive(0);
+    setShowQuiet(false);
     if (q.length < 2) {
       setHits(null);
       setLoading(false);
@@ -151,6 +174,14 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
     const cached = searchCache.get(cacheKey);
     if (cached) {
       setHits(cached);
+      setLoading(false);
+      return;
+    }
+    // typing on: the guilds of the shorter name at once, and no new search when that answer was complete
+    const shorter = fromShorterSearch(region, q);
+    if (shorter) setHits(shorter.hits);
+    if (shorter?.complete) {
+      rememberSearch(cacheKey, shorter.hits);
       setLoading(false);
       return;
     }
@@ -179,7 +210,11 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const open = (hit: GuildHit) => navigate(guildPath({ region, slug: hit.slug }), { state: { id: hit.id } });
   const hover = useHoverPrefetch(region);
   const found = q.length >= 2 ? hits : null;
-  const shown = found && minFame ? found.filter((hit) => (hit.killFame ?? 0) >= minFame) : found;
+  const famous = found && minFame ? found.filter((hit) => (hit.killFame ?? 0) >= minFame) : found;
+  // guilds that never fought are folded away while others did
+  const fought = famous?.filter((hit) => !neverFought(hit)) ?? [];
+  const quiet = famous && fought.length && !showQuiet ? famous.length - fought.length : 0;
+  const shown = quiet ? fought : famous;
   const fameFilter = FAME_FILTERS.find((f) => f.min === minFame) ?? FAME_FILTERS[0];
   const optionId = (i: number) => `${listId}-${i}`;
 
@@ -277,6 +312,11 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
             </Link>
           ))}
         </div>
+      ) : null}
+      {quiet ? (
+        <button type="button" className="gd-hits-more" onClick={() => setShowQuiet(true)}>
+          + {quiet} {quiet === 1 ? "guild" : "guilds"} without any kill or death, often bank or alt guilds
+        </button>
       ) : null}
     </section>
   );

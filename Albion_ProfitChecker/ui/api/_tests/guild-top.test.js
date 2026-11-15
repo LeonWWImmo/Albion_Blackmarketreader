@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GameinfoError, topGuildsOf } from "../_lib/gameinfo.js";
+import { rankByFame } from "../_lib/guildApi.js";
 import { GID, OTHER, setup } from "./guild-kit.js";
 
 const fight = (guilds) => ({ guilds: Object.fromEntries(guilds.map((g) => [g.id, g])) });
@@ -38,6 +39,12 @@ describe("search with fame", () => {
     const { call } = setup();
     const res = await call("search", { query: { region: "eu", q: "angry" } });
     expect(res).toMatchObject({ maxAge: 600, body: { guilds: [{ id: GID, killFame: 610, deathFame: 811 }] } });
+  });
+
+  it("ranks the same name match by kill fame, unknown fame last", () => {
+    const g = (name, killFame) => ({ name, killFame });
+    const ranked = rankByFame([g("Volans Bank", 0), g("Volans Academy", null), g("Volans Lymhurst", 9), g("volans", 0), g("The Volans", 50)], "volans");
+    expect(ranked.map((x) => x.name)).toEqual(["volans", "Volans Lymhurst", "Volans Bank", "Volans Academy", "The Volans"]);
   });
 
   it("shows a hit without fame when its info fails, and keeps that answer only briefly", async () => {
