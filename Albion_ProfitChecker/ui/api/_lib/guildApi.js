@@ -29,6 +29,11 @@ const FIGHTS_SHOWN = 8;
 const KILLBOARD_SHOWN = 25;
 /** Recent fights with our deaths whose kills are read for the killboard's deaths. */
 const DEATH_FIGHTS = 4;
+/**
+ * Albion lists only bigger fights per guild, so most deaths are read from the members' own death
+ * lists: of the members who played most recently, this many.
+ */
+const DEATH_PLAYERS = 20;
 const PUBLIC_CACHE_S = 300;
 const SEARCH_CACHE_S = 600;
 const SEARCH_SHOWN = 10;
@@ -310,12 +315,25 @@ async function getKillboard({ gameinfo, values }, { region, id }) {
     complete = false;
     return [];
   };
-  const [kills, battles] = await Promise.all([gameinfo.getGuildKills(region, id), gameinfo.getBattles(region, id).catch(partial)]);
-  // Albion's guild feed has kills only: deaths come from the kills of the latest fights we lost people in
+  const [kills, battles, members] = await Promise.all([
+    gameinfo.getGuildKills(region, id),
+    gameinfo.getBattles(region, id).catch(partial),
+    gameinfo.getMembers(region, id).catch(partial)
+  ]);
+  // Albion's guild feed has kills only: deaths come from the members who played last (their own
+  // death lists) and from the latest listed fights we lost people in
   const lost = battles.filter((b) => b.ours.some((p) => p.deaths > 0)).slice(0, DEATH_FIGHTS);
-  const fightKills = await Promise.all(lost.map((b) => gameinfo.getBattleEvents(region, b.id).catch(partial)));
+  const recent = members
+    .filter((m) => m.deathFame > 0)
+    .sort((a, b) => (b.statsAt ?? "").localeCompare(a.statsAt ?? ""))
+    .slice(0, DEATH_PLAYERS);
+  const lists = await Promise.all([
+    ...lost.map((b) => gameinfo.getBattleEvents(region, b.id).catch(partial)),
+    ...recent.map((m) => gameinfo.getPlayerDeaths(region, m.id).catch(partial))
+  ]);
   const deaths = new Map();
-  for (const event of fightKills.flat()) if (event.victim.guildId === id) deaths.set(event.id, event);
+  // only deaths while in this guild
+  for (const event of lists.flat()) if (event.victim.guildId === id) deaths.set(event.id, event);
   const newestFirst = (a, b) => b.time.localeCompare(a.time);
   const shownKills = kills.filter((e) => e.killer.guildId === id).sort(newestFirst).slice(0, KILLBOARD_SHOWN);
   const shownDeaths = [...deaths.values()].sort(newestFirst).slice(0, KILLBOARD_SHOWN);

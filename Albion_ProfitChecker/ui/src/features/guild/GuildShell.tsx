@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
 import { useToolAccount } from "@shared/account/useToolAccount";
@@ -12,7 +12,9 @@ import "./guild.css";
 export function GuildShell({ children }: { children: (region: Region, setRegion: (next: Region) => void) => ReactNode }) {
   const { pathname } = useLocation();
   const [region, setRegion] = useRegion();
-  const { meta, layers } = useToolAccount(pathname, null, region, setRegion);
+  const { meta, layers, faction } = useToolAccount(pathname, null, region, setRegion);
+  // the account's faction colour; without one the tools' own accent (guild.css)
+  const accent = faction ? ({ "--gd-accent": faction.accent, "--gd-accent-rgb": faction.accentRgb } as CSSProperties) : undefined;
 
   useEffect(() => {
     document.body.classList.add("guild-body");
@@ -21,9 +23,9 @@ export function GuildShell({ children }: { children: (region: Region, setRegion:
   }, []);
 
   return (
-    <div className="gd-root">
+    <div className="gd-root" style={accent}>
       <header className="bm-header">
-        <MobileNavBurger accent="#a78bfa" />
+        <MobileNavBurger accent="var(--gd-accent)" />
         <div className="bm-header-row">
           <div className="bm-brand">
             <div className="bm-brand-home">

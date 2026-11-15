@@ -5,12 +5,13 @@
 
    /guild: find a guild, your guild, the tools.
    /guild/<region>/<guild>[/<tab>]: the guild card, its tabs (Overview, Activity, ...).
-   Same frame and panels as the Price Checker; violet marks the guild section.
+   Same frame and panels as the Price Checker. The accent is the account's faction colour
+   (set on .gd-root by GuildShell), else the tools' own accent.
    =========================================================================== */
 
 body.guild-body {
   background:
-    radial-gradient(60% 45% at 50% -8%, rgba(167, 139, 250, 0.15), transparent 70%),
+    radial-gradient(60% 45% at 50% -8%, rgba(var(--fx-accent-rgb), 0.12), transparent 70%),
     radial-gradient(40% 35% at 100% 30%, rgba(45, 212, 191, 0.05), transparent 70%),
     linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px) 0 0 / 100% 44px,
     linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px) 0 0 / 44px 100%,
@@ -19,8 +20,8 @@ body.guild-body {
 }
 
 .gd-root {
-  --gd-accent: #a78bfa;
-  --gd-accent-rgb: 167, 139, 250;
+  --gd-accent: var(--fx-accent);
+  --gd-accent-rgb: var(--fx-accent-rgb);
   --gd-green: #4ade80;
   --gd-gold: #f5c451;
   --gd-red: #f87171;

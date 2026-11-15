@@ -15,6 +15,7 @@ import {
   needsRegionChoice,
   useFactionTheme
 } from "../index";
+import type { Faction } from "../theme/factions";
 
 type Region = "eu" | "us";
 type UserState = { id: string; email: string | null; avatar: string; region: Region | null };
@@ -53,7 +54,8 @@ function readStoredRegion(): Region | null {
  * Everything the tools share around the page itself, as on the Gold Tracker: guest or signed-in
  * session, the server question on a first visit, the faction style picker, the region pill and
  * account panel in the header, the community tile and the guide link.
- * Returns the header's right side (`meta`) and the overlays to render once (`layers`).
+ * Returns the header's right side (`meta`), the overlays to render once (`layers`) and the account's
+ * faction (null without one), for a tool that colours itself after it.
  */
 export function useToolAccount(
   /** this tool's path, where login sends the visitor back to, e.g. "/loot-split" */
@@ -62,11 +64,11 @@ export function useToolAccount(
   guide: ToolSlug | null,
   region: Region,
   setRegion: (next: Region) => void
-): { meta: ReactNode; layers: ReactNode } {
+): { meta: ReactNode; layers: ReactNode; faction: Faction | null } {
   const NEXT = encodeURIComponent(path);
   const [authService, setAuthService] = useState<AuthService | null>(null);
   const [user, setUser] = useState<UserState | null>(null);
-  useFactionTheme(user?.avatar ?? null);
+  const faction = useFactionTheme(user?.avatar ?? null);
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
@@ -353,5 +355,5 @@ export function useToolAccount(
     </>
   );
 
-  return { meta, layers };
+  return { meta, layers, faction };
 }

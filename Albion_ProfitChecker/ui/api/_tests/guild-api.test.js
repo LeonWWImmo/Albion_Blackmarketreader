@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { GameinfoError } from "../_lib/gameinfo.js";
 import { STALE_MS, normalizeQuery, rankGuilds } from "../_lib/guildApi.js";
 import { createMemoryGuildStore } from "../_lib/guildMemoryStore.js";
-import { GID, NOW, OTHER, member, setup } from "./guild-kit.js";
+import { GID, NOW, OTHER, killEvent, member, setup } from "./guild-kit.js";
 
 describe("search", () => {
   it("finds guilds by name and checks the input", async () => {
@@ -97,6 +97,33 @@ describe("killboard", () => {
     expect(res.body.deaths.map((e) => e.id)).toEqual([21]); // event 22 in the same fight was a kill of ours
     expect(deps.gameinfo.getBattleEvents).toHaveBeenCalledWith("eu", 1);
     expect((await call("killboard", { query: { region: "eu", id: "bad" } })).status).toBe(400);
+  });
+
+  it("also reads the deaths of the members who played last, once each, only those in this guild", async () => {
+    const { call, deps } = setup();
+    const day = (i) => `2026-11-${String(i + 1).padStart(2, "0")}T00:00:00Z`;
+    const members = Array.from({ length: 22 }, (_, i) => ({ ...member(`p${i}`, `P${i}`), deathFame: i === 0 ? 0 : 100, statsAt: day(i) }));
+    deps.gameinfo.getMembers.mockResolvedValue(members);
+    deps.gameinfo.getPlayerDeaths.mockImplementation(async (region, playerId) =>
+      playerId === "p21"
+        ? [killEvent(21, "2026-11-14T10:01:00Z", "x", GID), killEvent(31, "2026-11-14T11:30:00Z", "x", GID), killEvent(32, "2026-11-14T11:40:00Z", "x", "another guild")]
+        : []
+    );
+    const res = await call("killboard", { query: { region: "eu", id: GID } });
+    // newest first; 21 is in the fight and in the member's list, shown once; 32 was in another guild
+    expect(res.body.deaths.map((e) => e.id)).toEqual([31, 21]);
+    const asked = deps.gameinfo.getPlayerDeaths.mock.calls.map(([, id]) => id);
+    expect(asked).toHaveLength(20);
+    expect(asked[0]).toBe("p21"); // the most recently active first
+    expect(asked).not.toContain("p0"); // never died
+    expect(asked).not.toContain("p1"); // the 21st most recently active
+  });
+
+  it("still shows the board when a member's deaths cannot be read, without keeping it for everyone", async () => {
+    const { call, deps } = setup();
+    deps.gameinfo.getMembers.mockResolvedValue([{ ...member("a", "Ann"), deathFame: 5 }]);
+    deps.gameinfo.getPlayerDeaths.mockRejectedValue(new GameinfoError("down", 502));
+    expect(await call("killboard", { query: { region: "eu", id: GID } })).toMatchObject({ status: 200, maxAge: 0, body: { deaths: [{ id: 21 }] } });
   });
 
   it("still shows the kills when a fight cannot be read", async () => {

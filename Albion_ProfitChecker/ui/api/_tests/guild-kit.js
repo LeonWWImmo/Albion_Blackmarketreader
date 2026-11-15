@@ -40,6 +40,7 @@ function fakeGameinfo() {
     getMembers: vi.fn(async () => [member("a", "Ann"), member("b", "Bo")]),
     getBattles: vi.fn(async () => [{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, kills: 5, fame: 900, ours: [{ id: "a", name: "Ann", kills: 2, deaths: 1, killFame: 300 }] }]),
     getGuildKills: vi.fn(async () => [killEvent(11, "2026-11-14T09:00:00Z", GID, "x"), killEvent(12, "2026-11-14T11:00:00Z", GID, "x")]),
+    getPlayerDeaths: vi.fn(async () => []),
     getBattleEvents: vi.fn(async (region, battleId) => [killEvent(21, "2026-11-14T10:01:00Z", "x", GID, battleId), killEvent(22, "2026-11-14T10:02:00Z", GID, "x", battleId)])
   };
 }

@@ -244,6 +244,11 @@ export async function getGuildKills(region, id) {
   return remembered(`kills:${region}:${id}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/events?limit=51&offset=0&guildId=${id}`)));
 }
 
+/** A player's latest deaths (Albion keeps the last 10). */
+export async function getPlayerDeaths(region, playerId) {
+  return remembered(`deaths:${region}:${playerId}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/players/${playerId}/deaths`)));
+}
+
 /** Every kill of one fight, both sides. */
 export async function getBattleEvents(region, battleId) {
   return remembered(`battle:${region}:${battleId}`, async () => parseEvents(await fetchJson(`${HOSTS[region]}/events/battle/${battleId}?offset=0&limit=51`)));

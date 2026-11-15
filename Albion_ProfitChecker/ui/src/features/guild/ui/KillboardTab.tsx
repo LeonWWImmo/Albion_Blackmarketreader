@@ -37,7 +37,9 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
   const [board, setBoard] = useState<Killboard | null>(() => cachedKillboard(region, id));
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
-  const [side, setSide] = useState<"kills" | "deaths">("kills");
+  const [side, setSide] = useState<"kills" | "deaths" | null>(null);
+  // until a side is picked: the kills, or the deaths when there are no kills
+  const shown = side ?? (board && !board.kills.length && board.deaths.length ? "deaths" : "kills");
   const [search, setSearch] = useState("");
   const [minValue, setMinValue] = useState(0);
   const [area, setArea] = useState("all");
@@ -57,7 +59,7 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
   const events = useMemo(() => {
     if (!board) return [];
     const needle = search.trim().toLowerCase();
-    const list = (side === "kills" ? board.kills : board.deaths).filter(
+    const list = (shown === "kills" ? board.kills : board.deaths).filter(
       (e) =>
         e.value >= minValue &&
         (area === "all" || e.area === area) &&
@@ -69,7 +71,7 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
       fame: (a, b) => b.fame - a.fame
     };
     return [...list].sort(by[sort]);
-  }, [board, side, search, minValue, area, sort]);
+  }, [board, shown, search, minValue, area, sort]);
 
   if (!board) {
     return error ? (
@@ -114,10 +116,10 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
       <section className="gd-card">
         <div className="gd-list-head">
           <div className="gd-chips" role="group" aria-label="Show">
-            <button type="button" className={`gd-chip${side === "kills" ? " is-on" : ""}`} aria-pressed={side === "kills"} onClick={() => setSide("kills")}>
+            <button type="button" className={`gd-chip${shown === "kills" ? " is-on" : ""}`} aria-pressed={shown === "kills"} onClick={() => setSide("kills")}>
               Kills {board.kills.length}
             </button>
-            <button type="button" className={`gd-chip${side === "deaths" ? " is-on" : ""}`} aria-pressed={side === "deaths"} onClick={() => setSide("deaths")}>
+            <button type="button" className={`gd-chip${shown === "deaths" ? " is-on" : ""}`} aria-pressed={shown === "deaths"} onClick={() => setSide("deaths")}>
               Deaths {board.deaths.length}
             </button>
           </div>
@@ -158,7 +160,7 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
             ))}
           </ul>
         ) : (
-          <p className="gd-empty">{search || minValue || area !== "all" ? "Nothing matches these filters." : side === "kills" ? "No kills on the killboard lately." : "No deaths in the latest fights."}</p>
+          <p className="gd-empty">{search || minValue || area !== "all" ? "Nothing matches these filters." : shown === "kills" ? "No kills on the killboard lately." : "No deaths on the killboard lately."}</p>
         )}
         <p className="gd-foot">
           <span>
