@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { findGuideBySlug, GUIDES } from "@shared/content/toolContentData";
+import { childGuides, findGuideBySlug, GUIDES, TOOL_CONTENT } from "@shared/content/toolContentData";
 import { assetUrl } from "@shared/assets/assets";
 import { DemoVideo } from "@shared/ui/DemoVideo";
 import { useSeo } from "../shared/seo/useSeo";
@@ -16,6 +16,31 @@ function anchorId(heading: string): string {
     .replace(/^-|-$/g, "");
 }
 
+/** A guide picture full size over the page: closed by Escape, the button or a click anywhere. */
+function ZoomedImage({ src, title, onClose }: { src: string; title: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [onClose]);
+  return (
+    <div className="guide-zoom" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
+      <button type="button" className="guide-zoom-close" aria-label="Close" autoFocus onClick={onClose}>
+        ×
+      </button>
+      <figure onClick={onClose}>
+        <img src={src} alt={title} />
+        <figcaption>{title}</figcaption>
+      </figure>
+    </div>
+  );
+}
+
 /**
  * A guide in two layers. On top, for someone who has never seen the tool: one sentence, a short
  * clip of it in use and three picture steps. Below, folded away, the full explanation with the
@@ -26,6 +51,7 @@ export function GuidePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const found = findGuideBySlug(slug);
+  const [zoom, setZoom] = useState<{ src: string; title: string } | null>(null);
 
   /**
    * Back arrow. Returns to wherever the reader came from, but a visitor who landed here
@@ -75,6 +101,10 @@ export function GuidePage() {
   const { toolSlug, entry } = found;
   const { sections, faq, quick } = entry;
   const toolLabel = entry.guide.toolLabel;
+  const toolPath = entry.guide.toolPath ?? `/${toolSlug}`;
+  // a guide with a guide per part (the guild tools and their tabs): all of them, on each of them
+  const family = entry.guide.parent ?? toolSlug;
+  const parts = childGuides(family);
 
   return (
     <div className="guide-page">
@@ -88,7 +118,7 @@ export function GuidePage() {
           <button
             type="button"
             className="guide-back"
-            onClick={() => goBack(`/${toolSlug}`)}
+            onClick={() => goBack(toolPath)}
             aria-label={`Back to the ${toolLabel}`}
             title={`Back to the ${toolLabel}`}
           >
@@ -102,7 +132,7 @@ export function GuidePage() {
           <span className="guide-kicker">{toolLabel} guide</span>
           <h1>{entry.guide.h1}</h1>
           <p className="guide-lede">{quick.tagline}</p>
-          <Link className="guide-cta" to={`/${toolSlug}`}>
+          <Link className="guide-cta" to={toolPath}>
             Open the {toolLabel}
             <span aria-hidden="true"> &rarr;</span>
           </Link>
@@ -114,7 +144,7 @@ export function GuidePage() {
             <DemoVideo
               src={assetUrl(quick.video)}
               poster={assetUrl(quick.poster)}
-              url={`blackmarketreader.com/${toolSlug}`}
+              url={`blackmarketreader.com${toolPath}`}
               label={`Short clip: the ${toolLabel} in use`}
             />
           </section>
@@ -125,7 +155,15 @@ export function GuidePage() {
           <ol className="guide-steps">
             {quick.steps.map((step, i) => (
               <li key={step.title} className="guide-step">
-                <img src={assetUrl(step.image)} alt="" loading="lazy" width={800} height={500} />
+                {/* a click shows the picture big, to read what is on it */}
+                <button type="button" className="guide-step-zoom" onClick={() => setZoom({ src: assetUrl(step.image), title: step.title })} aria-label={`Show bigger: ${step.title}`}>
+                  <img src={assetUrl(step.image)} alt="" loading="lazy" width={800} height={500} />
+                  <span className="guide-step-zoom-hint" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                      <path d="M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12zm10 16-5.2-5.2M10 7v6M7 10h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </button>
                 <div className="guide-step-text">
                   <span className="guide-step-n" aria-hidden="true">{i + 1}</span>
                   <h3>{step.title}</h3>
@@ -135,6 +173,27 @@ export function GuidePage() {
             ))}
           </ol>
         </section>
+
+        {parts.length ? (
+          <section className="guide-parts" aria-labelledby="guide-parts-title">
+            <h2 id="guide-parts-title">{entry.guide.parent ? `More ${TOOL_CONTENT[family]?.guide.toolLabel ?? ""} guides` : "A guide for each tab"}</h2>
+            <ul className="guide-parts-list">
+              {[...(entry.guide.parent ? [{ toolSlug: family, ...TOOL_CONTENT[family].guide }] : []), ...parts]
+                .filter((g) => g.slug !== entry.guide.slug)
+                .map((g) => (
+                  <li key={g.slug}>
+                    <Link to={`/guides/${g.slug}`} className="guide-part">
+                      <img src={assetUrl(TOOL_CONTENT[g.toolSlug].quick.poster)} alt="" loading="lazy" width={320} height={200} />
+                      <span>
+                        <small>{g.toolLabel}</small>
+                        <b>{g.h1}</b>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ) : null}
 
         <section className="guide-cheats" aria-labelledby="guide-cheats-title">
           <h2 id="guide-cheats-title">The numbers in one look</h2>
@@ -187,10 +246,12 @@ export function GuidePage() {
           ))}
         </section>
 
+        {zoom ? <ZoomedImage src={zoom.src} title={zoom.title} onClose={() => setZoom(null)} /> : null}
+
         <aside className="guide-more">
           <h2>More Albion Online guides</h2>
           <ul>
-            {GUIDES.filter((g) => g.slug !== entry.guide.slug).map((g) => (
+            {GUIDES.filter((g) => g.slug !== entry.guide.slug && !g.parent).map((g) => (
               <li key={g.slug}>
                 <Link to={`/guides/${g.slug}`}>{g.h1}</Link>
               </li>

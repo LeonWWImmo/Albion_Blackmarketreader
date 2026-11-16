@@ -120,6 +120,21 @@ export function createGuildStore(db) {
       if (paid) must(await db.from("guild_regear_paid").upsert({ user_id: userId, region, battle_id: battleId, event_id: eventId }, { onConflict: "user_id,region,event_id" }));
       else must(await db.from("guild_regear_paid").delete().eq("user_id", userId).eq("region", region).eq("event_id", eventId));
     },
+    /** The fights a player marked to regear in one guild, newest mark first. */
+    async listRegearFights(userId, region, guildId) {
+      return must(
+        await db.from("guild_regear_fights").select("battle_id, info, created_at").eq("user_id", userId).eq("region", region).eq("guild_id", guildId).order("created_at", { ascending: false })
+      ).map((r) => ({ battle_id: Number(r.battle_id), info: r.info, created_at: r.created_at }));
+    },
+    async countRegearFights(userId) {
+      const { count, error } = await db.from("guild_regear_fights").select("battle_id", { count: "exact", head: true }).eq("user_id", userId);
+      if (error) throw new Error(`database: ${error.message}`);
+      return count ?? 0;
+    },
+    async setRegearFight(userId, region, guildId, battleId, info, at) {
+      if (info) must(await db.from("guild_regear_fights").upsert({ user_id: userId, region, guild_id: guildId, battle_id: battleId, info, created_at: at }, { onConflict: "user_id,region,battle_id" }));
+      else must(await db.from("guild_regear_fights").delete().eq("user_id", userId).eq("region", region).eq("battle_id", battleId));
+    },
     async getBankLog(userId, guildId) {
       const row = must(await db.from("guild_bank_logs").select("rows").eq("user_id", userId).eq("guild_id", guildId).maybeSingle());
       return row?.rows ?? [];

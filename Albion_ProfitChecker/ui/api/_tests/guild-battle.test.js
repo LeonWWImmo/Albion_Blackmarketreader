@@ -196,7 +196,7 @@ describe("Discord report webhook", () => {
     const saved = await call("hook-save", { method: "POST", token: "tok-ann", body: { url: ` ${HOOK} ` } });
     expect(saved).toMatchObject({ status: 200, body: { hook: { name: "Guild news" } } });
     expect(JSON.stringify(saved.body)).not.toContain("webhooks");
-    expect(deps.discord.post).toHaveBeenCalledWith(HOOK, expect.objectContaining({ content: expect.stringContaining("Angry fuzzies") }));
+    expect(deps.discord.post.mock.calls.find(([url]) => url === HOOK)[1].embeds[0].description).toContain("**Angry fuzzies**");
     expect(store.webhooks.get("user-ann")).toMatchObject({ url: HOOK, name: "Guild news" });
     const read = await call("hook", { token: "tok-ann" });
     expect(read.body).toEqual({ hook: { name: "Guild news", lastSentOn: null } });
@@ -227,7 +227,7 @@ describe("Discord report webhook", () => {
     const sync = await call("sync", { authorization: "Bearer cron-123" });
     expect(sync.body).toMatchObject({ synced: 1, reports: 1 });
     const [, report] = deps.discord.post.mock.calls.find(([url]) => url === HOOK);
-    expect(report.embeds[0]).toMatchObject({ title: "Angry fuzzies: daily report", url: "https://blackmarketreader.com/guild/eu/angry-fuzzies/activity" });
+    expect(report.embeds[0]).toMatchObject({ title: "🛡️ [BOSSS] Angry fuzzies", url: "https://blackmarketreader.com/guild/eu/angry-fuzzies/activity" });
     expect(store.webhooks.get("user-ann").last_sent_on).toBe("2026-11-15");
     expect(store.webhooks.has("user-bo")).toBe(false);
     // the same day again: nothing more

@@ -1,5 +1,5 @@
-// What a signed-in player keeps for themselves in the Guild section: regear paid ticks, their pasted
-// chest log and their saved loot splits. Private per account: nobody else reads them, also not
+// What a signed-in player keeps for themselves in the Guild section: regear paid ticks, the fights
+// they marked to regear, their pasted chest log and their saved loot splits. Private per account: nobody else reads them, also not
 // another player who marked the same guild. Everything the browser sends is checked and trimmed
 // here before it is stored.
 import { isBattleId, isGuildId, isRegion } from "./gameinfo.js";
@@ -7,6 +7,9 @@ import { isBattleId, isGuildId, isRegion } from "./gameinfo.js";
 /** Chest log rows kept per guild: months of a busy guild chest. */
 export const BANK_ROWS_MAX = 20_000;
 export const SPLITS_MAX = 200;
+/** Fights a player can keep marked, over all guilds. */
+export const REGEAR_FIGHTS_MAX = 500;
+const SPLIT_RUNS_MAX = 50;
 const SPLIT_ITEMS_MAX = 2_000;
 const SPLIT_PLAYERS_MAX = 100;
 const TEXT_MAX = 120;
@@ -46,7 +49,22 @@ export function splitData(data) {
     .filter((p) => p.name && !seen.has(p.name.toLowerCase()) && seen.add(p.name.toLowerCase()));
   if (!players.length || players.length > SPLIT_PLAYERS_MAX) return null;
   const pct = typeof data.guildPct === "number" && Number.isFinite(data.guildPct) ? Math.min(100, Math.max(0, data.guildPct)) : 0;
-  return { from: time(data.from), to: time(data.to), total: silver(data.total), guildPct: pct, guildCut: silver(data.guildCut), items, players };
+  // the runs the split is made of (one or more pieces of the chest log)
+  const runs = (Array.isArray(data.runs) ? data.runs : [])
+    .slice(0, SPLIT_RUNS_MAX)
+    .map((r) => ({ from: time(r?.from), to: time(r?.to) }))
+    .filter((r) => r.from && r.to && r.from <= r.to);
+  return { from: time(data.from), to: time(data.to), runs, total: silver(data.total), guildPct: pct, guildCut: silver(data.guildCut), items, players };
+}
+
+/** What the fight list shows of a marked fight, from what the browser sends. */
+export function fightInfo(info) {
+  if (!info || typeof info !== "object") return null;
+  const start = typeof info.startTime === "string" && !Number.isNaN(Date.parse(info.startTime)) ? new Date(info.startTime).toISOString() : null;
+  if (!start) return null;
+  const count = (value) => int(value, 0, 100_000) ?? 0;
+  const enemy = text(info.enemy);
+  return { startTime: start, players: count(info.players), ours: count(info.ours), kills: count(info.kills), deaths: count(info.deaths), enemy: enemy || null };
 }
 
 const splitOut = (row) => ({ id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at, data: row.data });
@@ -66,6 +84,28 @@ export async function handlePrivate(action, { query, body }, { store, now }, use
     if (!isRegion(region) || !isBattleId(battle) || !EVENT_ID.test(event)) return fail(400, "Pick a death first.");
     await store.setRegearPaid(user.id, region, Number(battle), Number(event), body?.paid === true);
     return ok({ paid: body?.paid === true });
+  }
+  if (action === "regear-fights") {
+    const region = String(query.region ?? "");
+    const guild = String(query.guild ?? "");
+    if (!isRegion(region) || !isGuildId(guild)) return fail(400, "Pick a guild first.");
+    const rows = await store.listRegearFights(user.id, region, guild);
+    return ok({ fights: rows.map((r) => ({ id: r.battle_id, markedAt: r.created_at, ...r.info })) });
+  }
+  if (action === "regear-mark") {
+    const region = String(body?.region ?? "");
+    const guild = String(body?.guild ?? "");
+    const battle = String(body?.battle ?? "");
+    if (!isRegion(region) || !isGuildId(guild) || !isBattleId(battle)) return fail(400, "Pick a fight first.");
+    if (body?.marked !== true) {
+      await store.setRegearFight(user.id, region, guild, Number(battle), null);
+      return ok({ marked: false });
+    }
+    const info = fightInfo(body?.fight);
+    if (!info) return fail(400, "Pick a fight first.");
+    if ((await store.countRegearFights(user.id)) >= REGEAR_FIGHTS_MAX) return fail(409, `You have ${REGEAR_FIGHTS_MAX} marked fights. Unmark old ones first.`);
+    await store.setRegearFight(user.id, region, guild, Number(battle), info, now().toISOString());
+    return ok({ marked: true });
   }
   if (action === "bank") {
     const guild = String(query.guild ?? "");

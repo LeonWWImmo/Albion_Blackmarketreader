@@ -2,6 +2,7 @@ import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
 import { useToolAccount } from "@shared/account/useToolAccount";
+import { TOOL_CONTENT, type ToolSlug } from "@shared/content/toolContentData";
 import { useRegion } from "@shared/region/useRegion";
 import type { Region } from "@shared/types";
 import { MobileNavBurger, ToolNav } from "../../shared";
@@ -13,7 +14,10 @@ import "./guild.css";
 export function GuildShell({ children }: { children: (region: Region, setRegion: (next: Region) => void) => ReactNode }) {
   const { pathname } = useLocation();
   const [region, setRegion] = useRegion();
-  const { meta, layers, faction } = useToolAccount(pathname, "guild", region, setRegion);
+  // the guide of the open tab (/guild/<region>/<guild>/<tab>), else the guild tools' guide
+  const tab = pathname.split("/")[4] ?? "";
+  const guide = (`guild-${tab}` in TOOL_CONTENT ? `guild-${tab}` : "guild") as ToolSlug;
+  const { meta, layers, faction } = useToolAccount(pathname, guide, region, setRegion);
   // the account's faction colour; without one the tools' own accent (guild.css)
   const accent = faction ? ({ "--gd-accent": faction.accent, "--gd-accent-rgb": faction.accentRgb } as CSSProperties) : undefined;
 

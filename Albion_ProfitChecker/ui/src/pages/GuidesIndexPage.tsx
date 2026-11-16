@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { GUIDES, TOOL_CONTENT } from "@shared/content/toolContentData";
+import { childGuides, GUIDES, TOOL_CONTENT } from "@shared/content/toolContentData";
 import { assetUrl } from "@shared/assets/assets";
 import { useSeo } from "../shared/seo/useSeo";
 import "./guides.css";
@@ -38,7 +38,8 @@ export function GuidesIndexPage() {
         </header>
 
         <ul className="guide-index-list">
-          {GUIDES.map((guide) => (
+          {/* the guides of a tool's parts (the guild tabs) are listed under that tool's card */}
+          {GUIDES.filter((guide) => !guide.parent).map((guide) => (
             <li key={guide.slug}>
               <Link to={`/guides/${guide.slug}`} className="guide-index-card">
                 <span className="guide-index-thumb">
@@ -49,6 +50,15 @@ export function GuidesIndexPage() {
                 <h2>{guide.h1}</h2>
                 <p>{TOOL_CONTENT[guide.toolSlug].quick.tagline}</p>
               </Link>
+              {childGuides(guide.toolSlug).length ? (
+                <ul className="guide-index-sub">
+                  {childGuides(guide.toolSlug).map((g) => (
+                    <li key={g.slug}>
+                      <Link to={`/guides/${g.slug}`}>{g.toolLabel}</Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           ))}
         </ul>

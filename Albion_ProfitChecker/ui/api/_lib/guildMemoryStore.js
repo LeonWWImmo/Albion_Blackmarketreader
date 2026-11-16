@@ -7,6 +7,7 @@ export function createMemoryGuildStore() {
   const snapshots = new Map();
   const webhooks = new Map(); // user id -> { user_id, url, name, last_sent_on }
   const regearPaid = new Map(); // "user:region:event" -> row
+  const regearFights = new Map(); // "user:region:battle" -> row
   const bankLogs = new Map(); // "user:guild" -> rows
   const splits = new Map(); // id -> row
   const all = () => [...guilds.values()];
@@ -68,6 +69,15 @@ export function createMemoryGuildStore() {
       const key = `${userId}:${region}:${eventId}`;
       if (paid) regearPaid.set(key, { user_id: userId, region, battle_id: battleId, event_id: eventId });
       else regearPaid.delete(key);
+    },
+    regearFights,
+    listRegearFights: async (userId, region, guildId) =>
+      [...regearFights.values()].filter((r) => r.user_id === userId && r.region === region && r.guild_id === guildId).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    countRegearFights: async (userId) => [...regearFights.values()].filter((r) => r.user_id === userId).length,
+    setRegearFight: async (userId, region, guildId, battleId, info, at) => {
+      const key = `${userId}:${region}:${battleId}`;
+      if (info) regearFights.set(key, { user_id: userId, region, guild_id: guildId, battle_id: battleId, info, created_at: at });
+      else regearFights.delete(key);
     },
     getBankLog: async (userId, guildId) => bankLogs.get(`${userId}:${guildId}`) ?? [],
     saveBankLog: async (userId, guildId, rows) => {

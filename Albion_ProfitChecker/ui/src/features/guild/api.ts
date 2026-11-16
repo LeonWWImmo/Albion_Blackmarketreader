@@ -209,6 +209,15 @@ export const fetchRegearPaid = (token: string, region: Region, battle: number) =
 export const setRegearPaid = (token: string, region: Region, battle: number, event: number, paid: boolean) =>
   call<{ paid: boolean }>("regear-pay", { token, method: "POST", body: { region, battle, event, paid } });
 
+/** A fight the player marked to regear: what the fight list shows of it, kept with the mark. */
+export type MarkedFight = { id: number; markedAt: string; startTime: string; players: number; ours: number; kills: number; deaths: number; enemy: string | null };
+
+export const fetchRegearFights = (token: string, region: Region, guild: string) =>
+  call<{ fights: MarkedFight[] }>(`regear-fights?region=${region}&guild=${encodeURIComponent(guild)}`, { token }).then((r) => r.fights);
+
+export const setRegearFight = (token: string, region: Region, guild: string, fight: Omit<MarkedFight, "markedAt">, marked: boolean) =>
+  call<{ marked: boolean }>("regear-mark", { token, method: "POST", body: { region, guild, battle: fight.id, fight, marked } });
+
 /** A chest log row as stored: [time (null when unknown), player, item, enchant, quality, amount]. */
 export type BankRow = [number | null, string, string, number, number, number];
 
@@ -220,6 +229,8 @@ export const saveBankLog = (token: string, guild: string, rows: BankRow[]) => ca
 export type SplitData = {
   from: number | null;
   to: number | null;
+  /** the pieces of the chest log the split is made of; empty in splits saved before there were several */
+  runs?: { from: number; to: number }[];
   total: number;
   guildPct: number;
   guildCut: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BANK_ROWS_MAX, bankRow, splitData } from "../_lib/guildPrivate.js";
+import { BANK_ROWS_MAX, bankRow, fightInfo, splitData } from "../_lib/guildPrivate.js";
 import { GID, NOW, setup } from "./guild-kit.js";
 
 const SPLIT = {
@@ -35,6 +35,20 @@ describe("a player's own guild data", () => {
     expect((await call("regear-paid", { token: "tok-bo", query: { region: "eu", battle: "7" } })).body).toEqual({ events: [] });
     expect((await call("regear-paid", { token: "tok-ann", query: { region: "us", battle: "7" } })).body).toEqual({ events: [] });
     expect((await pay("tok-ann", "1; drop")).status).toBe(400);
+  });
+
+  it("keeps the fights a player marked to regear, per guild and private to that player", async () => {
+    const { call } = setup();
+    const fight = { startTime: "2026-11-14T20:00:00Z", players: 120, ours: 30, kills: 12, deaths: 9, enemy: "[ALLY] Foes" };
+    const mark = (token, battle, marked = true) => call("regear-mark", { method: "POST", token, body: { region: "eu", guild: GID, battle, fight, marked } });
+    expect((await mark("tok-ann", 7)).body).toEqual({ marked: true });
+    await mark("tok-ann", 8);
+    await mark("tok-ann", 8, false);
+    const list = await call("regear-fights", { token: "tok-ann", query: { region: "eu", guild: GID } });
+    expect(list.body.fights).toEqual([{ id: 7, markedAt: NOW.toISOString(), ...fight, startTime: "2026-11-14T20:00:00.000Z" }]);
+    expect((await call("regear-fights", { token: "tok-bo", query: { region: "eu", guild: GID } })).body.fights).toEqual([]);
+    expect((await call("regear-fights", { query: { region: "eu", guild: GID } })).body.error).toMatch(/mark fights/);
+    expect((await call("regear-mark", { method: "POST", token: "tok-ann", body: { region: "eu", guild: GID, battle: 9, fight: {}, marked: true } })).status).toBe(400);
   });
 
   it("stores the chest log per player and guild, and drops rows that are not log rows", async () => {
@@ -93,6 +107,17 @@ describe("checking what the browser sends", () => {
     expect(bankRow([1, "Ann", "Rune", 0, 1, 0])).toBeNull();
     expect(bankRow([1, "Ann", "Rune", 5, 1, 1])).toBeNull();
     expect(bankRow({})).toBeNull();
+  });
+
+  it("keeps a marked fight's numbers and nothing else", () => {
+    expect(fightInfo({ startTime: "2026-11-14T20:00:00Z", players: -1, kills: 3, extra: "x", enemy: "  " })).toEqual({ startTime: "2026-11-14T20:00:00.000Z", players: 0, ours: 0, kills: 3, deaths: 0, enemy: null });
+    expect(fightInfo({ startTime: "soon" })).toBeNull();
+  });
+
+  it("keeps the runs a split is made of", () => {
+    const data = splitData({ ...SPLIT, runs: [{ from: 1, to: 5 }, { from: 9, to: 3 }, "x", { from: 10, to: 20 }] });
+    expect(data.runs).toEqual([{ from: 1, to: 5 }, { from: 10, to: 20 }]);
+    expect(splitData(SPLIT).runs).toEqual([]);
   });
 
   it("keeps one row per player name, and the numbers in range", () => {

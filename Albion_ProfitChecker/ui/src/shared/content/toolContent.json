@@ -1025,7 +1025,7 @@
         },
         {
           "title": "Use the tabs",
-          "text": "Battles, attendance, regear, bank log and loot splits, and a daily report in your Discord.",
+          "text": "Each tab has its own guide below: activity, killboard, battles, attendance, regear, bank log and the Discord report.",
           "image": "picture/guides/guild-3.jpg"
         }
       ]
@@ -1061,8 +1061,8 @@
       {
         "heading": "Regear after a big fight",
         "paragraphs": [
-          "Pick the fight: the size chips (20+, 50+, 100+ players) find the ZvZ or castle fight of the last 7 days. The regear list shows every death of the guild with its gear and what it was worth on your server. Count the bag too adds the bag's contents.",
-          "Click a player for the details: every item with its value, the bag, how they did in the fight (kills, damage, heal) and who killed them. Copy open list gives player, silver and items for your regear channel; the shopping list sums up the gear to buy.",
+          "Pick the fight: the size chips (20+, 50+, 100+ players) find the ZvZ or castle fight of the last 7 days. Mark this fight keeps it under ★ Marked in your account, also after the 7 days. The regear list shows every death of the guild with its gear and what it was worth on your server. Count the bag too adds the bag's contents.",
+          "Click a row for the details: every item with its value, the bag, how they did in the fight (kills, damage, heal) and who killed them. Copy open list gives player, silver and items for your regear channel; the shopping list sums up the gear to buy.",
           "Signed in, tick each death once it is paid. The ticks are saved to your account, so they are still there tomorrow and on your phone."
         ]
       },
@@ -1070,13 +1070,13 @@
         "heading": "Bank log and loot splits",
         "paragraphs": [
           "Paste the guild chest log (in the game: open the chest, Log, Copy). The Bank log shows per player what they put in and took out and what it was worth. Paste a new copy now and then: rows already there are skipped, so the log grows past what Albion itself keeps.",
-          "Split a loot run: pick the run (the deposits of a mass loot trip, found by the pauses in the log, or set from and to yourself), check who is in it, set the guild's cut and save it. A saved split keeps the prices of the day it was saved; tick each player when they got their silver."
+          "Split loot runs: tick one or more runs (the deposits of a mass loot trip, found by the pauses in the log, or a time set by hand), tick who is in, set the guild's cut and save it. The saved split opens with a box per player: tick each when they got their silver. A split keeps the prices of the day it was saved."
         ]
       },
       {
         "heading": "Daily report in Discord",
         "paragraphs": [
-          "Mark your guild, then paste a Discord webhook link in the Discord tab (Server settings, Integrations, Webhooks, New Webhook, Copy Webhook URL). Every day after the guild's snapshot, between 03:30 and 04:30 UTC, the report goes there: active, quiet and inactive members, who joined and left, and the top fame gainers of the week. It pings nobody."
+          "Mark your guild, then paste a Discord webhook link in the Discord tab (Server settings, Integrations, Webhooks, New Webhook, Copy Webhook URL). Every day after the guild's snapshot, between 03:30 and 04:30 UTC, the report goes there: a bar of active, quiet and inactive members, who joined and left, the fights of the last day and the top fame gainers of the week. It pings nobody."
         ]
       },
       {
@@ -1114,7 +1114,8 @@
       "title": "Albion Online Guild Tools Guide: Activity, Battles, Regear, Bank Log and Loot Splits | Blackmarket Reader",
       "description": "How to run your Albion Online guild with free tools: member activity, battle reports, attendance, regear lists after a ZvZ, the guild chest log, loot splits and a daily Discord report.",
       "keywords": "Albion Online guild tools, Albion guild activity, Albion regear calculator, Albion battle report, Albion guild attendance, Albion guild bank log, Albion loot split",
-      "toolLabel": "Guild Tools"
+      "toolLabel": "Guild Tools",
+      "toolPath": "/guild"
     },
     "summary": {
       "intro": "Search any guild and see its activity, fights and killboard live from Albion. Sign in to mark your guild for daily snapshots, and keep regear ticks, a chest log and loot splits in your account.",
@@ -1142,5 +1143,618 @@
         "Ideas and wishes are welcome on our Discord."
       ]
     }
+  },
+  "guild-activity": {
+    "title": "How to see who is active in your Albion Online guild",
+    "quick": {
+      "tagline": "Every member with their status, the fame they gained and when they last played: find who went quiet before the next kick round.",
+      "video": "",
+      "poster": "picture/guides/guild-activity-1.jpg",
+      "steps": [
+        {
+          "title": "See every member's status",
+          "text": "Active played in the last 3 days, quiet 3 to 13 days, inactive 14 days or more. The cards on top count them.",
+          "image": "picture/guides/guild-activity-1.jpg"
+        },
+        {
+          "title": "Filter the inactive ones",
+          "text": "The Inactive chip shows only them. Copy inactive list gives names and days for your officer channel.",
+          "image": "picture/guides/guild-activity-2.jpg"
+        },
+        {
+          "title": "Open a member",
+          "text": "Click a row: fame by kind (PvE, PvP, gathering, crafting), PvE by zone, gathering by resource and when they last fought.",
+          "image": "picture/guides/guild-activity-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-activity-tracker",
+      "h1": "How to see who is active in your Albion Online guild",
+      "title": "Albion Online Guild Activity Tracker: Active, Quiet and Inactive Members | Blackmarket Reader",
+      "description": "Find the inactive members of your Albion Online guild: status per member, fame gained per week and month, who joined and who left, and a list to copy before a kick round.",
+      "keywords": "Albion Online guild activity, Albion inactive members, Albion guild tracker, Albion guild kick list, Albion fame per week",
+      "toolLabel": "Guild Activity",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "Every member with their status, the fame they gained and when they last played: find who went quiet before the next kick round.",
+      "cards": [
+        {
+          "label": "Status",
+          "formula": "days since last fame gained",
+          "text": "Active: under 3 days. Quiet: 3 to 13. Inactive: 14 and more."
+        },
+        {
+          "label": "Fame this week",
+          "formula": "fame now - fame 7 days ago",
+          "text": "Needs daily snapshots: mark the guild, the columns fill from the next day."
+        },
+        {
+          "label": "New and left",
+          "formula": "today's members vs yesterday's",
+          "text": "Who joined and who left, seen by the daily snapshot of a marked guild."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Mark your guild first: the 7-day and 30-day columns need snapshots.",
+        "Find a member by name with the search field.",
+        "The Left the guild list shows who is gone, with the day."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "What the status means",
+        "paragraphs": [
+          "Albion has no last login time, so the page reads when a member last gained fame: a kill, PvE, gathering, crafting. Active means fame in the last 3 days, quiet 3 to 13 days, inactive 14 days or more. A member who only trades or talks shows as quiet or inactive."
+        ]
+      },
+      {
+        "heading": "Fame gained per week and month",
+        "paragraphs": [
+          "Albion only tells the total fame of a member. Once you mark the guild, its members' fame is saved every day; the 7-day and 30-day columns are the difference. They fill in from the day after marking, the 30-day column after a month."
+        ]
+      },
+      {
+        "heading": "Kick lists",
+        "paragraphs": [
+          "The Inactive chip filters the list, Copy inactive list copies name and days since they last played, one per line. Paste it in your officer channel before a kick round."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why are the 7-day columns empty?",
+        "a": "They need two daily snapshots. Sign in, mark the guild, and they fill in from the next day."
+      },
+      {
+        "q": "Is a quiet member really inactive?",
+        "a": "Not always: someone who only trades or crafts little may gain little fame. Look at the details before kicking."
+      }
+    ]
+  },
+  "guild-killboard": {
+    "title": "How to read your Albion Online guild killboard",
+    "quick": {
+      "tagline": "The guild's latest kills and deaths, each with its silver value, the builds on both sides, the bag and who helped.",
+      "video": "",
+      "poster": "picture/guides/guild-killboard-1.jpg",
+      "steps": [
+        {
+          "title": "Kills and deaths at a glance",
+          "text": "Kills, silver taken, deaths and silver lost on top; every kill below, newest first. Green is a kill, red a death.",
+          "image": "picture/guides/guild-killboard-1.jpg"
+        },
+        {
+          "title": "Sort and filter",
+          "text": "Kills or deaths only, by value (100k+, 1m+, 10m+), by area, or sort by most valuable or most fame. Find a player or guild by name.",
+          "image": "picture/guides/guild-killboard-2.jpg"
+        },
+        {
+          "title": "Open a kill",
+          "text": "Click it for both builds with the value per item, the victim's bag and the damage and heal of every helper.",
+          "image": "picture/guides/guild-killboard-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-killboard",
+      "h1": "How to read your Albion Online guild killboard",
+      "title": "Albion Online Guild Killboard: Kills, Deaths and Silver Lost | Blackmarket Reader",
+      "description": "The latest kills and deaths of any Albion Online guild with what each was worth in silver, the builds of killer and victim, the bag and who helped.",
+      "keywords": "Albion Online killboard, Albion guild killboard, Albion kill value, Albion death value, Albion builds",
+      "toolLabel": "Guild Killboard",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "The guild's latest kills and deaths, each with its silver value, the builds on both sides, the bag and who helped.",
+      "cards": [
+        {
+          "label": "Kill value",
+          "formula": "victim's gear + bag x market price",
+          "text": "Prices of your server: the cheapest believable sell order of the last 3 days."
+        },
+        {
+          "label": "Silver lost",
+          "formula": "sum of the deaths' values",
+          "text": "What the guild's dead had on them."
+        },
+        {
+          "label": "Group",
+          "formula": "players in the killer's party",
+          "text": "How many took part in the kill."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Sort by Most valuable to find the big losses.",
+        "A kill in a listed fight links to the full battle report.",
+        "The killboard is live from Albion: no sign-in needed."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Where it comes from",
+        "paragraphs": [
+          "Everything is read live from Albion's own killboard for the server you picked (Europe or America). The page shows the guild's latest events; older ones are on the Battles tab inside their fights."
+        ]
+      },
+      {
+        "heading": "The values",
+        "paragraphs": [
+          "Each item is priced with the market data of your server (Albion Online Data Project): the cheapest believable sell order of the last 3 days. An item nobody sells counts as 0, so the real value can be a little higher."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why is a kill missing?",
+        "a": "Albion's killboard lists kills a few minutes late, and lists the latest events only. Big fights are complete on the Battles tab."
+      },
+      {
+        "q": "Can I see another guild?",
+        "a": "Yes, any guild: search it on the Guild page."
+      }
+    ]
+  },
+  "guild-battles": {
+    "title": "How to read an Albion Online battle report for your guild",
+    "quick": {
+      "tagline": "The guild's fights of the last 7 days, and for each a full report: sides, best players, damage, heal and every kill.",
+      "video": "",
+      "poster": "picture/guides/guild-battles-1.jpg",
+      "steps": [
+        {
+          "title": "Pick a fight",
+          "text": "Newest first, with the main enemy, how many of the guild were there, kills and deaths. The size chips find the big ones.",
+          "image": "picture/guides/guild-battles-1.jpg"
+        },
+        {
+          "title": "Who fought",
+          "text": "Sides as Albion's players see them: an alliance with all its guilds counts as one side. Your side is marked, with who came out ahead.",
+          "image": "picture/guides/guild-battles-2.jpg"
+        },
+        {
+          "title": "Best players and everyone",
+          "text": "Most kills, damage, assists and heal; then every player with kills, deaths, fame, damage and heal. Filter by guild.",
+          "image": "picture/guides/guild-battles-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-battle-report",
+      "h1": "How to read an Albion Online battle report for your guild",
+      "title": "Albion Online Battle Report: Your Guild's Fights, Sides and Best Players | Blackmarket Reader",
+      "description": "Every fight of an Albion Online guild in the last 7 days: who fought on which side, the best players, damage and heal per player and every kill with its value.",
+      "keywords": "Albion Online battle report, Albion battleboard, Albion ZvZ report, Albion guild fights, Albion damage meter",
+      "toolLabel": "Guild Battles",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "The guild's fights of the last 7 days, and for each a full report: sides, best players, damage, heal and every kill.",
+      "cards": [
+        {
+          "label": "Side",
+          "formula": "alliance, else guild",
+          "text": "All guilds of one alliance fight as one side."
+        },
+        {
+          "label": "Damage",
+          "formula": "damage to players who died",
+          "text": "Albion counts damage on kills only, not on players who got away."
+        },
+        {
+          "label": "Result",
+          "formula": "kills vs deaths of your side",
+          "text": "Ahead, behind or even."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Own page opens the report on its own address: share it in Discord.",
+        "Use 20+ or 50+ players to skip the small skirmishes.",
+        "Every kill of the fight is at the bottom, with its value."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Which fights are listed",
+        "paragraphs": [
+          "Albion's killboard lists a fight per guild when enough players took part. The tab shows the fights of the last 7 days; single deaths are on the Killboard tab."
+        ]
+      },
+      {
+        "heading": "Sharing a report",
+        "paragraphs": [
+          "Own page opens the report at /guild/battle/<server>/<id>. The link shows the fight from your guild's side, for anyone you send it to."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why is heal so low?",
+        "a": "Albion only counts heal that helped a kill, not all heal of the fight."
+      },
+      {
+        "q": "Can I see fights older than 7 days?",
+        "a": "Not yet in the list. A marked fight in the Regear tab stays there longer."
+      }
+    ]
+  },
+  "guild-attendance": {
+    "title": "How to track ZvZ attendance in your Albion Online guild",
+    "quick": {
+      "tagline": "How many of the guild's fights each member was in, over the days and fight size you pick, and who was in none.",
+      "video": "",
+      "poster": "picture/guides/guild-attendance-1.jpg",
+      "steps": [
+        {
+          "title": "The numbers on top",
+          "text": "Fights counted, members who took part, members in none and the average of us per fight.",
+          "image": "picture/guides/guild-attendance-1.jpg"
+        },
+        {
+          "title": "Pick the time and size",
+          "text": "24 hours, 3 or 7 days, and count only fights with at least 10, 20 or 50 players to see who shows up for the ZvZs.",
+          "image": "picture/guides/guild-attendance-2.jpg"
+        },
+        {
+          "title": "The fights behind it",
+          "text": "The list of the counted fights below, with players, kills and deaths. Copy who was in none for your officers.",
+          "image": "picture/guides/guild-attendance-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-attendance",
+      "h1": "How to track ZvZ attendance in your Albion Online guild",
+      "title": "Albion Online Guild Attendance: Who Shows Up for Fights | Blackmarket Reader",
+      "description": "See who of your Albion Online guild was in its fights: fights per member over 24 hours, 3 or 7 days, only bigger fights if you like, and who was in none.",
+      "keywords": "Albion Online attendance, Albion ZvZ attendance, Albion guild attendance tracker, Albion CTA attendance",
+      "toolLabel": "Guild Attendance",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "How many of the guild's fights each member was in, over the days and fight size you pick, and who was in none.",
+      "cards": [
+        {
+          "label": "% of fights",
+          "formula": "fights with them / fights counted",
+          "text": "59 of 260 fights is 23%."
+        },
+        {
+          "label": "Took part",
+          "formula": "members in at least one fight",
+          "text": "Of the current members."
+        },
+        {
+          "label": "Average",
+          "formula": "our players per fight",
+          "text": "How many of the guild a fight usually has."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Count only 20+ player fights for CTA and ZvZ attendance.",
+        "Copy who was in none before an activity check.",
+        "The 7-day view reads up to 100 fights a day."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "How it is counted",
+        "paragraphs": [
+          "The page reads the guild's fights from Albion's killboard for the days you pick and checks which members were in each. A member counts as there when Albion lists them in the fight: they killed, died, or helped a kill."
+        ]
+      },
+      {
+        "heading": "Limits",
+        "paragraphs": [
+          "A member who was there but never touched a kill is not listed by Albion, so the real attendance can be a little higher. Fights older than 7 days are not read yet."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Why is a member at 0 who was there?",
+        "a": "Albion lists a player in a fight only when they killed, died or helped a kill. Healers who never got an assist can be missing."
+      },
+      {
+        "q": "Can it go back further than 7 days?",
+        "a": "Not yet: it is read live from the killboard."
+      }
+    ]
+  },
+  "guild-regear": {
+    "title": "How to do regears for your Albion Online guild",
+    "quick": {
+      "tagline": "Pick the fight, see every death of the guild with what the gear was worth, tick who is paid and buy what is missing.",
+      "video": "",
+      "poster": "picture/guides/guild-regear-1.jpg",
+      "steps": [
+        {
+          "title": "Pick and mark the fight",
+          "text": "Size chips (20+, 50+, 100+ players) find the ZvZ of the last 7 days. Mark this fight keeps it under ★ Marked, also after the 7 days.",
+          "image": "picture/guides/guild-regear-1.jpg"
+        },
+        {
+          "title": "The regear list",
+          "text": "Every death with gear, value and killer. Count the bag too adds the bag. Signed in, tick each death once it is paid.",
+          "image": "picture/guides/guild-regear-2.jpg"
+        },
+        {
+          "title": "Details of a death",
+          "text": "Click a row: every item with its value, the bag, kills, damage and heal in the fight, and who killed them.",
+          "image": "picture/guides/guild-regear-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-regear-calculator",
+      "h1": "How to do regears for your Albion Online guild",
+      "title": "Albion Online Regear Calculator: Regear List After a ZvZ | Blackmarket Reader",
+      "description": "Regear after a ZvZ or castle fight in Albion Online: every death of your guild with its gear value, the bag, details per death, paid ticks, marked fights and a shopping list.",
+      "keywords": "Albion Online regear, Albion regear calculator, Albion regear list, Albion ZvZ regear, Albion CTA regear",
+      "toolLabel": "Guild Regear",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "Pick the fight, see every death of the guild with what the gear was worth, tick who is paid and buy what is missing.",
+      "cards": [
+        {
+          "label": "Regear",
+          "formula": "gear (+ bag) x market price",
+          "text": "The cheapest believable sell order of the last 3 days, per item, on your server."
+        },
+        {
+          "label": "Still to pay",
+          "formula": "regear of deaths not ticked",
+          "text": "Ticks are saved to your account."
+        },
+        {
+          "label": "Shopping list",
+          "formula": "gear of open deaths, per item",
+          "text": "What to buy for the regear; bags are paid in silver."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Mark the fight right after the CTA: you find it again under ★ Marked.",
+        "Copy open list gives player, silver and items for your regear channel.",
+        "Filter by IP to regear only proper sets."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Picking the fight",
+        "paragraphs": [
+          "The fights of the last 7 days with deaths of the guild, newest first. The size chips count all players of both sides, so 50+ finds the ZvZs. Mark this fight saves it to your account: it stays under ★ Marked with its date and numbers, also when it is older than 7 days."
+        ]
+      },
+      {
+        "heading": "The list and the ticks",
+        "paragraphs": [
+          "Every death of the guild in the fight, with the gear, its value and who killed them. Signed in, tick a death once it is paid: the ticks are saved to your account and are there tomorrow and on your phone. Still to pay sums the deaths not ticked yet."
+        ]
+      },
+      {
+        "heading": "Copy and buy",
+        "paragraphs": [
+          "Copy open list copies player, silver and the items, one death per line. The shopping list sums up the gear of the open deaths per item: what to buy on the market."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Who sees my ticks and marked fights?",
+        "a": "Only you: they are saved to your account. Shared regear lists for officers are planned."
+      },
+      {
+        "q": "Why is a death missing?",
+        "a": "Albion lists a fight's kills a few minutes late; try again soon. Single deaths outside listed fights are on the Killboard tab."
+      }
+    ]
+  },
+  "guild-bank": {
+    "title": "How to split mass loot from the Albion Online guild chest",
+    "quick": {
+      "tagline": "Paste the chest log, see who put in and took out what, split loot runs between the players and tick who got their silver.",
+      "video": "",
+      "poster": "picture/guides/guild-bank-1.jpg",
+      "steps": [
+        {
+          "title": "Add the chest log",
+          "text": "In the game: chest, Log, Copy; paste it here. Per player: put in, taken out and the balance in silver. Pasting again adds new rows.",
+          "image": "picture/guides/guild-bank-1.jpg"
+        },
+        {
+          "title": "Split one or more runs",
+          "text": "Tick the runs (or set a time by hand), tick who is in, set the guild's cut. The loot shows with icons and values; save it.",
+          "image": "picture/guides/guild-bank-2.jpg"
+        },
+        {
+          "title": "Tick who got paid",
+          "text": "The saved split opens with a box per player. Tick each once paid, Everyone paid, or copy who is not paid yet.",
+          "image": "picture/guides/guild-bank-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-bank-log",
+      "h1": "How to split mass loot from the Albion Online guild chest",
+      "title": "Albion Online Guild Bank Log and Loot Split: Chest Log per Player | Blackmarket Reader",
+      "description": "Paste the Albion Online guild chest log: see what each player put in and took out, split one or more loot runs between the players, save it and tick who got paid.",
+      "keywords": "Albion Online guild bank log, Albion chest log, Albion loot split, Albion mass loot split, Albion guild chest",
+      "toolLabel": "Guild Bank Log",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "Paste the chest log, see who put in and took out what, split loot runs between the players and tick who got their silver.",
+      "cards": [
+        {
+          "label": "Loot",
+          "formula": "what is left in the chest x price",
+          "text": "Items put in during the runs minus taken out, at instant sale prices."
+        },
+        {
+          "label": "Each gets",
+          "formula": "(loot - guild cut) / players",
+          "text": "Equal shares."
+        },
+        {
+          "label": "Balance",
+          "formula": "put in - taken out",
+          "text": "Per player, in silver."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Paste the log after every run: Albion keeps only the latest rows.",
+        "Pick several runs for one split when a trip had breaks.",
+        "Players who only took out start unticked."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "The chest log",
+        "paragraphs": [
+          "Open the guild chest in the game, Log, Copy, and paste it. The page reads every row (time, player, item, amount) and saves it to your account, per guild. Pasting again skips rows that are already there, so the log grows past what Albion itself shows."
+        ]
+      },
+      {
+        "heading": "Runs",
+        "paragraphs": [
+          "The page finds the runs by the pauses in the log: deposits close together are one run. Tick one or more runs for a split, or set a time by hand. The loot is what is still in the chest from those runs: put in minus taken out."
+        ]
+      },
+      {
+        "heading": "Players and paid ticks",
+        "paragraphs": [
+          "Everyone who put loot in is ticked; players who only took out are not. Add someone who put nothing in by name. After saving, the split opens with a box per player: tick each once they got their silver. Splits keep the prices of the day they were saved."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Who sees my chest log and splits?",
+        "a": "Only you: they are saved to your account. Shared splits for the whole guild are planned."
+      },
+      {
+        "q": "Why does an item count as 0?",
+        "a": "Nobody sells or buys it on your server right now, so it has no price."
+      }
+    ]
+  },
+  "guild-discord": {
+    "title": "How to get a daily Albion Online guild report in Discord",
+    "quick": {
+      "tagline": "Every morning a report of your guild in your Discord channel: members, joins and leaves, the last day's fights and the top fame gainers.",
+      "video": "",
+      "poster": "picture/guides/guild-discord-1.jpg",
+      "steps": [
+        {
+          "title": "Mark your guild",
+          "text": "Sign in and press ☆ Mark on your guild: it gets a daily snapshot, and the report is about the guild you marked.",
+          "image": "picture/guides/guild-discord-1.jpg"
+        },
+        {
+          "title": "Paste a webhook link",
+          "text": "In Discord: Server settings, Integrations, Webhooks, New Webhook, Copy Webhook URL. Paste it in the Discord tab and press Connect.",
+          "image": "picture/guides/guild-discord-2.jpg"
+        },
+        {
+          "title": "Get the report every day",
+          "text": "Between 03:30 and 04:30 UTC: a member bar, joins and leaves, fights of the last 24 hours, top fame and links. It pings nobody.",
+          "image": "picture/guides/guild-discord-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-online-guild-discord-report",
+      "h1": "How to get a daily Albion Online guild report in Discord",
+      "title": "Albion Online Guild Report in Discord: Daily Activity, Fights and Fame | Blackmarket Reader",
+      "description": "A daily report of your Albion Online guild in your Discord: active, quiet and inactive members, who joined and left, the fights of the last day and the top fame gainers.",
+      "keywords": "Albion Online Discord bot, Albion guild Discord report, Albion guild webhook, Albion Discord guild tracker",
+      "toolLabel": "Guild Discord Report",
+      "toolPath": "/guild",
+      "parent": "guild"
+    },
+    "summary": {
+      "intro": "Every morning a report of your guild in your Discord channel: members, joins and leaves, the last day's fights and the top fame gainers.",
+      "cards": [
+        {
+          "label": "When",
+          "formula": "daily, 03:30 to 04:30 UTC",
+          "text": "Right after the guild's snapshot."
+        },
+        {
+          "label": "Joined and left",
+          "formula": "since the last report",
+          "text": "A missed day is caught up, up to a week back."
+        },
+        {
+          "label": "Pings",
+          "formula": "none",
+          "text": "The report mentions nobody."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Make a channel just for the report.",
+        "A first message comes right away when you connect.",
+        "Remove or change the webhook in the Discord tab any time."
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Setting it up",
+        "paragraphs": [
+          "Mark your guild, open the Discord tab and paste the webhook link of the channel the report should go to. The link is checked with Discord and a first message is posted right away. The page never shows the link again, only its name."
+        ]
+      },
+      {
+        "heading": "What it posts",
+        "paragraphs": [
+          "One message a day: the members as a bar of active, quiet and inactive, who joined and who left since the last report, the fights of the last 24 hours with kills and deaths, the five members with the most fame in 7 days and links to the guild's tabs."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Can two players send the report to two servers?",
+        "a": "Yes: each player sets their own webhook for the guild they marked."
+      },
+      {
+        "q": "The report did not come. Why?",
+        "a": "Discord may have deleted the webhook, or the daily run was late. Check the Discord tab: it shows when the last report went out."
+      }
+    ]
   }
 }

@@ -36,11 +36,32 @@ function nameList(names) {
   return text;
 }
 
+const ICON = `${SITE}/apple-touch-icon.png`;
+const BAR_CELLS = 12;
+const MEDALS = ["🥇", "🥈", "🥉"];
+const REGION = { eu: "Europe", us: "America" };
+const DAY_MS = 86_400_000;
+
+const author = { name: "Blackmarket Reader · Guild tools", url: `${SITE}/guild`, icon_url: ICON };
+const guildUrl = (guild, tab) => `${SITE}/guild/${guild.region}/${guild.slug}${tab ? `/${tab}` : ""}`;
+
+/** The members as a bar of coloured squares: active, quiet, inactive. */
+export function statusBar({ active = 0, quiet = 0, inactive = 0 }) {
+  const all = active + quiet + inactive;
+  if (!all) return "";
+  const cells = [active, quiet, inactive].map((n) => Math.round((n / all) * BAR_CELLS));
+  // rounding may give one cell too many or too few: the biggest part takes it
+  const biggest = cells.indexOf(Math.max(...cells));
+  cells[biggest] += BAR_CELLS - cells.reduce((t, n) => t + n, 0);
+  return "🟩".repeat(cells[0]) + "🟨".repeat(cells[1]) + "🟥".repeat(cells[2]);
+}
+
 /**
- * The daily report of one guild, from its guild page answer (guild + activity): who is active,
- * who joined or left since `since` (a day, inclusive), and who gained the most fame in 7 days.
+ * The daily report of one guild, from its guild page answer (guild, activity, fights): who is
+ * active, who joined or left since `since` (a day, inclusive), the fights of the last day and who
+ * gained the most fame in 7 days. One Discord embed, with links to the guild's tabs.
  */
-export function dailyReport({ guild, activity }, since, now) {
+export function dailyReport({ guild, activity, fights = [] }, since, now) {
   const { counts, members, left } = activity;
   const joined = members.filter((m) => m.joinedOn && m.joinedOn >= since).map((m) => m.name);
   const gone = left.filter((m) => m.leftOn >= since).map((m) => m.name);
@@ -48,26 +69,69 @@ export function dailyReport({ guild, activity }, since, now) {
     .filter((m) => (m.gains["7"]?.total ?? 0) > 0)
     .sort((a, b) => b.gains["7"].total - a.gains["7"].total)
     .slice(0, TOP_GAINERS)
-    .map((m, i) => `${i + 1}. ${m.name} · ${shortNumber(m.gains["7"].total)}`);
+    .map((m, i) => `${MEDALS[i] ?? `\`${i + 1}.\``} **${m.name}** · ${shortNumber(m.gains["7"].total)}`);
+  const lastDay = fights.filter((f) => now - Date.parse(f.startTime) <= DAY_MS);
+  const kills = lastDay.reduce((t, f) => t + f.kills, 0);
+  const deaths = lastDay.reduce((t, f) => t + f.deaths, 0);
+  const date = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const bar = statusBar(counts);
   return {
     username: "Blackmarket Reader",
+    avatar_url: ICON,
     allowed_mentions: { parse: [] },
     embeds: [
       {
-        title: `${guild.name}: daily report`,
-        url: `${SITE}/guild/${guild.region}/${guild.slug}/activity`,
+        author,
+        title: `🛡️ ${guild.allianceTag ? `[${guild.allianceTag}] ` : ""}${guild.name}`,
+        url: guildUrl(guild, "activity"),
+        description: [`**Daily report** · ${date} · ${REGION[guild.region] ?? guild.region.toUpperCase()}`, bar, `🟩 ${counts.active} active · 🟨 ${counts.quiet} quiet · 🟥 ${counts.inactive} inactive (14+ days)`]
+          .filter(Boolean)
+          .join("\n"),
         color: ACCENT,
         fields: [
+          { name: "👥 Members", value: `**${guild.memberCount}**`, inline: true },
+          { name: "📥 Joined", value: `**${joined.length}**`, inline: true },
+          { name: "📤 Left", value: `**${gone.length}**`, inline: true },
+          ...(joined.length ? [{ name: `📥 New (${joined.length})`, value: nameList(joined) }] : []),
+          ...(gone.length ? [{ name: `📤 Gone (${gone.length})`, value: nameList(gone) }] : []),
           {
-            name: "Members",
-            value: `${guild.memberCount} · 🟢 ${counts.active} active · 🟡 ${counts.quiet} quiet · 🔴 ${counts.inactive} inactive (14+ days)`
+            name: "⚔️ Last 24 hours",
+            value: lastDay.length
+              ? `**${lastDay.length}** ${lastDay.length === 1 ? "fight" : "fights"} · 🗡️ ${kills} ${kills === 1 ? "kill" : "kills"} · 💀 ${deaths} ${deaths === 1 ? "death" : "deaths"} · [regear](${guildUrl(guild, "regear")})`
+              : "No listed fight."
           },
-          { name: `Joined (${joined.length})`, value: nameList(joined), inline: true },
-          { name: `Left (${gone.length})`, value: nameList(gone), inline: true },
-          { name: "Most fame, 7 days", value: gainers.length ? gainers.join("\n") :"Shows after a week of daily snapshots." }
+          { name: "🏆 Most fame, 7 days", value: gainers.length ? gainers.join("\n") : "Shows after a week of daily snapshots." },
+          {
+            name: "🔗 Open",
+            value: ["activity", "battles", "attendance", "regear"].map((tab) => `[${tab[0].toUpperCase()}${tab.slice(1)}](${guildUrl(guild, tab)})`).join(" · ")
+          }
         ],
-        footer: { text: "Blackmarket Reader · after the daily snapshot" },
+        footer: { text: "Daily snapshot · blackmarketreader.com", icon_url: ICON },
         timestamp: now.toISOString()
+      }
+    ]
+  };
+}
+
+/** The first message to a new webhook: what will come here, and when. */
+export function helloMessage(guild) {
+  return {
+    username: "Blackmarket Reader",
+    avatar_url: ICON,
+    allowed_mentions: { parse: [] },
+    embeds: [
+      {
+        author,
+        title: "✅ Connected",
+        url: guildUrl(guild, "discord"),
+        description: `The daily report of **${guild.name}** comes to this channel every day after the guild snapshot.`,
+        color: ACCENT,
+        fields: [
+          { name: "🕓 When", value: "Every day, 03:30 to 04:30 UTC", inline: true },
+          { name: "🔕 Pings", value: "None", inline: true },
+          { name: "📋 In the report", value: "Active, quiet and inactive members · who joined and left · the fights of the last day · the top fame gainers of the week" }
+        ],
+        footer: { text: "Change or remove it in the Discord tab of the guild page", icon_url: ICON }
       }
     ]
   };

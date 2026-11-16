@@ -4,16 +4,19 @@ import { shortPrice } from "../../price-checker/ui/format";
 import { loadNames } from "../../loot-split/core/market";
 import {
   GuildApiError,
+  fetchRegearFights,
   fetchRegearPaid,
   fightPath,
   guildPath,
   itemIcon,
+  setRegearFight,
   setRegearPaid,
   type AttendanceFight,
   type BattleReport,
   type GearSlot,
   type GuildPageData,
   type KillEvent,
+  type MarkedFight,
   type PricedItem
 } from "../api";
 import { cachedBattle, cachedFights, loadBattle, loadFights } from "../core/guildData";
@@ -78,6 +81,8 @@ const SIZES = [
   { min: 50, label: "50+ players" },
   { min: 100, label: "100+ players" }
 ];
+/** The "marked fights" chip: the fights the player marked to regear, of any age. */
+const MARKED = -1;
 const FIGHTS_SHOWN = 12;
 const HELPERS_SHOWN = 6;
 
@@ -94,9 +99,47 @@ const pickOf = (f: AttendanceFight): PickFight => ({
   enemy: f.enemy
 });
 
+/**
+ * The fights the signed-in player marked to regear in this guild, kept in their account: the officer
+ * who runs the regear finds the fight again later, also after the 7 days of the fight list.
+ */
+function useMarkedFights(token: string | null, region: GuildPageData["guild"]["region"], guildId: string) {
+  const [marked, setMarked] = useState<MarkedFight[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setMarked([]);
+    if (!token) return;
+    let alive = true;
+    fetchRegearFights(token, region, guildId)
+      .then((list) => alive && setMarked(list))
+      .catch((err: unknown) => alive && setError(err instanceof GuildApiError ? err.message : "Your marked fights could not load."));
+    return () => {
+      alive = false;
+    };
+  }, [token, region, guildId]);
+
+  /** Marks or unmarks a fight: shown at once, put back when it could not be saved. */
+  const toggle = (fight: PickFight) => {
+    if (!token) return;
+    const on = !marked.some((m) => m.id === fight.id);
+    const before = marked;
+    const info = { id: fight.id, startTime: fight.startTime, players: fight.players, ours: fight.ours, kills: fight.kills, deaths: fight.deaths, enemy: fight.enemy ?? null };
+    setMarked(on ? [{ ...info, markedAt: new Date().toISOString() }, ...marked] : marked.filter((m) => m.id !== fight.id));
+    setError("");
+    setRegearFight(token, region, guildId, info, on).catch((err: unknown) => {
+      setMarked(before);
+      setError(err instanceof GuildApiError ? err.message : "The fight could not be marked. Try again.");
+    });
+  };
+  return { marked, toggle, error };
+}
+
 /** What our dead lost in one fight, as a regear list: gear value per death, details, paid ticks and lists to copy. */
 export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }) {
   const { guild } = data;
+  const { pathname } = useLocation();
+  const { marked, toggle: toggleMark, error: markError } = useMarkedFights(mine.token, guild.region, guild.id);
   // the latest fights come with the page; the fights of 7 days load behind them
   const [week, setWeek] = useState(() => cachedFights(guild.region, guild.id));
   const [weekError, setWeekError] = useState(false);
@@ -115,7 +158,10 @@ export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }
   }, [guild.region, guild.id]);
 
   const all: PickFight[] = week ? week.fights.map(pickOf) : data.fights;
-  const fights = all.filter((f) => f.deaths > 0 && f.players >= min);
+  const markedIds = new Set(marked.map((m) => m.id));
+  // marked fights newest first; one still in the list shows its fresh numbers
+  const markedFights: PickFight[] = marked.map((m) => all.find((f) => f.id === m.id) ?? m).sort((a, b) => b.startTime.localeCompare(a.startTime));
+  const fights = min === MARKED ? markedFights : all.filter((f) => f.deaths > 0 && f.players >= min);
   // a size that hides the picked fight shows the newest one left
   const chosen = battleId !== null && fights.some((f) => f.id === battleId) ? battleId : (fights[0]?.id ?? null);
 
@@ -130,11 +176,11 @@ export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }
         </div>
         <div className="gd-list-head gd-list-tools">
           <div className="gd-chips" role="group" aria-label="Fight size">
-            {SIZES.map((s) => (
+            {[...SIZES, { min: MARKED, label: `★ Marked (${marked.length})` }].map((s) => (
               <button
                 key={s.min}
                 type="button"
-                className={`gd-chip${min === s.min ? " is-on" : ""}`}
+                className={`gd-chip${min === s.min ? " is-on" : ""}${s.min === MARKED ? " is-marked" : ""}`}
                 aria-pressed={min === s.min}
                 onClick={() => {
                   setMin(s.min);
@@ -146,10 +192,20 @@ export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }
             ))}
           </div>
         </div>
+        {markError ? (
+          <p className="gd-error" role="alert">
+            {markError}
+          </p>
+        ) : null}
         <div className="gd-fight-pick" role="group" aria-label="Fight">
           {fights.slice(0, count).map((f) => (
             <button key={f.id} type="button" className={`gd-fight-chip${f.id === chosen ? " is-on" : ""}`} aria-pressed={f.id === chosen} onClick={() => setBattleId(f.id)}>
               <b>
+                {markedIds.has(f.id) ? (
+                  <span className="gd-fight-star" title="Marked to regear">
+                    ★{" "}
+                  </span>
+                ) : null}
                 {timeAgo(f.startTime, new Date())} · {new Date(f.startTime).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" })}
               </b>
               {f.enemy ? <small className="gd-fight-enemy">vs {f.enemy}</small> : null}
@@ -171,7 +227,15 @@ export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }
           ) : null}
           {!fights.length ? (
             <p className="gd-empty">
-              {all.some((f) => f.deaths > 0) ? (
+              {min === MARKED ? (
+                mine.token ? (
+                  "No marked fight yet. Pick a fight and press Mark this fight: it stays here, also after the 7 days."
+                ) : (
+                  <>
+                    <Link to={`/login?next=${encodeURIComponent(pathname)}`}>Sign in</Link> to mark fights to regear: they are saved to your account.
+                  </>
+                )
+              ) : all.some((f) => f.deaths > 0) ? (
                 "No fight of this size with deaths. Pick a smaller size."
               ) : (
                 <>
@@ -183,7 +247,19 @@ export function RegearTab({ data, mine }: { data: GuildPageData; mine: MyGuild }
           ) : null}
         </div>
       </section>
-      {chosen ? <RegearList key={chosen} data={data} battleId={chosen} mine={mine} /> : null}
+      {chosen ? (
+        <RegearList
+          key={chosen}
+          data={data}
+          battleId={chosen}
+          mine={mine}
+          isMarked={markedIds.has(chosen)}
+          onMark={() => {
+            const fight = fights.find((f) => f.id === chosen);
+            if (fight) toggleMark(fight);
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -241,7 +317,7 @@ function usePaid(token: string | null, region: GuildPageData["guild"]["region"],
   return { paid, toggle, error };
 }
 
-function RegearList({ data, battleId, mine }: { data: GuildPageData; battleId: number; mine: MyGuild }) {
+function RegearList({ data, battleId, mine, isMarked, onMark }: { data: GuildPageData; battleId: number; mine: MyGuild; isMarked: boolean; onMark: () => void }) {
   const { guild } = data;
   const { pathname } = useLocation();
   const [report, setReport] = useState<BattleReport | null>(() => cachedBattle(guild.region, battleId));
@@ -298,6 +374,31 @@ function RegearList({ data, battleId, mine }: { data: GuildPageData; battleId: n
 
   return (
     <>
+      <section className={`gd-card gd-regear-fight${isMarked ? " is-marked" : ""}`}>
+        <span>
+          <b>
+            {isMarked ? "★ " : ""}
+            {new Date(report.battle.startTime).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          </b>
+          <small>
+            {isMarked
+              ? "Marked to regear: it stays under ★ Marked, also after the 7 days."
+              : signedIn
+                ? "Mark the fight to find its regear again under ★ Marked, also after the 7 days."
+                : "Sign in to mark the fight and keep its regear in your account."}
+          </small>
+        </span>
+        {signedIn ? (
+          <button type="button" className={`gd-btn${isMarked ? "" : " is-primary"}`} aria-pressed={isMarked} onClick={onMark}>
+            {isMarked ? "Unmark fight" : "☆ Mark this fight"}
+          </button>
+        ) : (
+          <Link className="gd-btn" to={`/login?next=${encodeURIComponent(pathname)}`}>
+            Sign in to mark
+          </Link>
+        )}
+      </section>
+
       <section className="gd-stats">
         <div className="gd-card gd-stat">
           <small>DEATHS</small>
@@ -340,7 +441,7 @@ function RegearList({ data, battleId, mine }: { data: GuildPageData; battleId: n
             <input type="checkbox" checked={withBag} onChange={(e) => setWithBag(e.target.checked)} />
             Count the bag too
           </label>
-          <span className="gd-muted">Click a player for the details.</span>
+          <span className="gd-muted">Click a row for the details.</span>
         </div>
         <div className="gd-row is-head">
           <span>PLAYER</span>
@@ -354,8 +455,17 @@ function RegearList({ data, battleId, mine }: { data: GuildPageData; battleId: n
           const isPaid = ticked.has(e.id);
           return (
             <div key={e.id} className={`gd-regear-death${isOpen ? " is-open" : ""}`}>
-              <div className={`gd-row${isPaid ? " is-paid" : ""}`}>
-                <button type="button" className="gd-who gd-who-icon gd-regear-open" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : e.id)}>
+              {/* the whole row opens the details; the button keeps it reachable by keyboard */}
+              <div className={`gd-row gd-row-click${isPaid ? " is-paid" : ""}`} onClick={() => setOpen(isOpen ? null : e.id)}>
+                <button
+                  type="button"
+                  className="gd-who gd-who-icon gd-regear-open"
+                  aria-expanded={isOpen}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    setOpen(isOpen ? null : e.id);
+                  }}
+                >
                   {e.victim.gear.MainHand ? (
                     <img src={itemIcon(e.victim.gear.MainHand.type, e.victim.gear.MainHand.quality, 64)} alt="" width={34} height={34} loading="lazy" decoding="async" />
                   ) : (
@@ -371,7 +481,8 @@ function RegearList({ data, battleId, mine }: { data: GuildPageData; battleId: n
                 <span className="gd-num">{e.victim.itemPower}</span>
                 <span className="gd-num gd-col-mid gd-muted">{e.killer.name}</span>
                 <span className="gd-num gd-strong is-gold">{report.priced ? shortPrice(cost(e)) : "–"}</span>
-                <span className="gd-num">
+                {/* ticking paid does not open the row */}
+                <span className="gd-num gd-regear-paid" onClick={(ev) => ev.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={isPaid}

@@ -50,12 +50,13 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
           <h2>What it posts</h2>
         </div>
         <ul className="gd-discord-list">
-          <li>Members: how many are active, quiet and inactive (14+ days)</li>
+          <li>Members: how many are active, quiet and inactive (14+ days), as a coloured bar</li>
           <li>Who joined and who left since the last report</li>
+          <li>The fights of the last 24 hours: how many, kills and deaths, with a link to the regear</li>
           <li>The 5 members with the most fame in 7 days</li>
-          <li>A link to the guild's Activity page</li>
+          <li>Links to the guild's Activity, Battles, Attendance and Regear tabs</li>
         </ul>
-        <p className="gd-muted">Once a day, right after the guild's daily snapshot (around 03:30 UTC). No pings: it mentions nobody.</p>
+        <p className="gd-muted">Once a day, right after the guild's daily snapshot (between 03:30 and 04:30 UTC). No pings: it mentions nobody.</p>
         <h3 className="gd-discord-how">Get a webhook link</h3>
         <ol className="gd-discord-list">
           <li>In Discord: Server settings → Integrations → Webhooks</li>

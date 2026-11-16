@@ -23,13 +23,15 @@
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
 //   GET  regear-paid?region=eu&battle=1  the deaths of a fight the signed-in player ticked as paid
 //   POST regear-pay {region, battle, event, paid}
+//   GET  regear-fights?region=eu&guild=.. the fights of a guild they marked to regear
+//   POST regear-mark {region, guild, battle, fight, marked}
 //   GET  bank?guild=..                   the signed-in player's chest log of a guild
 //   POST bank-save {guild, rows}         replace it
 //   GET  splits?guild=..                 their saved loot splits of a guild
 //   POST split-save {guild, id?, name, data}, split-remove {id}
 // The last ones are private per player (api/_lib/guildPrivate.js) and never reach the killboard.
 import { GameinfoError, PAGES_BUDGET_MS, TOP_RANGES, isBattleId, isGuildId, isRegion } from "./gameinfo.js";
-import { dailyReport, isWebhookUrl } from "./guildDiscord.js";
+import { dailyReport, helloMessage, isWebhookUrl } from "./guildDiscord.js";
 import { handlePrivate } from "./guildPrivate.js";
 import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
@@ -625,11 +627,7 @@ async function saveHook(deps, user, body) {
   if (!guild) return fail(409, "Mark your guild first: the report is about the guild you marked.");
   const name = await discord.check(url);
   if (!name) return fail(400, "Discord does not know this webhook. Copy its link again.");
-  const hello = await discord.post(url, {
-    username: "Blackmarket Reader",
-    allowed_mentions: { parse: [] },
-    content: `Connected: the daily report of **${guild.name}** comes here every day after the guild snapshot (between 03:30 and 04:30 UTC).`
-  });
+  const hello = await discord.post(url, helloMessage(guild));
   if (hello !== "ok") return fail(502, "Discord did not take the first message. Try again in a minute.");
   await store.saveWebhook(user.id, url, name);
   return ok({ hook: { name, lastSentOn: null } });
@@ -652,14 +650,16 @@ async function getStatus({ gameinfo, store, now }) {
   return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status", "regear-paid", "bank", "splits"]);
-const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "regear-pay", "bank-save", "split-save", "split-remove"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status", "regear-paid", "regear-fights", "bank", "splits"]);
+const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "regear-pay", "regear-mark", "bank-save", "split-save", "split-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 /** The player's own data: only the database, never the killboard. */
-const PRIVATE_ACTIONS = new Set(["regear-paid", "regear-pay", "bank", "bank-save", "splits", "split-save", "split-remove"]);
+const PRIVATE_ACTIONS = new Set(["regear-paid", "regear-pay", "regear-fights", "regear-mark", "bank", "bank-save", "splits", "split-save", "split-remove"]);
 const SIGN_IN = {
   hook: "Sign in to set up the Discord report.",
   regear: "Sign in to tick deaths as paid.",
+  "regear-fights": "Sign in to mark fights to regear.",
+  "regear-mark": "Sign in to mark fights to regear.",
   bank: "Sign in to keep the chest log.",
   split: "Sign in to save loot splits.",
   splits: "Sign in to save loot splits."
@@ -706,7 +706,7 @@ export async function handleGuild(action, request, deps) {
       const row = user && deps.store ? await deps.store.getMark(user.id) : null;
       return ok({ guild: row ? guildRef(row) : null });
     }
-    if (!user) return fail(401, SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
+    if (!user) return fail(401, SIGN_IN[action] ?? SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
     if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
     if (action === "mark") return await mark(deps, user, body);

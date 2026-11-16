@@ -167,6 +167,9 @@ function BankLogBody({ data, token, saved }: { data: GuildPageData; token: strin
     return (id && prices ? bestSale(prices[id], quality, false, "fast")?.unit : 0) ?? 0;
   };
 
+  /** The game's id of an item, for its icon; null without the names (yet). */
+  const idOf = (name: string, enchant: number) => (names ? itemId(names, name, enchant) : null);
+
   const rows = useMemo(() => {
     const now = Date.now();
     const unit = (e: LogEntry) => unitOf(e.name, e.enchant, e.quality);
@@ -340,7 +343,7 @@ function BankLogBody({ data, token, saved }: { data: GuildPageData; token: strin
         </>
       ) : null}
 
-      <LootSplits guildId={guild.id} token={token} entries={entries} unitOf={unitOf} priced={Boolean(prices)} />
+      <LootSplits guildId={guild.id} token={token} entries={entries} unitOf={unitOf} idOf={idOf} priced={Boolean(prices)} />
     </>
   );
 }

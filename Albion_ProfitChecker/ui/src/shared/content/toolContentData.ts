@@ -33,6 +33,10 @@ export type GuideMeta = {
   keywords: string;
   /** Display name of the tool this guide belongs to. */
   toolLabel: string;
+  /** Where "Open the tool" goes, when it is not /<tool slug> (a guild tab guide opens /guild). */
+  toolPath?: string;
+  /** The guide this one is part of (each guild tab's guide belongs to "guild"). */
+  parent?: string;
 };
 
 /** One picture step of a guide's quick start. Paths are relative to the site root. */
@@ -74,6 +78,9 @@ export const GUIDES = Object.entries(TOOL_CONTENT).map(([toolSlug, entry]) => ({
   toolSlug,
   ...entry.guide
 }));
+
+/** The guides that are part of `toolSlug`'s guide (the guild tabs' guides of the guild guide). */
+export const childGuides = (toolSlug: string) => GUIDES.filter((g) => g.parent === toolSlug);
 
 /** Looks up a guide (and its body) by its URL slug. */
 export function findGuideBySlug(slug: string): { toolSlug: string; entry: ToolContentEntry } | null {
