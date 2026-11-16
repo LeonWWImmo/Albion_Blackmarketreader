@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { ago, auditSummary, buildCard, cardHtml, cityCoverage, coverageProblems, oldErrorPosts, overall } from "./health-check.mjs";
+import { ago, auditSummary, buildCard, cardHtml, cityCoverage, coverageProblems, killboardSection, oldErrorPosts, overall } from "./health-check.mjs";
 
 const at = Date.parse("2026-11-04T14:02:00Z");
 const ok = (label) => ({ label, status: "ok", value: "1/1", caption: "fine", summary: "1/1 fine", problems: [] });
 const report = (sections, speed = []) => ({ at, seconds: 95, sections, speed });
+
+describe("killboard", () => {
+  const up = (ms) => ({ state: "ok", code: 200, ms });
+  it("is ok when both killboards answer and every marked guild is synced", () => {
+    expect(killboardSection({ killboard: { eu: up(120), us: up(180) }, lateSyncs: 0 })).toMatchObject({ status: "ok", value: "OK", caption: "EU 120 ms · US 180 ms", problems: [] });
+  });
+  it("fails when Albion blocks our server, and says where", () => {
+    const s = killboardSection({ killboard: { eu: up(120), us: { state: "blocked", code: 403, ms: 30 } }, lateSyncs: 0 });
+    expect(s).toMatchObject({ status: "fail", value: "BLOCKED", caption: "EU 120 ms · US blocked" });
+    expect(s.problems[0]).toContain("US killboard blocks our server");
+  });
+  it("warns when a killboard is down, fails when the sync is late", () => {
+    expect(killboardSection({ killboard: { eu: { state: "down", code: 502, ms: 8000 }, us: up(1) }, lateSyncs: 0 })).toMatchObject({ status: "warn", value: "DOWN", problems: [expect.stringContaining("HTTP 502")] });
+    expect(killboardSection({ killboard: { eu: up(1), us: up(1) }, lateSyncs: 2 })).toMatchObject({ status: "fail", value: "LATE", problems: [expect.stringContaining("2 marked guild(s)")] });
+    expect(killboardSection({ killboard: { eu: up(1), us: up(1) }, lateSyncs: null })).toMatchObject({ status: "warn" });
+  });
+});
 
 describe("overall", () => {
   it("takes the worst status", () => {

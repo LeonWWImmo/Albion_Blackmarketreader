@@ -69,6 +69,9 @@ const FIGHTS_CACHE_S = 600;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
+/** A marked guild not synced for this long: the daily sync is broken (it runs every 24 h). */
+const SYNC_LATE_MS = 28 * 3600 * 1000;
+const STATUS_CACHE_S = 60;
 /** A roster shrinking below this share of the stored one is checked once more before it counts. */
 const ROSTER_DROP = 0.5;
 const ROSTER_DROP_MIN = 10;
@@ -616,7 +619,24 @@ async function saveHook(deps, user, body) {
   return ok({ hook: { name, lastSentOn: null } });
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync"]);
+/**
+ * For the daily health check: can this server reach both killboards (a block of its address shows
+ * nowhere else), and how many marked guilds the daily sync has missed.
+ */
+async function getStatus({ gameinfo, store, now }) {
+  const [eu, us] = await Promise.all([gameinfo.probeKillboard("eu"), gameinfo.probeKillboard("us")]);
+  let lateSyncs = null;
+  if (store) {
+    try {
+      lateSyncs = (await store.dueGuilds(new Date(now().getTime() - SYNC_LATE_MS).toISOString(), 100)).length;
+    } catch {
+      // the database is down: null tells the check so
+    }
+  }
+  return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
+}
+
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status"]);
 const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 
@@ -633,6 +653,7 @@ export async function handleGuild(action, request, deps) {
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await syncDue(deps);
     }
+    if (action === "status") return await getStatus(deps);
     if (PUBLIC_ACTIONS.has(action)) {
       if (!isRegion(region)) return fail(400, "Unknown server.");
       if (action === "guild") return await getGuildPage(deps, { region, slug: String(query.slug ?? ""), id: String(query.id ?? "") });

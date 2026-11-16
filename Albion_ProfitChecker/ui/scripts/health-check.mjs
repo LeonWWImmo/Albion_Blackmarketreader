@@ -402,6 +402,46 @@ async function checkDiscord(now) {
   return section("Discord", status, { value, caption, problems });
 }
 
+/**
+ * Albion's killboard as our server (Vercel) sees it. Cloudflare in front of it can block the server's
+ * address (403): every guild tool is down then, and nothing else shows it. Also the daily guild sync.
+ */
+export function killboardSection({ killboard, lateSyncs }) {
+  const problems = [];
+  const parts = [];
+  let blocked = false;
+  let down = false;
+  for (const region of ["eu", "us"]) {
+    const k = killboard?.[region];
+    const name = region.toUpperCase();
+    if (k?.state === "ok") parts.push(`${name} ${k.ms} ms`);
+    else if (k?.state === "blocked") {
+      blocked = true;
+      parts.push(`${name} blocked`);
+      problems.push(`${name} killboard blocks our server's address (403): the guild tools on ${name} are down until Albion lifts it`);
+    } else {
+      down = true;
+      parts.push(`${name} down`);
+      problems.push(`${name} killboard did not answer our server (${k?.code ? `HTTP ${k.code}` : "no answer"})`);
+    }
+  }
+  const late = lateSyncs > 0;
+  if (lateSyncs == null) problems.push("guild sync: the database did not answer");
+  else if (late) problems.push(`guild sync: ${lateSyncs} marked guild(s) not synced for over a day`);
+  const status = blocked || late ? "fail" : down || lateSyncs == null ? "warn" : "ok";
+  const value = blocked ? "BLOCKED" : late ? "LATE" : down ? "DOWN" : "OK";
+  return section("Killboard", status, { value, caption: parts.join(" · "), problems });
+}
+
+async function checkKillboard() {
+  // never the CDN's copy (it keeps the answer a minute)
+  const res = await http(`${SITE}/api/guild/status?at=${Date.now()}`);
+  // the guild tools are not on the live site yet: the address answers with the app's page
+  if (res.status === 404 || !(res.headers.get("content-type") ?? "").includes("json")) return section("Killboard", "ok", { value: "–", caption: "guild tools not live yet" });
+  if (!res.ok) throw new Error(`/api/guild/status -> HTTP ${res.status}`);
+  return killboardSection(await res.json());
+}
+
 async function runChecks() {
   const started = Date.now();
   const { chromium } = await import("@playwright/test");
@@ -413,6 +453,7 @@ async function runChecks() {
     ["Website", () => checkWebsite(chromium, speed)],
     ["Data", () => checkData(started, coverage)],
     ["Discord", () => checkDiscord(started)],
+    ["Killboard", () => checkKillboard()],
     ["Security", () => checkSecurity()]
   ];
   const sections = [];
@@ -449,6 +490,7 @@ const ICONS = {
   Website: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3.2 3.6 3.2 14.4 0 18M12 3c-3.2 3.6-3.2 14.4 0 18"/>',
   Data: '<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
   Discord: '<path d="M5 4.5h14a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-7.5L6 21v-4H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01" stroke-width="3"/>',
+  Killboard: '<path d="M4 4l10 10M4 4h4M4 4v4M20 4 10 14M20 4h-4M20 4v4M7.5 14.5l2 2M16.5 14.5l-2 2M9.5 16.5 5 21M14.5 16.5 19 21"/>',
   Security: '<path d="M12 2.5 4 5.5v6c0 5 3.4 8.8 8 10 4.6-1.2 8-5 8-10v-6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'
 };
 const escapeHtml = (value) => String(value).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -502,7 +544,7 @@ export function cardHtml(report) {
   .when { text-align: right; }
   .when .date { font-size: 34px; font-weight: 800; }
   .when .time { font-size: 19px; color: #8b97b3; font-weight: 500; margin-top: 6px; }
-  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .tiles { display: grid; grid-template-columns: repeat(${Math.max(report.sections.length, 1)}, 1fr); gap: 14px; }
   .tile { background: #111a30; border: 1px solid #1e2a45; border-radius: 22px; padding: 20px 18px 18px; position: relative; overflow: hidden; }
   .tile.bad { background: color-mix(in srgb, var(--c) 12%, #111a30); border-color: color-mix(in srgb, var(--c) 55%, #1e2a45); box-shadow: 0 0 34px color-mix(in srgb, var(--c) 22%, transparent); }
   .tile::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: var(--c); }
@@ -512,6 +554,9 @@ export function cardHtml(report) {
   .label { margin-top: 14px; font-size: 19px; font-weight: 700; color: #9aa6c2; }
   .value { margin-top: 4px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 42px; font-weight: 700; letter-spacing: -.03em; color: #fff; white-space: nowrap; }
   .value.small { font-size: 27px; padding-top: 11px; padding-bottom: 5px; }
+  /* seven tiles and more: narrower, so the values get smaller */
+  .tiles.many .value { font-size: 34px; }
+  .tiles.many .value.small { font-size: 23px; }
   .caption { margin-top: 6px; font-size: 15px; color: #8b97b3; font-weight: 500; line-height: 1.35; min-height: 44px; }
   .panels { display: grid; grid-template-columns: 1.45fr 1fr; gap: 14px; margin-top: 16px; }
   .panel { background: #111a30; border: 1px solid #1e2a45; border-radius: 22px; padding: 22px 24px 16px; }
@@ -539,7 +584,7 @@ export function cardHtml(report) {
     <div><div class="kicker">DAILY HEALTH CHECK</div><div class="headline"><span class="dot"></span>${state.headline}</div></div>
     <div class="when"><div class="date">${escapeHtml(date)}</div><div class="time">${utcTime(report.at)} UTC · checked in ${report.seconds}s</div></div>
   </div>
-  <div class="tiles">${tiles}</div>
+  <div class="tiles${report.sections.length > 6 ? " many" : ""}">${tiles}</div>
   ${speed.length || grid ? `<div class="panels">
     ${speed.length ? `<div class="panel"><div class="panel-head"><span>PAGE SPEED · desktop</span><div><strong>${(average / 1000).toFixed(1)}s</strong><em>avg load</em></div></div><div class="bars">${bars}</div></div>` : "<div></div>"}
     ${grid ? `<div class="panel"><div class="panel-head"><span>PRICE COVERAGE · %</span><em>materials with a price</em></div>${grid}<div class="legend">green ≥ 80 · amber ≥ 50 · red below · BRE half</div></div>` : ""}

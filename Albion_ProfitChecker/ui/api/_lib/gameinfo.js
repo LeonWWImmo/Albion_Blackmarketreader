@@ -89,6 +89,28 @@ async function fetchJson(url) {
   throw last;
 }
 
+/**
+ * Can this server reach the region's killboard right now: "ok", "blocked" (Cloudflare refuses this
+ * server's address, 403) or "down" (an error or no answer). For the daily health check.
+ */
+export async function probeKillboard(region) {
+  const url = `${HOSTS[region]}/battles?limit=1&offset=0&sort=recent`;
+  const lane = laneOf(url);
+  if (lane.blockedUntil > Date.now()) return { state: "blocked", code: 403, ms: 0 };
+  const started = Date.now();
+  try {
+    const code = await inLane(lane, async () => {
+      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      await res.body?.cancel();
+      return res.status;
+    });
+    if (code === 403) lane.blockedUntil = Date.now() + BLOCK_PAUSE_MS;
+    return { state: code === 403 ? "blocked" : code >= 200 && code < 300 ? "ok" : "down", code, ms: Date.now() - started };
+  } catch {
+    return { state: "down", code: 0, ms: Date.now() - started };
+  }
+}
+
 /** One request per key at a time, and its answer kept for CACHE_MS; `fresh` skips the kept one. */
 async function remembered(key, load, fresh = false) {
   const hit = memory.get(key);
