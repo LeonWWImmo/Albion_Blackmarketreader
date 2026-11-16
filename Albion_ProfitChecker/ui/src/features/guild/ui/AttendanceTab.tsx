@@ -130,7 +130,7 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
         <div className="gd-row is-head">
           <span>MEMBER</span>
           <span className="gd-num">FIGHTS</span>
-          <span className="gd-num">SHARE</span>
+          <span className="gd-num" title="Of the fights counted above, how many this member was in">% OF FIGHTS</span>
           <span className="gd-num gd-col-mid">K / D</span>
           <span className="gd-num gd-col-mid">KILL FAME</span>
           <span className="gd-num gd-col-mid">LAST FIGHT</span>
