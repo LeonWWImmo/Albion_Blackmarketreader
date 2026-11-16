@@ -665,7 +665,11 @@ export async function handleGuild(action, request, deps) {
     if (action === "hook-save") return await saveHook(deps, user, body);
     return ok({ removed: await deps.store.removeWebhook(user.id) });
   } catch (error) {
-    if (error instanceof GameinfoError) return fail(error.status, error.status === 404 ? NOT_FOUND : "Albion's killboard is not answering right now. Try again in a minute.");
+    if (error instanceof GameinfoError) {
+      // the cause goes to the server log: a 502 alone does not tell a slow killboard from a block
+      if (error.status !== 404) console.warn("guild api", action, error.message);
+      return fail(error.status, error.status === 404 ? NOT_FOUND : "Albion's killboard is not answering right now. Try again in a minute.");
+    }
     console.error("guild api", action, error);
     return fail(500, "Something went wrong. Try again in a minute.");
   }

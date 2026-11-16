@@ -39,6 +39,8 @@ async function fetchJson(url) {
       if (res.status === 404) throw new GameinfoError("not found", 404);
       if (res.ok) return await res.json();
       last = new GameinfoError(`Albion's killboard answered ${res.status}`, 502);
+      // Cloudflare in front of the killboard blocks this server's address: asking again only makes it worse
+      if (res.status === 403) break;
     } catch (error) {
       if (error instanceof GameinfoError && error.status === 404) throw error;
       last = error instanceof GameinfoError ? error : new GameinfoError("Albion's killboard did not answer", 502);

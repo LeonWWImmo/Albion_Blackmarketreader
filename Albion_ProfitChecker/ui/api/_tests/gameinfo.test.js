@@ -154,6 +154,13 @@ describe("requests", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("does not ask again when the killboard blocks this server", async () => {
+    const fetchMock = vi.fn(async () => new Response("blocked", { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getMembers("us", GID)).rejects.toMatchObject({ status: 502, message: expect.stringContaining("403") });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("reads the period's two pages of biggest fights for the top guilds, once", async () => {
     const page = [{ guilds: { [GID]: { id: GID, name: "Angry fuzzies", alliance: "", killFame: 5, kills: 1, deaths: 0 } } }];
     const fetchMock = vi.fn(async () => new Response(JSON.stringify(page), { status: 200 }));
