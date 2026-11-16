@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { GuildApiError, fetchHook, guildPath, removeHook, saveHook, type DiscordHook, type GuildPageData } from "../api";
 import type { MyGuild } from "../useMyGuild";
+import { Loading } from "./Loading";
 
 const WEBHOOK = /^https:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/api\/webhooks\/\d{15,25}\/[\w-]{20,100}$/;
 
@@ -19,7 +20,7 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
           <h2>Daily report in Discord</h2>
         </div>
         {!mine.loaded ? (
-          <div className="gd-skeleton" aria-busy="true" />
+          <Loading what="Checking your sign-in" />
         ) : !token ? (
           <div className="gd-discord-body">
             <p className="gd-muted">Sign in and mark your guild, then give a Discord webhook: the report comes there every day.</p>
@@ -110,7 +111,7 @@ function HookForm({ token, guildName }: { token: string; guildName: string }) {
       setHook(null);
     });
 
-  if (hook === undefined) return <div className="gd-skeleton" aria-busy="true" />;
+  if (hook === undefined) return <Loading what="Loading your Discord report" />;
   const valid = WEBHOOK.test(url.trim());
   return (
     <div className="gd-discord-body">

@@ -48,6 +48,8 @@ const SEARCH_CACHE_S = 600;
 const SEARCH_SHOWN = 10;
 /** A search hit whose fame takes longer than this is shown without it. */
 const FAME_WAIT_MS = 800;
+/** Only the first hits get their fame looked up: one search must not send a burst to the killboard. */
+const FAME_LOOKUPS = 5;
 const TOP_SHOWN = 5;
 const TOP_CACHE_S = 1800;
 /** A fight that ended this long ago no longer changes: its report is kept for hours. */
@@ -231,7 +233,9 @@ function within(promise, ms) {
  */
 async function withFame(gameinfo, region, hits) {
   return Promise.all(
-    hits.map(async (g) => {
+    hits.map(async (g, i) => {
+      // the rest keeps the fame the search gave (its kill fame is often missing)
+      if (i >= FAME_LOOKUPS) return g;
       const info = await within(gameinfo.getGuild(region, g.id), FAME_WAIT_MS);
       return { ...g, killFame: info ? info.killFame : null, deathFame: info ? info.deathFame : null };
     })
@@ -249,7 +253,8 @@ const fightsOf = (battles) =>
       fame: b.fame,
       ours: b.ours.length,
       kills: b.ours.reduce((t, p) => t + p.kills, 0),
-      deaths: b.ours.reduce((t, p) => t + p.deaths, 0)
+      deaths: b.ours.reduce((t, p) => t + p.deaths, 0),
+      enemy: b.enemy ?? null
     }));
 
 /**
@@ -643,9 +648,10 @@ export async function handleGuild(action, request, deps) {
       const q = normalizeQuery(query.q);
       if (q.length < 2 || q.length > 40) return fail(400, "Type at least 2 letters of the guild name.");
       const hits = withSlugs(rankGuilds(await deps.gameinfo.searchGuilds(region, q), q).slice(0, SEARCH_SHOWN));
-      const guilds = rankByFame(await withFame(deps.gameinfo, region, hits), q);
-      // a hit without its fame is not kept for long: the next search fills it in
-      return ok({ guilds }, guilds.some((g) => g.killFame === null) ? 60 : SEARCH_CACHE_S);
+      const withKnownFame = await withFame(deps.gameinfo, region, hits);
+      const guilds = rankByFame(withKnownFame, q);
+      // a looked-up hit without its fame is not kept for long: the next search fills it in
+      return ok({ guilds }, withKnownFame.some((g) => g.killFame === null) ? 60 : SEARCH_CACHE_S);
     }
     // mine, mark, unmark, hook: the signed-in player
     const user = token ? await deps.userFromToken(token) : null;

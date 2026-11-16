@@ -96,17 +96,23 @@ describe("parsers", () => {
     ]);
   });
 
-  it("keeps only this guild's players in a fight", () => {
+  it("keeps only this guild's players in a fight, and names the biggest enemy guild", () => {
     const raw = [
       {
         id: 7,
         startTime: "2026-11-13T20:41:00Z",
         totalKills: 4,
         totalFame: 900,
-        players: { a: { id: "a", name: "Ann", guildId: GID, kills: 2, deaths: 0, killFame: 300 }, z: { id: "z", name: "Zed", guildId: "other", kills: 1, deaths: 2, killFame: 10 } }
+        players: {
+          a: { id: "a", name: "Ann", guildId: GID, allianceId: "al1", kills: 2, deaths: 0, killFame: 300 },
+          // our alliance: not an enemy, however many
+          y: { id: "y", name: "Yan", guildId: "ally", guildName: "Friends", allianceId: "al1", kills: 0, deaths: 0, killFame: 0 },
+          w: { id: "w", name: "Wes", guildId: "ally", guildName: "Friends", allianceId: "al1", kills: 0, deaths: 0, killFame: 0 },
+          z: { id: "z", name: "Zed", guildId: "other", guildName: "Foes", allianceId: "al2", allianceName: "FOE", kills: 1, deaths: 2, killFame: 10 }
+        }
       }
     ];
-    expect(parseBattles(raw, GID)).toEqual([{ id: 7, startTime: "2026-11-13T20:41:00Z", players: 2, kills: 4, fame: 900, ours: [{ id: "a", name: "Ann", kills: 2, deaths: 0, killFame: 300 }] }]);
+    expect(parseBattles(raw, GID)).toEqual([{ id: 7, startTime: "2026-11-13T20:41:00Z", players: 4, kills: 4, fame: 900, enemy: "[FOE] Foes", ours: [{ id: "a", name: "Ann", kills: 2, deaths: 0, killFame: 300 }] }]);
   });
 });
 
@@ -154,11 +160,34 @@ describe("requests", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  it("does not ask again when the killboard blocks this server", async () => {
+  it("does not ask again when the killboard blocks this server, and pauses that host", async () => {
     const fetchMock = vi.fn(async () => new Response("blocked", { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(getMembers("us", GID)).rejects.toMatchObject({ status: 502, message: expect.stringContaining("403") });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    // the paused host is not asked at all; the other server still is
+    await expect(searchGuilds("us", "angry")).rejects.toMatchObject({ status: 502 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify({ guilds: [] }), { status: 200 }));
+    expect(await searchGuilds("eu", "angry")).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks one host at most 4 times at once, the rest waits its turn", async () => {
+    let running = 0;
+    let most = 0;
+    const fetchMock = vi.fn(async () => {
+      running++;
+      most = Math.max(most, running);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      running--;
+      return new Response(JSON.stringify({ guilds: [] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const all = await Promise.all(Array.from({ length: 10 }, (_, i) => searchGuilds("eu", `guild ${i}`)));
+    expect(all).toHaveLength(10);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(most).toBe(4);
   });
 
   it("reads the period's two pages of biggest fights for the top guilds, once", async () => {

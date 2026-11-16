@@ -11,6 +11,7 @@ import { AttendanceTab } from "./ui/AttendanceTab";
 import { BankLogTab } from "./ui/BankLogTab";
 import { DiscordTab } from "./ui/DiscordTab";
 import { GuildHeader } from "./ui/GuildHeader";
+import { Loading } from "./ui/Loading";
 import { KillboardTab } from "./ui/KillboardTab";
 import { OverviewTab } from "./ui/OverviewTab";
 import { RegearTab } from "./ui/RegearTab";
@@ -79,7 +80,8 @@ function GuildBody() {
   if (!data) {
     return (
       <main className="gd" aria-busy="true">
-        <div className="gd-skeleton is-head" />
+        {/* step by step: the overview first; every other tab loads its own part when it is opened */}
+        <Loading head what="Loading the guild: members and latest fights" />
         <div className="gd-skeleton" />
       </main>
     );

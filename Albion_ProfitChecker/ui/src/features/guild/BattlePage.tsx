@@ -7,6 +7,7 @@ import { GuildApiError, guildPath, itemIcon, slugOf, type BattlePlayer, type Bat
 import { cachedBattle, loadBattle } from "./core/guildData";
 import { GuildShell } from "./GuildShell";
 import { KillRow } from "./ui/KillboardTab";
+import { Loading } from "./ui/Loading";
 
 type Sort = "killFame" | "kills" | "deaths" | "damage" | "assists" | "healAssists" | "itemPower";
 const SORTS: { key: Sort; label: string }[] = [
@@ -78,7 +79,7 @@ function BattleBody({ region, id, focus }: { region: Region | null; id: number |
   if (!report) {
     return (
       <main className="gd" aria-busy="true">
-        <div className="gd-skeleton is-head" />
+        <Loading head what="Loading the battle report: every kill of the fight, with prices" />
         <div className="gd-skeleton" />
       </main>
     );

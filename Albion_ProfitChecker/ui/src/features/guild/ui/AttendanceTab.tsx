@@ -5,6 +5,7 @@ import { GuildApiError, battlePath, type AttendanceFight, type GuildPageData } f
 import { cachedFights, loadFights } from "../core/guildData";
 import { timeAgo } from "../core/view";
 import { CopyButton } from "./CopyButton";
+import { Loading } from "./Loading";
 
 const RANGES = [
   { days: 1, label: "24 hours" },
@@ -60,7 +61,7 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
         </button>
       </p>
     ) : (
-      <div className="gd-skeleton" aria-busy="true" />
+      <Loading what="Loading the guild's fights of the last 7 days" />
     );
   }
 
@@ -78,7 +79,7 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
           <b>{fights.length}</b>
           <span>
             {RANGES.find((r) => r.days === days)?.label}
-            {minPlayers ? `, ${minPlayers}+ players` : ""}
+            {minPlayers ? `, at least ${minPlayers} players` : ", any size"}
           </span>
         </div>
         <div className="gd-card gd-stat">
@@ -114,13 +115,16 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
               </button>
             ))}
           </div>
-          <select className="gd-select" value={minPlayers} onChange={(e) => setMinPlayers(Number(e.target.value))} aria-label="Fight size">
-            {MIN_PLAYERS.map((n) => (
-              <option key={n} value={n}>
-                {n ? `${n}+ players` : "Any size"}
-              </option>
-            ))}
-          </select>
+          <label className="gd-check">
+            Count fights with
+            <select className="gd-select" value={minPlayers} onChange={(e) => setMinPlayers(Number(e.target.value))} aria-label="Count fights with">
+              {MIN_PLAYERS.map((n) => (
+                <option key={n} value={n}>
+                  {n ? `at least ${n} players` : "any number of players"}
+                </option>
+              ))}
+            </select>
+          </label>
           {absent.length ? <CopyButton text={absent.map((r) => r.name).join("\n")} label="Copy who was in none" count={absent.length} /> : null}
         </div>
         <div className="gd-row is-head">
@@ -161,7 +165,8 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
         {!filtered.length ? <p className="gd-empty">Nobody matches.</p> : null}
         <div className="gd-foot">
           <span>
-            From Albion's list of the guild's fights, small ones too (single kills outside a fight are not in it).
+            Players: everyone in the fight, both sides. Small fights of a few players are mostly ganks; set a size to count only the guild's real fights.
+            From Albion's list of the guild's fights (single kills outside a fight are not in it).
             {loaded.complete
               ? ` The last ${loaded.days} days.`
               : oldest

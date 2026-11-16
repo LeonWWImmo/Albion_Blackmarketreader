@@ -11,8 +11,15 @@ const CACHE_MS = 10 * 60 * 1000;
 const CACHE_MAX = 200;
 const GUILD_ID = /^[A-Za-z0-9_-]{10,40}$/;
 
+/** At most this many requests to one killboard host at a time per instance: bursts get a server blocked. */
+const HOST_AT_ONCE = 4;
+/** After a block (403) the host is not asked at all for this long: asking on only makes the block last. */
+const BLOCK_PAUSE_MS = 5 * 60_000;
+
 const memory = new Map();
 const pending = new Map();
+/** Per host: requests running, requests waiting for a turn, and until when it blocks us. */
+const lanes = new Map();
 
 export const isRegion = (value) => Object.prototype.hasOwnProperty.call(HOSTS, value);
 export const isGuildId = (value) => typeof value === "string" && GUILD_ID.test(value);
@@ -21,6 +28,7 @@ export const isGuildId = (value) => typeof value === "string" && GUILD_ID.test(v
 export function clearGameinfoMemory() {
   memory.clear();
   pending.clear();
+  lanes.clear();
 }
 
 /** A gameinfo error the caller can show: `status` is what our API answers. */
@@ -31,16 +39,47 @@ export class GameinfoError extends Error {
   }
 }
 
+function laneOf(url) {
+  const host = new URL(url).host;
+  if (!lanes.has(host)) lanes.set(host, { running: 0, waiting: [], blockedUntil: 0 });
+  return lanes.get(host);
+}
+
+/** Runs `task` when the host has a free turn; a finished one hands its turn straight to the next. */
+async function inLane(lane, task) {
+  if (lane.running < HOST_AT_ONCE) lane.running++;
+  else await new Promise((resolve) => lane.waiting.push(resolve));
+  try {
+    return await task();
+  } finally {
+    const next = lane.waiting.shift();
+    if (next) next();
+    else lane.running--;
+  }
+}
+
+const blocked = () => new GameinfoError("Albion's killboard blocks this server (403), not asking for a few minutes", 502);
+
 async function fetchJson(url) {
+  const lane = laneOf(url);
   let last = null;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    if (lane.blockedUntil > Date.now()) throw blocked();
     try {
-      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      const res = await inLane(lane, async () => {
+        // blocked while this one waited for its turn
+        if (lane.blockedUntil > Date.now()) throw blocked();
+        const answer = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+        return { status: answer.status, body: answer.ok ? await answer.json() : null };
+      });
       if (res.status === 404) throw new GameinfoError("not found", 404);
-      if (res.ok) return await res.json();
+      if (res.body !== null) return res.body;
       last = new GameinfoError(`Albion's killboard answered ${res.status}`, 502);
       // Cloudflare in front of the killboard blocks this server's address: asking again only makes it worse
-      if (res.status === 403) break;
+      if (res.status === 403) {
+        lane.blockedUntil = Date.now() + BLOCK_PAUSE_MS;
+        break;
+      }
     } catch (error) {
       if (error instanceof GameinfoError && error.status === 404) throw error;
       last = error instanceof GameinfoError ? error : new GameinfoError("Albion's killboard did not answer", 502);
@@ -128,6 +167,24 @@ export function parseMembers(raw) {
 }
 
 /** Fights the guild took part in, each with only that guild's players. */
+/**
+ * The guild with the most players in the fight that is neither the guild nor in its alliance, as
+ * "[alliance] guild" (Albion's list does not say where a fight was, so this names the fight).
+ */
+function mainEnemy(players, guildId) {
+  const ally = players.find((p) => p?.guildId === guildId && p.allianceId)?.allianceId ?? null;
+  const counts = new Map();
+  for (const p of players) {
+    if (!p?.guildId || !p.guildName || p.guildId === guildId || (ally && p.allianceId === ally)) continue;
+    const seen = counts.get(p.guildId) ?? { name: p.allianceName ? `[${p.allianceName}] ${p.guildName}` : p.guildName, n: 0 };
+    seen.n++;
+    counts.set(p.guildId, seen);
+  }
+  let best = null;
+  for (const c of counts.values()) if (!best || c.n > best.n) best = c;
+  return best ? best.name : null;
+}
+
 export function parseBattles(raw, guildId) {
   if (!Array.isArray(raw)) throw new GameinfoError("unexpected answer from Albion's killboard", 502);
   return raw
@@ -138,6 +195,7 @@ export function parseBattles(raw, guildId) {
       players: Object.keys(b.players).length,
       kills: num(b.totalKills),
       fame: num(b.totalFame),
+      enemy: mainEnemy(Object.values(b.players), guildId),
       ours: Object.values(b.players)
         .filter((p) => p?.guildId === guildId)
         .map((p) => ({ id: p.id, name: p.name, kills: num(p.kills), deaths: num(p.deaths), killFame: num(p.killFame) }))

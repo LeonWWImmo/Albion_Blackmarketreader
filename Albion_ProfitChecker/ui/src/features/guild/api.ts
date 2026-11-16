@@ -51,7 +51,8 @@ export type Activity = {
   left: { id: string; name: string; leftOn: string }[];
 };
 
-export type Fight = { id: number; startTime: string; players: number; fame: number; ours: number; kills: number; deaths: number };
+/** ours, kills, deaths: of the guild; enemy: the biggest other guild there ("[alliance] guild"), Albion does not say where it was. */
+export type Fight = { id: number; startTime: string; players: number; fame: number; ours: number; kills: number; deaths: number; enemy?: string | null };
 
 export type GuildPageData = {
   guild: {

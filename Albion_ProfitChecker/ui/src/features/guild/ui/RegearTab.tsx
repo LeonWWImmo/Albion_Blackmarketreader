@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
 import { GuildApiError, battlePath, guildPath, itemIcon, type BattleReport, type GuildPageData, type KillEvent } from "../api";
 import { cachedBattle, loadBattle } from "../core/guildData";
-import { timeAgo } from "../core/view";
+import { areaLabel, timeAgo } from "../core/view";
 import { CopyButton } from "./CopyButton";
+import { Loading } from "./Loading";
 
 const MIN_IP = [0, 1100, 1200, 1300, 1400];
 const MIN_GEAR = [
@@ -61,9 +62,18 @@ export function RegearTab({ data }: { data: GuildPageData }) {
         <div className="gd-fight-pick" role="group" aria-label="Fight">
           {fights.map((f) => (
             <button key={f.id} type="button" className={`gd-fight-chip${f.id === battleId ? " is-on" : ""}`} aria-pressed={f.id === battleId} onClick={() => setBattleId(f.id)}>
-              <b>{timeAgo(f.startTime, new Date())}</b>
+              <b>
+                {timeAgo(f.startTime, new Date())} · {new Date(f.startTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+              </b>
+              {f.enemy ? <small className="gd-fight-enemy">vs {f.enemy}</small> : null}
               <small>
-                {f.players} players · <span className="is-red">{f.deaths} dead</span>
+                <span className="is-green">
+                  {f.kills} {f.kills === 1 ? "kill" : "kills"}
+                </span>{" "}
+                · <span className="is-red">{f.deaths} {f.deaths === 1 ? "death" : "deaths"}</span>
+              </small>
+              <small>
+                {f.ours} of us · {f.players} players in all
               </small>
             </button>
           ))}
@@ -72,6 +82,15 @@ export function RegearTab({ data }: { data: GuildPageData }) {
       {battleId ? <RegearList key={battleId} data={data} battleId={battleId} /> : null}
     </>
   );
+}
+
+/** The kind of place most kills of the fight were in (open world, hellgate, …): Albion names no zone. */
+function mainArea(kills: KillEvent[]): string | null {
+  const counts = new Map<string, number>();
+  for (const e of kills) if (e.area) counts.set(e.area, (counts.get(e.area) ?? 0) + 1);
+  let best: string | null = null;
+  for (const [area, n] of counts) if (!best || n > (counts.get(best) ?? 0)) best = area;
+  return best;
 }
 
 function RegearList({ data, battleId }: { data: GuildPageData; battleId: number }) {
@@ -114,7 +133,7 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
         </button>
       </p>
     ) : (
-      <div className="gd-skeleton" aria-busy="true" />
+      <Loading what="Loading the deaths of this fight, with what the gear was worth" />
     );
   }
 
@@ -149,10 +168,10 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
           <span>{open.length} not ticked yet</span>
         </div>
         <div className="gd-card gd-stat">
-          <small>FIGHT</small>
-          <b>{report.battle.players}</b>
+          <small>WHERE</small>
+          <b className="gd-stat-text">{areaLabel(mainArea(report.kills))}</b>
           <span>
-            <Link to={battlePath(guild.region, report.battle.id, guild.id)}>Battle report →</Link>
+            {report.battle.players} players · <Link to={battlePath(guild.region, report.battle.id, guild.id)}>Battle report →</Link>
           </span>
         </div>
       </section>

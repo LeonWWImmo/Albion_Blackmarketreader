@@ -5,6 +5,7 @@ import { shortPrice } from "../../price-checker/ui/format";
 import { GuildApiError, battlePath, itemIcon, type Fighter, type GearSlot, type GuildPageData, type KillEvent, type Killboard, type PricedItem } from "../api";
 import { cachedKillboard, loadKillboard } from "../core/guildData";
 import { areaLabel, timeAgo } from "../core/view";
+import { Loading } from "./Loading";
 
 const SLOTS: { key: GearSlot; label: string }[] = [
   { key: "MainHand", label: "Weapon" },
@@ -84,7 +85,7 @@ export function KillboardTab({ data }: { data: GuildPageData }) {
         </button>
       </p>
     ) : (
-      <div className="gd-skeleton" aria-busy="true" />
+      <Loading what="Loading kills and deaths, with what the gear was worth" />
     );
   }
 

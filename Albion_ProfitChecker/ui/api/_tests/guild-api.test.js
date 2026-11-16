@@ -41,7 +41,7 @@ describe("guild page", () => {
     // totals from today's roster, no gains yet; where the fame came from rides along
     expect(res.body.activity.members[0]).toMatchObject({ totals: { total: 1010, pve: 1000, pvp: 10 }, gains: { 7: null, 30: null }, main: "pve" });
     expect(res.body.activity.members[0].details).toMatchObject({ killFame: 10, deathFame: 0 });
-    expect(res.body.fights).toEqual([{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, fame: 900, ours: 1, kills: 2, deaths: 1 }]);
+    expect(res.body.fights).toEqual([{ id: 1, startTime: "2026-11-14T10:00:00Z", players: 12, fame: 900, ours: 1, kills: 2, deaths: 1, enemy: null }]);
     // a signed-in visit gets the same public answer: nothing personal is in it
     expect(await call("guild", { token: "tok-ann", query: { region: "eu", slug: "angry-fuzzies" } })).toEqual(res);
   });

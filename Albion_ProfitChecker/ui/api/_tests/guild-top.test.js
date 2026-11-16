@@ -53,4 +53,14 @@ describe("search with fame", () => {
     const res = await call("search", { query: { region: "eu", q: "angry" } });
     expect(res).toMatchObject({ status: 200, maxAge: 60, body: { guilds: [{ id: GID, killFame: null }] } });
   });
+
+  it("looks up the fame of the first 5 hits only, the rest keeps the search's", async () => {
+    const { call, deps } = setup();
+    const hits = Array.from({ length: 8 }, (_, i) => ({ id: `guild-id-number-${i}`, name: `Angry ${i}`, allianceName: null, killFame: 1, deathFame: 2 }));
+    deps.gameinfo.searchGuilds.mockResolvedValue(hits);
+    const res = await call("search", { query: { region: "eu", q: "angry" } });
+    expect(deps.gameinfo.getGuild).toHaveBeenCalledTimes(5);
+    expect(res.body.guilds).toHaveLength(8);
+    expect(res.body.guilds.find((g) => g.id === "guild-id-number-7")).toMatchObject({ killFame: 1, deathFame: 2 });
+  });
 });
