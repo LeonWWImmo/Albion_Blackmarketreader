@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { STALE_MS, handleGuild } from "../_lib/guildApi.js";
+import { handleGuild } from "../_lib/guildApi.js";
 import { GID, NOW, OTHER, member, setup } from "./guild-kit.js";
+
+const DAY_MS = 24 * 3600 * 1000;
 
 describe("guild API edge cases", () => {
   it("gives two guilds with one name stable addresses, also on a cold link", async () => {
@@ -33,13 +35,13 @@ describe("guild API edge cases", () => {
     await markAs("tok-ann");
 
     // a short list first, the full one when asked again: nobody leaves
-    deps.now = () => new Date(NOW.getTime() + STALE_MS + 1000);
+    deps.now = () => new Date(NOW.getTime() + DAY_MS + 1000);
     deps.gameinfo.getMembers.mockImplementation(async (region, id, options) => (options?.fresh ? many : many.slice(0, 3)));
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 1 } });
     expect([...store.players.values()].filter((p) => p.left_on)).toHaveLength(0);
 
     // empty twice: the sync fails instead of marking everyone as left
-    deps.now = () => new Date(NOW.getTime() + 2 * STALE_MS + 2000);
+    deps.now = () => new Date(NOW.getTime() + 2 * DAY_MS + 2000);
     deps.gameinfo.getMembers.mockResolvedValue([]);
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 0, failed: 1 } });
@@ -52,7 +54,7 @@ describe("guild API edge cases", () => {
     const many = Array.from({ length: 20 }, (_, i) => member(`p${i}`, `P${i}`));
     deps.gameinfo.getMembers.mockResolvedValue(many);
     await markAs("tok-ann");
-    deps.now = () => new Date(NOW.getTime() + STALE_MS + 1000);
+    deps.now = () => new Date(NOW.getTime() + DAY_MS + 1000);
     deps.gameinfo.getMembers.mockResolvedValue(many.slice(0, 4));
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 1 } });
     expect([...store.players.values()].filter((p) => p.left_on)).toHaveLength(16);

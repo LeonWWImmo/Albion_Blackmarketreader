@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { GameinfoError } from "../_lib/gameinfo.js";
-import { STALE_MS, normalizeQuery, rankGuilds } from "../_lib/guildApi.js";
+import { normalizeQuery, rankGuilds } from "../_lib/guildApi.js";
 import { createMemoryGuildStore } from "../_lib/guildMemoryStore.js";
 import { GID, NOW, OTHER, killEvent, member, setup } from "./guild-kit.js";
+
+const DAY_MS = 24 * 3600 * 1000;
 
 describe("search", () => {
   it("finds guilds by name and checks the input", async () => {
@@ -207,7 +209,7 @@ describe("daily sync", () => {
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ status: 200, body: { synced: 0, failed: 0 } });
 
     // a day later Ann's fame grew and Bo left: the sync notes both and the page shows them
-    const tomorrow = new Date(NOW.getTime() + STALE_MS + 4 * 3600 * 1000);
+    const tomorrow = new Date(NOW.getTime() + DAY_MS + 4 * 3600 * 1000);
     deps.now = () => tomorrow;
     deps.gameinfo.getMembers.mockResolvedValue([member("a", "Ann", 1600)]);
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ status: 200, body: { synced: 1, failed: 0 } });
@@ -223,14 +225,14 @@ describe("daily sync", () => {
     const { call, markAs, deps } = setup();
     await markAs("tok-ann");
     await call("unmark", { method: "POST", token: "tok-ann" });
-    deps.now = () => new Date(NOW.getTime() + 2 * STALE_MS);
+    deps.now = () => new Date(NOW.getTime() + 2 * DAY_MS);
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 0 } });
   });
 
   it("counts a failed guild and goes on", async () => {
     const { call, deps, markAs } = setup();
     await markAs("tok-ann");
-    deps.now = () => new Date(NOW.getTime() + STALE_MS + 1000);
+    deps.now = () => new Date(NOW.getTime() + DAY_MS + 1000);
     deps.gameinfo.getGuild.mockRejectedValueOnce(new GameinfoError("down", 502));
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ status: 200, body: { synced: 0, failed: 1 } });

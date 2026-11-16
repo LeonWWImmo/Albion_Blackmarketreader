@@ -21,13 +21,21 @@
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
 //   POST unmark                          remove the mark
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
+//   GET  regear-paid?region=eu&battle=1  the deaths of a fight the signed-in player ticked as paid
+//   POST regear-pay {region, battle, event, paid}
+//   GET  bank?guild=..                   the signed-in player's chest log of a guild
+//   POST bank-save {guild, rows}         replace it
+//   GET  splits?guild=..                 their saved loot splits of a guild
+//   POST split-save {guild, id?, name, data}, split-remove {id}
+// The last ones are private per player (api/_lib/guildPrivate.js) and never reach the killboard.
 import { GameinfoError, PAGES_BUDGET_MS, TOP_RANGES, isBattleId, isGuildId, isRegion } from "./gameinfo.js";
 import { dailyReport, isWebhookUrl } from "./guildDiscord.js";
+import { handlePrivate } from "./guildPrivate.js";
 import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
 
-/** The cron syncs a marked guild again when its last sync is older than this. */
-export const STALE_MS = 20 * 3600 * 1000;
+// The cron syncs each marked guild once per day (UTC): the ones not synced yet today, also when a
+// mark synced it late the evening before.
 // one guild can take ~17 s when the killboard is slow (2 tries of 8 s): stop starting new ones
 // early enough to stay inside the function's 60 s
 const SYNC_BUDGET_MS = 30_000;
@@ -549,7 +557,8 @@ async function mark(deps, user, body) {
 async function syncDue(deps) {
   const { store, gameinfo } = deps;
   const started = Date.now();
-  const due = await store.dueGuilds(new Date(deps.now() - STALE_MS).toISOString(), SYNC_BATCH);
+  const today = dayOf(deps.now());
+  const due = await store.dueGuilds(`${today}T00:00:00.000Z`, SYNC_BATCH);
   const result = { synced: 0, failed: 0, waiting: 0, reports: 0 };
   for (const guild of due) {
     if (Date.now() - started > SYNC_BUDGET_MS) {
@@ -562,16 +571,23 @@ async function syncDue(deps) {
     } catch (error) {
       result.failed++;
       console.error("guild sync failed", guild.id, error);
-      continue;
     }
+  }
+  // the reports of every guild with today's snapshot: also the ones a mark took earlier today
+  const fresh = (await store.dueGuilds(FAR_FUTURE, SYNC_BATCH)).filter((g) => g.last_synced_at && dayOf(g.last_synced_at) === today);
+  for (const guild of fresh) {
+    if (Date.now() - started > REPORT_BUDGET_MS) break;
     try {
-      if (Date.now() - started < REPORT_BUDGET_MS) result.reports += await postReports(deps, guild, started);
+      result.reports += await postReports(deps, guild, started);
     } catch (error) {
       console.error("guild reports failed", guild.id, error);
     }
   }
   return ok(result);
 }
+
+/** Later than any sync: dueGuilds(FAR_FUTURE) lists every marked guild. */
+const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
 /** Posts today's report of a freshly synced guild to its players' Discord webhooks; how many went out. */
 async function postReports(deps, guild, started) {
@@ -612,7 +628,7 @@ async function saveHook(deps, user, body) {
   const hello = await discord.post(url, {
     username: "Blackmarket Reader",
     allowed_mentions: { parse: [] },
-    content: `Connected: the daily report of **${guild.name}** comes here every day after the guild snapshot (around 03:30 UTC).`
+    content: `Connected: the daily report of **${guild.name}** comes here every day after the guild snapshot (between 03:30 and 04:30 UTC).`
   });
   if (hello !== "ok") return fail(502, "Discord did not take the first message. Try again in a minute.");
   await store.saveWebhook(user.id, url, name);
@@ -636,17 +652,27 @@ async function getStatus({ gameinfo, store, now }) {
   return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status"]);
-const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status", "regear-paid", "bank", "splits"]);
+const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "regear-pay", "bank-save", "split-save", "split-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
+/** The player's own data: only the database, never the killboard. */
+const PRIVATE_ACTIONS = new Set(["regear-paid", "regear-pay", "bank", "bank-save", "splits", "split-save", "split-remove"]);
+const SIGN_IN = {
+  hook: "Sign in to set up the Discord report.",
+  regear: "Sign in to tick deaths as paid.",
+  bank: "Sign in to keep the chest log.",
+  split: "Sign in to save loot splits.",
+  splits: "Sign in to save loot splits."
+};
 
 export async function handleGuild(action, request, deps) {
   const { method, query = {}, body, token, authorization, client } = request;
   if (!GET_ACTIONS.has(action) && !POST_ACTIONS.has(action)) return fail(404, "Unknown guild action.");
   if (method !== (POST_ACTIONS.has(action) ? "POST" : "GET")) return fail(405, "Method not allowed");
   const region = String(query.region ?? "").toLowerCase();
-  // every action but the cron can reach Albion's killboard: limited per visitor
-  if (action !== "sync" && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
+  // every action that can reach Albion's killboard is limited per visitor (ticking paid in a big
+  // regear is many quick clicks, and reaches the database only)
+  if (action !== "sync" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
   try {
     if (action === "sync") {
       if (!deps.cronSecret || authorization !== `Bearer ${deps.cronSecret}`) return fail(401, "Unauthorized");
@@ -680,8 +706,9 @@ export async function handleGuild(action, request, deps) {
       const row = user && deps.store ? await deps.store.getMark(user.id) : null;
       return ok({ guild: row ? guildRef(row) : null });
     }
-    if (!user) return fail(401, action.startsWith("hook") ? "Sign in to set up the Discord report." : "Sign in to mark a guild.");
+    if (!user) return fail(401, SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
+    if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
     if (action === "mark") return await mark(deps, user, body);
     if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });
     if (action === "hook") {

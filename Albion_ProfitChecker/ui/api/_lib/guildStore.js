@@ -111,6 +111,42 @@ export function createGuildStore(db) {
     },
     async setWebhookSent(userId, day) {
       must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId));
+    },
+    /** The deaths of one fight this player ticked as paid (kill event ids). */
+    async getRegearPaid(userId, region, battleId) {
+      return must(await db.from("guild_regear_paid").select("event_id").eq("user_id", userId).eq("region", region).eq("battle_id", battleId)).map((r) => Number(r.event_id));
+    },
+    async setRegearPaid(userId, region, battleId, eventId, paid) {
+      if (paid) must(await db.from("guild_regear_paid").upsert({ user_id: userId, region, battle_id: battleId, event_id: eventId }, { onConflict: "user_id,region,event_id" }));
+      else must(await db.from("guild_regear_paid").delete().eq("user_id", userId).eq("region", region).eq("event_id", eventId));
+    },
+    async getBankLog(userId, guildId) {
+      const row = must(await db.from("guild_bank_logs").select("rows").eq("user_id", userId).eq("guild_id", guildId).maybeSingle());
+      return row?.rows ?? [];
+    },
+    /** No rows removes the log. */
+    async saveBankLog(userId, guildId, rows, at) {
+      if (rows.length) must(await db.from("guild_bank_logs").upsert({ user_id: userId, guild_id: guildId, rows, updated_at: at }, { onConflict: "user_id,guild_id" }));
+      else must(await db.from("guild_bank_logs").delete().eq("user_id", userId).eq("guild_id", guildId));
+    },
+    /** This player's splits of a guild, newest first. */
+    async listSplits(userId, guildId) {
+      return must(await db.from("guild_splits").select("*").eq("user_id", userId).eq("guild_id", guildId).order("created_at", { ascending: false }).limit(PAGE));
+    },
+    async countSplits(userId, guildId) {
+      const { count, error } = await db.from("guild_splits").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("guild_id", guildId);
+      if (error) throw new Error(`database: ${error.message}`);
+      return count ?? 0;
+    },
+    async addSplit(row) {
+      return must(await db.from("guild_splits").insert(row).select("*").single());
+    },
+    /** Only the player's own split; null when it is not theirs or gone. */
+    async updateSplit(userId, id, changes) {
+      return must(await db.from("guild_splits").update(changes).eq("id", id).eq("user_id", userId).select("*").maybeSingle());
+    },
+    async removeSplit(userId, id) {
+      return must(await db.from("guild_splits").delete().eq("id", id).eq("user_id", userId).select("id")).length > 0;
     }
   };
 }

@@ -108,9 +108,9 @@ function GuildBody() {
       ) : tab === "attendance" ? (
         <AttendanceTab key={data.guild.id} data={data} />
       ) : tab === "regear" ? (
-        <RegearTab key={data.guild.id} data={data} />
+        <RegearTab key={data.guild.id} data={data} mine={mine} />
       ) : tab === "bank" ? (
-        <BankLogTab key={data.guild.id} data={data} />
+        <BankLogTab key={data.guild.id} data={data} mine={mine} />
       ) : tab === "discord" ? (
         <DiscordTab key={data.guild.id} data={data} mine={mine} />
       ) : (

@@ -201,6 +201,40 @@ export const markGuild = (token: string, region: Region, id: string) => call<{ g
 
 export const unmarkGuild = (token: string) => call<{ unmarked: boolean }>("unmark", { token, method: "POST", body: {} });
 
+// The signed-in player's own data: private to their account.
+
+/** The deaths of a fight this player ticked as paid (kill event ids). */
+export const fetchRegearPaid = (token: string, region: Region, battle: number) => call<{ events: number[] }>(`regear-paid?region=${region}&battle=${battle}`, { token }).then((r) => r.events);
+
+export const setRegearPaid = (token: string, region: Region, battle: number, event: number, paid: boolean) =>
+  call<{ paid: boolean }>("regear-pay", { token, method: "POST", body: { region, battle, event, paid } });
+
+/** A chest log row as stored: [time (null when unknown), player, item, enchant, quality, amount]. */
+export type BankRow = [number | null, string, string, number, number, number];
+
+export const fetchBankLog = (token: string, guild: string) => call<{ rows: BankRow[] }>(`bank?guild=${encodeURIComponent(guild)}`, { token }).then((r) => r.rows);
+
+export const saveBankLog = (token: string, guild: string, rows: BankRow[]) => call<{ count: number }>("bank-save", { token, method: "POST", body: { guild, rows } });
+
+/** A loot split as saved: the items priced when it was made, each player's silver and whether they got it. */
+export type SplitData = {
+  from: number | null;
+  to: number | null;
+  total: number;
+  guildPct: number;
+  guildCut: number;
+  items: { name: string; enchant: number; quality: number; amount: number; unit: number }[];
+  players: { name: string; share: number; silver: number; paid: boolean }[];
+};
+export type SavedSplit = { id: string; name: string; createdAt: string; updatedAt: string; data: SplitData };
+
+export const fetchSplits = (token: string, guild: string) => call<{ splits: SavedSplit[] }>(`splits?guild=${encodeURIComponent(guild)}`, { token }).then((r) => r.splits);
+
+export const saveSplit = (token: string, guild: string, split: { id?: string; name: string; data: SplitData }) =>
+  call<{ split: SavedSplit }>("split-save", { token, method: "POST", body: { guild, ...split } }).then((r) => r.split);
+
+export const removeSplit = (token: string, id: string) => call<{ removed: boolean }>("split-remove", { token, method: "POST", body: { id } });
+
 /** /guild/eu/angry-fuzzies, with the tab: /guild/eu/angry-fuzzies/activity */
 export const guildPath = (ref: { region: Region; slug: string }, tab?: string) => `/guild/${ref.region}/${ref.slug}${tab && tab !== "overview" ? `/${tab}` : ""}`;
 

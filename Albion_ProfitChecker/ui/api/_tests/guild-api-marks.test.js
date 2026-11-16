@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { GameinfoError } from "../_lib/gameinfo.js";
-import { STALE_MS, withSlugs } from "../_lib/guildApi.js";
+import { withSlugs } from "../_lib/guildApi.js";
 import { GID, NOW, member, setup } from "./guild-kit.js";
+
+const DAY_MS = 24 * 3600 * 1000;
 
 const TWIN = "Twin0000000000000000000";
 
@@ -132,7 +134,7 @@ describe("marks", () => {
     await markAs("tok-ann");
     spy.mockRestore();
     deps.gameinfo.getMembers.mockResolvedValue([member("a", "Ann")]);
-    deps.now = () => new Date(NOW.getTime() + STALE_MS / 2);
+    deps.now = () => new Date(NOW.getTime() + DAY_MS / 2);
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 1 } });
     expect(store.snapshots.size).toBe(1);
   });
