@@ -385,7 +385,7 @@ a.gd-mine:hover {
 
 .gd-tools {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1495,6 +1495,99 @@ h2.gd-guild-name {
   background: rgba(var(--gd-accent-rgb), 0.08);
 }
 
+.gd-best-card.is-focus {
+  border-color: rgba(var(--gd-accent-rgb), 0.5);
+}
+
+/* a short line next to a list's title: what the list shows */
+.gd-head-note {
+  flex: 1;
+  font-size: 13px;
+}
+
+.gd-battles .gd-row {
+  grid-template-columns: minmax(0, 1.6fr) 70px 130px 80px 90px;
+}
+
+/* who fought: one line per side with a bar of its players */
+.gd-fought .gd-fought-result {
+  margin: 0 18px 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 700;
+}
+
+.gd-fought-list {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 14px;
+  list-style: none;
+}
+
+.gd-fought-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(60px, 1fr) 64px 64px 64px;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--gd-line);
+}
+
+.gd-fought-list li.is-focus {
+  border-radius: 12px;
+  background: rgba(var(--gd-accent-rgb), 0.08);
+}
+
+.gd-fought-name {
+  display: grid;
+  min-width: 0;
+}
+
+.gd-fought-name b,
+.gd-fought-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gd-fought-name small,
+.gd-fought-list .gd-num small {
+  color: var(--gd-muted);
+  font-size: 12px;
+}
+
+.gd-fought-list .gd-num {
+  display: grid;
+}
+
+.gd-fought-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.gd-fought-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gd-accent);
+}
+
+.gd-fight-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.gd-fight-head h2 {
+  font-size: 20px;
+}
+
 .gd-row a {
   color: inherit;
   text-decoration: none;
@@ -1530,6 +1623,55 @@ h2.gd-guild-name {
 
 .gd-bank .gd-row {
   grid-template-columns: minmax(0, 1.4fr) 112px 112px 112px;
+}
+
+/* the gear of a death, on its own line under the row: what the regear hands out */
+.gd-regear-gear {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-regear-gear li {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+}
+
+.gd-regear-gear img {
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.gd-regear-gear small {
+  color: var(--gd-muted);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.gd-shopping-note {
+  padding: 0 18px 10px;
+  font-size: 13px;
+}
+
+.gd-shopping-list {
+  display: grid;
+  margin: 0;
+  padding: 0 18px 14px;
+  list-style: none;
+}
+
+.gd-shopping-list li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 56px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--gd-line);
 }
 
 .gd-row.is-paid {
@@ -1745,6 +1887,8 @@ h2.gd-guild-name {
 
 .gd-discord-body p {
   margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .gd-discord-body .gd-btn {
@@ -1770,8 +1914,9 @@ h2.gd-guild-name {
   font-size: 13px;
 }
 
-.gd-discord-how {
-  margin: 6px 18px 8px;
+/* .gd h3 resets the margin: the space is padding here */
+.gd-discord .gd-discord-how {
+  padding: 6px 18px 8px;
   font-size: 15px;
 }
 
@@ -1791,6 +1936,18 @@ h2.gd-guild-name {
   .gd-regear .gd-row {
     grid-template-columns: minmax(0, 1fr) auto auto auto;
   }
+  .gd-battles .gd-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .gd-fought-list li {
+    grid-template-columns: minmax(0, 1fr) 44px 44px 44px;
+    gap: 8px;
+    padding: 8px 4px;
+  }
+  .gd-fought-bar {
+    display: none;
+  }
+  .gd-battles .gd-col-mid,
   .gd-sides .gd-col-mid,
   .gd-players .gd-col-mid,
   .gd-regear .gd-col-mid,

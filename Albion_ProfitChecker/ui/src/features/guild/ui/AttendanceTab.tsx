@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { GuildApiError, battlePath, type AttendanceFight, type GuildPageData } from "../api";
+import { GuildApiError, fightPath, type AttendanceFight, type GuildPageData } from "../api";
 import { cachedFights, loadFights } from "../core/guildData";
 import { timeAgo } from "../core/view";
 import { CopyButton } from "./CopyButton";
@@ -190,7 +190,7 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
         </div>
         {showFights
           ? fights.map((f) => (
-              <Link key={f.id} className="gd-row gd-row-link" to={battlePath(guild.region, f.id, guild.id)} title="Battle report">
+              <Link key={f.id} className="gd-row gd-row-link" to={fightPath(guild, f.id)} title="Battle report">
                 <div>
                   <b>
                     {f.players} players · {shortPrice(f.fame)} fame

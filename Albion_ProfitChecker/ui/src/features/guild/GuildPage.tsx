@@ -8,6 +8,7 @@ import { isGuildTab, type GuildTab } from "./core/tools";
 import { GuildShell } from "./GuildShell";
 import { ActivityTab } from "./ui/ActivityTab";
 import { AttendanceTab } from "./ui/AttendanceTab";
+import { BattlesTab } from "./ui/BattlesTab";
 import { BankLogTab } from "./ui/BankLogTab";
 import { DiscordTab } from "./ui/DiscordTab";
 import { GuildHeader } from "./ui/GuildHeader";
@@ -102,6 +103,8 @@ function GuildBody() {
         <ActivityTab key={data.guild.id} data={data} />
       ) : tab === "killboard" ? (
         <KillboardTab key={data.guild.id} data={data} />
+      ) : tab === "battles" ? (
+        <BattlesTab key={data.guild.id} data={data} />
       ) : tab === "attendance" ? (
         <AttendanceTab key={data.guild.id} data={data} />
       ) : tab === "regear" ? (

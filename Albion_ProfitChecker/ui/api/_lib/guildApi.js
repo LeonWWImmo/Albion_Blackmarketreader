@@ -496,7 +496,7 @@ async function getFights({ gameinfo, now }, { region, id }) {
   const fights = all
     .filter((b) => b.startTime >= since && b.ours.length && !seen.has(b.id) && seen.add(b.id))
     .sort((a, b) => b.startTime.localeCompare(a.startTime))
-    .map((b) => ({ id: b.id, startTime: b.startTime, players: b.players, kills: b.kills, fame: b.fame, ours: b.ours }));
+    .map((b) => ({ id: b.id, startTime: b.startTime, players: b.players, kills: b.kills, fame: b.fame, enemy: b.enemy ?? null, ours: b.ours }));
   const whole = complete && !failed;
   return ok({ fights, days: ATTENDANCE_DAYS, complete: whole }, whole ? FIGHTS_CACHE_S : 0);
 }

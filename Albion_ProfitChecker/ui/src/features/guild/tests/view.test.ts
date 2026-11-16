@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Activity, ActivityMember } from "../api";
 import { battlePath, guildPath, slugOf } from "../api";
 import { isGuildTab } from "../core/tools";
-import { areaLabel, daysAgo, filterMembers, joinedAndLeft, kickListText, searchMembers, shareBars, sparkHeights, timeAgo } from "../core/view";
+import { areaLabel, daysAgo, filterMembers, itemName, joinedAndLeft, kickListText, searchMembers, shareBars, sparkHeights, tierOf, timeAgo } from "../core/view";
 
 const NOW = new Date("2026-11-14T15:00:00Z");
 const member = (name: string, status: ActivityMember["status"], extra: Partial<ActivityMember> = {}): ActivityMember => ({
@@ -25,6 +25,19 @@ const activity = (members: ActivityMember[], left: Activity["left"] = []): Activ
   counts: { active: 0, quiet: 0, inactive: 0, unknown: 0 },
   members,
   left
+});
+
+describe("gear names", () => {
+  it("names gear the way players do: name, tier and enchantment", () => {
+    const names = new Map([["T8_2H_BOW_KEEPER", "Elder's Bow of Badon"], ["T4_HEAD_PLATE_SET1", "Adept's Soldier Helmet"]]);
+    expect(tierOf("T8_2H_BOW_KEEPER@3")).toBe("8.3");
+    expect(tierOf("T4_HEAD_PLATE_SET1")).toBe("4.0");
+    expect(tierOf("UNIQUE_HIDEOUT")).toBe("");
+    expect(itemName("T8_2H_BOW_KEEPER@3", names)).toBe("Bow of Badon 8.3");
+    expect(itemName("T4_HEAD_PLATE_SET1", names)).toBe("Soldier Helmet 4.0");
+    // names not loaded (yet): the id, readable
+    expect(itemName("T6_MAIN_SWORD@1", null)).toBe("main sword 6.1");
+  });
 });
 
 describe("guild view helpers", () => {
@@ -89,6 +102,7 @@ describe("guild view helpers", () => {
     expect(guildPath({ region: "us", slug: "x" }, "overview")).toBe("/guild/us/x");
     expect(isGuildTab("killboard")).toBe(true);
     expect(isGuildTab("regear")).toBe(true);
+    expect(isGuildTab("battles")).toBe(true);
     expect(isGuildTab("battle")).toBe(false);
     expect(battlePath("eu", 123)).toBe("/guild/battle/eu/123");
     expect(battlePath("us", 7, "a-b_c")).toBe("/guild/battle/us/7?guild=a-b_c");

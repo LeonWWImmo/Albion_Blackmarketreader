@@ -75,7 +75,7 @@ export function GuildStartPage() {
   useSeo({
     title: "Albion Online Guild Tools: Activity, Regear and Attendance | Blackmarket Reader",
     description:
-      "Free Albion Online guild tools: see which members are active, quiet or inactive, the guild's kills and deaths with full gear, and, soon, regear, attendance and the guild bank, straight from the killboard.",
+      "Free Albion Online guild tools: see which members are active, quiet or inactive, the guild's kills and deaths with full gear, battle reports, regear lists, attendance, the guild bank and a daily Discord report, straight from the killboard.",
     keywords: "Albion Online guild tools, Albion guild activity, Albion inactive members, Albion guild killboard, Albion regear, Albion guild management",
     canonical: "https://blackmarketreader.com/guild"
   });

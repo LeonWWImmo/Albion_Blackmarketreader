@@ -142,6 +142,8 @@ export type AttendanceFight = {
   players: number;
   kills: number;
   fame: number;
+  /** the biggest other guild there, "[alliance] guild" */
+  enemy?: string | null;
   ours: { id: string; name: string; kills: number; deaths: number; killFame: number }[];
 };
 /** The signed-in player's Discord webhook: only its name, never its link. */
@@ -204,6 +206,9 @@ export const guildPath = (ref: { region: Region; slug: string }, tab?: string) =
 
 /** A fight's report page; `guildId` reads it from that guild's side (its kills green, its deaths red). */
 export const battlePath = (region: Region, id: number, guildId?: string) => `/guild/battle/${region}/${id}${guildId ? `?guild=${encodeURIComponent(guildId)}` : ""}`;
+
+/** A fight's report inside the guild's Battles tab: read from that guild's side. */
+export const fightPath = (ref: { region: Region; slug: string }, id: number) => `${guildPath(ref, "battles")}?fight=${id}`;
 
 /** A guild's address from its name alone (the guild page moves on to its real one when they differ). */
 export const slugOf = (name: string) =>

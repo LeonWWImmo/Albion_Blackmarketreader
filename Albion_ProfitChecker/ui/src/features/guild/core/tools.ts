@@ -2,17 +2,19 @@
 export const GUILD_TOOLS = [
   { key: "activity", label: "Activity", icon: "📈", ready: true },
   { key: "killboard", label: "Killboard", icon: "💀", ready: true },
+  { key: "battles", label: "Battle reports", icon: "🏰", ready: true },
   { key: "regear", label: "Regear", icon: "⚔️", ready: true },
   { key: "attendance", label: "Attendance", icon: "🛡️", ready: true },
   { key: "bank", label: "Bank log", icon: "🏦", ready: true },
   { key: "discord", label: "Discord report", icon: "📣", ready: true }
 ] as const;
 
-export type GuildTab = "overview" | "activity" | "killboard" | "attendance" | "regear" | "bank" | "discord";
+export type GuildTab = "overview" | "activity" | "killboard" | "battles" | "attendance" | "regear" | "bank" | "discord";
 export const GUILD_TABS: { key: GuildTab; label: string }[] = [
   { key: "overview", label: "Overview" },
   { key: "activity", label: "Activity" },
   { key: "killboard", label: "Killboard" },
+  { key: "battles", label: "Battles" },
   { key: "attendance", label: "Attendance" },
   { key: "regear", label: "Regear" },
   { key: "bank", label: "Bank log" },

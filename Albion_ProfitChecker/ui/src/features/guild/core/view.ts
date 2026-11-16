@@ -82,3 +82,20 @@ export function shareBars(entries: [string, number][]): [string, number, number]
   const max = shown[0]?.[1] ?? 0;
   return shown.map(([label, v]) => [label, v, max ? Math.max(4, Math.round((v / max) * 100)) : 0]);
 }
+
+const TIER_WORD = /^(?:Beginner|Novice|Journeyman|Adept|Expert|Master|Grandmaster|Elder)'s /;
+
+/** "8.3" for "T8_2H_BOW@3": tier and enchantment, the way players name gear. */
+export function tierOf(type: string): string {
+  const [base, enchant = "0"] = type.split("@");
+  const tier = /^T(\d)_/.exec(base)?.[1];
+  return tier ? `${tier}.${enchant}` : "";
+}
+
+/** "Bow of Badon 8.3": the item's English name without its tier word, then tier and enchantment. */
+export function itemName(type: string, names: Map<string, string> | null): string {
+  const base = type.split("@")[0];
+  const name = names?.get(base)?.replace(TIER_WORD, "") ?? base.replace(/^T\d_/, "").replace(/_/g, " ").toLowerCase();
+  const tier = tierOf(type);
+  return tier ? `${name} ${tier}` : name;
+}

@@ -1,11 +1,59 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { GuildApiError, battlePath, guildPath, itemIcon, type BattleReport, type GuildPageData, type KillEvent } from "../api";
+import { loadNames } from "../../loot-split/core/market";
+import { GuildApiError, fightPath, guildPath, itemIcon, type BattleReport, type GearSlot, type GuildPageData, type KillEvent, type PricedItem } from "../api";
 import { cachedBattle, loadBattle } from "../core/guildData";
-import { areaLabel, timeAgo } from "../core/view";
+import { areaLabel, itemName, tierOf, timeAgo } from "../core/view";
 import { CopyButton } from "./CopyButton";
 import { Loading } from "./Loading";
+
+/** The gear a death costs, in the order of Albion's kill screen. */
+const SLOTS: { key: GearSlot; label: string }[] = [
+  { key: "MainHand", label: "Weapon" },
+  { key: "OffHand", label: "Off-hand" },
+  { key: "Head", label: "Head" },
+  { key: "Armor", label: "Armor" },
+  { key: "Shoes", label: "Shoes" },
+  { key: "Cape", label: "Cape" },
+  { key: "Bag", label: "Bag" },
+  { key: "Mount", label: "Mount" },
+  { key: "Potion", label: "Potion" },
+  { key: "Food", label: "Food" }
+];
+const QUALITY = ["", "Normal", "Good", "Outstanding", "Excellent", "Masterpiece"];
+
+const gearOf = (e: KillEvent) => SLOTS.flatMap(({ key, label }) => (e.victim.gear[key] ? [{ label, item: e.victim.gear[key] as PricedItem }] : []));
+
+/** Item id -> English name, for the gear lists (the names file maps name -> id). */
+function useItemNames(): Map<string, string> | null {
+  const [names, setNames] = useState<Map<string, string> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadNames()
+      .then((byName) => alive && setNames(new Map(Object.entries(byName).map(([name, id]) => [id, name]))))
+      // without names the gear shows by its id
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return names;
+}
+
+/** Every piece of gear of the open deaths, summed per item: what to buy for the regear. */
+function shoppingList(deaths: KillEvent[]): { type: string; count: number; value: number }[] {
+  const byType = new Map<string, { type: string; count: number; value: number }>();
+  for (const e of deaths) {
+    for (const { item } of gearOf(e)) {
+      const row = byType.get(item.type) ?? { type: item.type, count: 0, value: 0 };
+      row.count += item.count;
+      row.value += item.value;
+      byType.set(item.type, row);
+    }
+  }
+  return [...byType.values()].sort((a, b) => b.value - a.value || b.count - a.count);
+}
 
 const MIN_IP = [0, 1100, 1200, 1300, 1400];
 const MIN_GEAR = [
@@ -102,6 +150,7 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
   const [minGear, setMinGear] = useState(0);
   const [withBag, setWithBag] = useState(false);
   const [paid, setPaid] = useState(() => readPaid(battleId));
+  const names = useItemNames();
 
   useEffect(() => {
     let alive = true;
@@ -147,7 +196,10 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
   const open = deaths.filter((e) => !paid.has(e.id));
   const total = deaths.reduce((t, e) => t + cost(e), 0);
   const owed = open.reduce((t, e) => t + cost(e), 0);
-  const copyText = open.map((e) => `${e.victim.name}\t${Math.round(cost(e))}`).join("\n");
+  // player, silver, then the gear to hand out: what an officer pastes into the regear channel
+  const copyText = open.map((e) => `${e.victim.name}\t${Math.round(cost(e))}\t${gearOf(e).map(({ item }) => itemName(item.type, names)).join(", ")}`).join("\n");
+  const shopping = shoppingList(open);
+  const shoppingText = shopping.map((s) => `${s.count}x ${itemName(s.type, names)}`).join("\n");
 
   return (
     <>
@@ -171,7 +223,7 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
           <small>WHERE</small>
           <b className="gd-stat-text">{areaLabel(mainArea(report.kills))}</b>
           <span>
-            {report.battle.players} players · <Link to={battlePath(guild.region, report.battle.id, guild.id)}>Battle report →</Link>
+            {report.battle.players} players · <Link to={fightPath(guild, report.battle.id)}>Battle report →</Link>
           </span>
         </div>
       </section>
@@ -227,6 +279,14 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
             <span className="gd-num">
               <input type="checkbox" checked={paid.has(e.id)} onChange={() => toggle(e.id)} aria-label={`${e.victim.name} paid`} />
             </span>
+            <ul className="gd-regear-gear" aria-label={`Gear of ${e.victim.name}`}>
+              {gearOf(e).map(({ label, item }) => (
+                <li key={label} title={`${label}: ${itemName(item.type, names)}, ${QUALITY[item.quality] ?? ""}${item.count > 1 ? ` ×${item.count}` : ""}${item.value > 0 ? ` · ${shortPrice(item.value)}` : ""}`}>
+                  <img src={itemIcon(item.type, item.quality, 64)} alt={label} width={36} height={36} loading="lazy" decoding="async" />
+                  <small>{tierOf(item.type)}</small>
+                </li>
+              ))}
+            </ul>
           </div>
         ))}
         {!deaths.length ? <p className="gd-empty">{report.kills.length ? "No death of the guild matches these filters." : "Albion has not listed this fight's kills yet. Try again in a few minutes."}</p> : null}
@@ -239,6 +299,26 @@ function RegearList({ data, battleId }: { data: GuildPageData; battleId: number 
           </span>
         </p>
       </section>
+
+      {shopping.length ? (
+        <section className="gd-card gd-shopping">
+          <div className="gd-list-head">
+            <h2>Shopping list</h2>
+            <CopyButton text={shoppingText} label="Copy shopping list" count={shopping.length} />
+          </div>
+          <p className="gd-muted gd-shopping-note">The gear of every death not ticked yet, summed up per item: what to buy for the regear.</p>
+          <ul className="gd-shopping-list">
+            {shopping.map((s) => (
+              <li key={s.type}>
+                <img src={itemIcon(s.type, 1, 64)} alt="" width={32} height={32} loading="lazy" decoding="async" />
+                <span>{itemName(s.type, names)}</span>
+                <b className="gd-num">×{s.count}</b>
+                <span className="gd-num gd-muted">{report.priced && s.value ? shortPrice(s.value) : "–"}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </>
   );
 }

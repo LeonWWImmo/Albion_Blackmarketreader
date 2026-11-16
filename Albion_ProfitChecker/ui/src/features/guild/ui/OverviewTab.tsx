@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { battlePath, guildPath, type GuildPageData } from "../api";
+import { fightPath, guildPath, type GuildPageData } from "../api";
 import { joinedAndLeft, timeAgo } from "../core/view";
 import { TrackingNote } from "./TrackingNote";
 
@@ -77,7 +77,7 @@ export function OverviewTab({ data }: { data: GuildPageData }) {
           </div>
           {fights.length ? (
             fights.map((fight) => (
-              <Link key={fight.id} className="gd-row gd-row-link" to={battlePath(guild.region, fight.id, guild.id)} title="Battle report">
+              <Link key={fight.id} className="gd-row gd-row-link" to={fightPath(guild, fight.id)} title="Battle report">
                 <div>
                   <b>
                     {fight.players} players · {shortPrice(fight.fame)} fame
