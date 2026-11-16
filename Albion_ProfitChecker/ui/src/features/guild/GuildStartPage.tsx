@@ -145,6 +145,13 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
           </div>
         ))}
       </section>
+      <Link className="gd-card gd-mine" to="/guides/albion-online-guild-tools">
+        <div>
+          <b>New here? How the guild tools work</b>
+          <p className="gd-muted">The guide: marking your guild, regear after a ZvZ, the bank log and loot splits, attendance and the Discord report.</p>
+        </div>
+        <span className="gd-btn">Read the guide</span>
+      </Link>
     </main>
   );
 }

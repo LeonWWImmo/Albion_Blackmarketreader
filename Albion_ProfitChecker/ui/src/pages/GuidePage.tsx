@@ -108,14 +108,17 @@ export function GuidePage() {
           </Link>
         </header>
 
-        <section className="guide-watch" aria-label={`The ${toolLabel} in action`}>
-          <DemoVideo
-            src={assetUrl(quick.video)}
-            poster={assetUrl(quick.poster)}
-            url={`blackmarketreader.com/${toolSlug}`}
-            label={`Short clip: the ${toolLabel} in use`}
-          />
-        </section>
+        {/* a tool without its clip yet goes straight to the steps */}
+        {quick.video ? (
+          <section className="guide-watch" aria-label={`The ${toolLabel} in action`}>
+            <DemoVideo
+              src={assetUrl(quick.video)}
+              poster={assetUrl(quick.poster)}
+              url={`blackmarketreader.com/${toolSlug}`}
+              label={`Short clip: the ${toolLabel} in use`}
+            />
+          </section>
+        ) : null}
 
         <section className="guide-quick" aria-labelledby="guide-steps-title">
           <h2 id="guide-steps-title">How it works</h2>

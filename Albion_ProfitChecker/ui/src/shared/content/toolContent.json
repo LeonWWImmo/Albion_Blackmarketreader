@@ -1005,5 +1005,142 @@
         "Use the enchantment ladder to see whether enchanting yourself is cheaper than buying."
       ]
     }
+  },
+  "guild": {
+    "title": "How the guild tools work",
+    "quick": {
+      "tagline": "Find your guild and see who plays, who fought, what the regear costs and who still gets paid.",
+      "video": "",
+      "poster": "picture/guides/guild-1.jpg",
+      "steps": [
+        {
+          "title": "Find your guild",
+          "text": "Search it by name on the Guild page, pick EU or US. Any guild works without an account.",
+          "image": "picture/guides/guild-1.jpg"
+        },
+        {
+          "title": "Sign in and mark it",
+          "text": "A marked guild gets a daily snapshot: fame gained per member, who went quiet, who joined and left.",
+          "image": "picture/guides/guild-2.jpg"
+        },
+        {
+          "title": "Use the tabs",
+          "text": "Battles, attendance, regear, bank log and loot splits, and a daily report in your Discord.",
+          "image": "picture/guides/guild-3.jpg"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "heading": "Finding a guild and marking it",
+        "paragraphs": [
+          "Open the Guild page, pick your server (Europe or America) and type a few letters of the guild name. The best match comes first, with its kill fame; the top guilds of the week are listed below the search.",
+          "Everything on a guild page comes live from Albion's killboard, so anyone can look at any guild. Signing in adds what the killboard alone cannot give: press Mark on your guild and it gets a snapshot every day. From then on the Activity tab shows the fame each member gained per week and month, who went quiet and who joined or left."
+        ]
+      },
+      {
+        "heading": "Activity: who plays and who went quiet",
+        "paragraphs": [
+          "Every member with their status: active, quiet or inactive for 14 days and more, when they last fought and the fame they gained. Filter the inactive ones and copy them as a list, for example before a kick round.",
+          "The gains need two snapshots, so they fill in over the days after a guild was marked."
+        ]
+      },
+      {
+        "heading": "Killboard and Battles",
+        "paragraphs": [
+          "The Killboard tab shows the guild's latest kills and deaths with what each cost in silver. The Battles tab lists the guild's fights of the last 7 days, newest first, with the main enemy, how many of the guild were there and the kills and deaths. Filter by size (10+, 20+, 50+ players) to find the big fights.",
+          "Open a fight for its full report: who fought on which side (an alliance with all its guilds counts as one side), the best players, every player with damage and heal, and every kill with its value. Own page opens the report on its own address, to share it."
+        ]
+      },
+      {
+        "heading": "Attendance",
+        "paragraphs": [
+          "How many of the guild's fights each member was in, over the chosen days and fight size. % of fights is the share of the counted fights the member was in: 59 of 260 fights is 23%. Count only bigger fights to see who shows up for the ZvZs."
+        ]
+      },
+      {
+        "heading": "Regear after a big fight",
+        "paragraphs": [
+          "Pick the fight: the size chips (20+, 50+, 100+ players) find the ZvZ or castle fight of the last 7 days. The regear list shows every death of the guild with its gear and what it was worth on your server. Count the bag too adds the bag's contents.",
+          "Click a player for the details: every item with its value, the bag, how they did in the fight (kills, damage, heal) and who killed them. Copy open list gives player, silver and items for your regear channel; the shopping list sums up the gear to buy.",
+          "Signed in, tick each death once it is paid. The ticks are saved to your account, so they are still there tomorrow and on your phone."
+        ]
+      },
+      {
+        "heading": "Bank log and loot splits",
+        "paragraphs": [
+          "Paste the guild chest log (in the game: open the chest, Log, Copy). The Bank log shows per player what they put in and took out and what it was worth. Paste a new copy now and then: rows already there are skipped, so the log grows past what Albion itself keeps.",
+          "Split a loot run: pick the run (the deposits of a mass loot trip, found by the pauses in the log, or set from and to yourself), check who is in it, set the guild's cut and save it. A saved split keeps the prices of the day it was saved; tick each player when they got their silver."
+        ]
+      },
+      {
+        "heading": "Daily report in Discord",
+        "paragraphs": [
+          "Mark your guild, then paste a Discord webhook link in the Discord tab (Server settings, Integrations, Webhooks, New Webhook, Copy Webhook URL). Every day after the guild's snapshot, between 03:30 and 04:30 UTC, the report goes there: active, quiet and inactive members, who joined and left, and the top fame gainers of the week. It pings nobody."
+        ]
+      },
+      {
+        "heading": "Your account and what stays private",
+        "paragraphs": [
+          "Looking at guilds needs no account. An account is free and keeps what you add: the guild you marked, your regear ticks, your chest log, your loot splits and your Discord report. These are private to your account for now: another player who marked the same guild sees only their own."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Do I need an account for the guild tools?",
+        "a": "No, any guild page works without one. Sign in to mark your guild (daily snapshots, activity gains), to tick regears as paid, to keep a chest log and loot splits, and for the Discord report."
+      },
+      {
+        "q": "Why does a fight or a death not show up?",
+        "a": "Albion's killboard lists the bigger fights per guild only, and a fight's kills can take a few minutes to appear. Single deaths are on the Killboard tab."
+      },
+      {
+        "q": "Where do the silver values come from?",
+        "a": "From the Albion Online Data Project market data of your server: for gear the cheapest believable sell order of the last 3 days, for the chest log what an item sells for right away."
+      },
+      {
+        "q": "Can other officers see my regear ticks or loot splits?",
+        "a": "Not yet: they are saved to your account only. Shared lists for a whole guild are planned."
+      },
+      {
+        "q": "Can attendance go back further than 7 days?",
+        "a": "Not yet. Albion's killboard lists about 100 fights a day for a big guild, so the page reads the last 7 days live."
+      }
+    ],
+    "guide": {
+      "slug": "albion-online-guild-tools",
+      "h1": "How to use the Albion Online guild tools",
+      "title": "Albion Online Guild Tools Guide: Activity, Battles, Regear, Bank Log and Loot Splits | Blackmarket Reader",
+      "description": "How to run your Albion Online guild with free tools: member activity, battle reports, attendance, regear lists after a ZvZ, the guild chest log, loot splits and a daily Discord report.",
+      "keywords": "Albion Online guild tools, Albion guild activity, Albion regear calculator, Albion battle report, Albion guild attendance, Albion guild bank log, Albion loot split",
+      "toolLabel": "Guild Tools"
+    },
+    "summary": {
+      "intro": "Search any guild and see its activity, fights and killboard live from Albion. Sign in to mark your guild for daily snapshots, and keep regear ticks, a chest log and loot splits in your account.",
+      "cards": [
+        {
+          "label": "Regear",
+          "formula": "gear (+ bag) x market price",
+          "text": "The cheapest believable sell order of the last 3 days, per item, on your server."
+        },
+        {
+          "label": "Attendance",
+          "formula": "fights with them / fights counted",
+          "text": "Over the days and the fight size you pick."
+        },
+        {
+          "label": "Loot split",
+          "formula": "(loot - guild cut) / players",
+          "text": "Loot: what is left in the chest from the run, at instant sale prices."
+        }
+      ],
+      "tipsHeading": "Tips",
+      "tips": [
+        "Filter Regear by 50+ players to find the ZvZ.",
+        "Paste the chest log every few days: the rows add up.",
+        "Ideas and wishes are welcome on our Discord."
+      ]
+    }
   }
 }

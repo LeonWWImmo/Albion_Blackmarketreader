@@ -5,6 +5,7 @@ import { useToolAccount } from "@shared/account/useToolAccount";
 import { useRegion } from "@shared/region/useRegion";
 import type { Region } from "@shared/types";
 import { MobileNavBurger, ToolNav } from "../../shared";
+import { GuildWelcome } from "./ui/GuildWelcome";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./guild.css";
 
@@ -12,7 +13,7 @@ import "./guild.css";
 export function GuildShell({ children }: { children: (region: Region, setRegion: (next: Region) => void) => ReactNode }) {
   const { pathname } = useLocation();
   const [region, setRegion] = useRegion();
-  const { meta, layers, faction } = useToolAccount(pathname, null, region, setRegion);
+  const { meta, layers, faction } = useToolAccount(pathname, "guild", region, setRegion);
   // the account's faction colour; without one the tools' own accent (guild.css)
   const accent = faction ? ({ "--gd-accent": faction.accent, "--gd-accent-rgb": faction.accentRgb } as CSSProperties) : undefined;
 
@@ -40,6 +41,7 @@ export function GuildShell({ children }: { children: (region: Region, setRegion:
         </div>
       </header>
       {children(region, setRegion)}
+      <GuildWelcome />
       {layers}
     </div>
   );
