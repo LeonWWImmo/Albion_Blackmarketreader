@@ -14,12 +14,12 @@
 //   GET  killboard?region=eu&id=..       the guild's latest kills and deaths (public, cached)
 //   GET  battle?region=eu&id=123         one fight: alliances, guilds, players with damage and healing, every kill
 //   GET  fights?region=eu&id=..          the guild's listed fights with who of us was there (attendance)
-//   GET  hook                            the name of the signed-in player's Discord webhook
-//   POST hook-save {url}                 set it (checked with Discord, then a first message is posted)
-//   POST hook-remove                     remove it
-//   GET  mine                            the guild the signed-in player has marked
+//   GET  hook?region=eu                  the name of the signed-in player's Discord webhook on that server
+//   POST hook-save {region, url}         set it (checked with Discord, then a first message is posted)
+//   POST hook-remove {region}            remove it
+//   GET  mine                            the guilds the signed-in player has marked (one per server)
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
-//   POST unmark                          remove the mark
+//   POST unmark {region}                 remove the mark on that server
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
 //   GET  regear-paid?region=eu&battle=1  the deaths of a fight the signed-in player ticked as paid
 //   POST regear-pay {region, battle, event, paid}
@@ -89,6 +89,7 @@ const ROSTER_DROP_MIN = 10;
 const ok = (body, maxAge = 0) => ({ status: 200, body, maxAge });
 const fail = (status, error) => ({ status, body: { error }, maxAge: 0 });
 const NOT_FOUND = "No guild with that name on this server.";
+const SERVER = { eu: "Europe", us: "America" };
 const UNIQUE_VIOLATION = "23505";
 
 const guildRef = (row) => ({ id: row.id, region: row.region, slug: row.slug, name: row.name });
@@ -527,18 +528,18 @@ async function mark(deps, user, body) {
   const region = String(body?.region ?? "");
   const id = String(body?.id ?? "");
   if (!isRegion(region) || !isGuildId(id)) return fail(400, "Pick a guild first.");
-  const current = await store.getMark(user.id);
+  const current = await store.getMark(user.id, region);
   if (current?.id === id) return ok({ guild: guildRef(current) });
-  if (current) return fail(409, `You marked ${current.name} already. Unmark it first.`);
+  if (current) return fail(409, `You marked ${current.name} on ${SERVER[region]} already. Unmark it first.`);
   const now = deps.now();
   const today = dayOf(now);
   // whether anyone had it marked is read before this mark: two first marks at once both start tracking today
   const [info, members, existing, markedBefore] = await Promise.all([gameinfo.getGuild(region, id), gameinfo.getMembers(region, id), store.getGuild(id), store.countMarks(id)]);
   await saveGuildRow(store, region, info, members.length, existing);
-  if (!(await store.addMark(user.id, id))) {
-    const other = await store.getMark(user.id);
+  if (!(await store.addMark(user.id, region, id))) {
+    const other = await store.getMark(user.id, region);
     if (other?.id === id) return ok({ guild: guildRef(other) }); // a second click that was faster
-    return fail(409, other ? `You marked ${other.name} already. Unmark it first.` : "Try again in a moment.");
+    return fail(409, other ? `You marked ${other.name} on ${SERVER[region]} already. Unmark it first.` : "Try again in a moment.");
   }
   // nobody had it marked (before, or any more besides this mark): tracking starts anew, gains must
   // not span the time without snapshots
@@ -598,7 +599,7 @@ async function postReports(deps, guild, started) {
   if (!discord) return 0;
   const now = deps.now();
   const today = dayOf(now);
-  const hooks = (await store.webhooksOfGuild(guild.id)).filter((h) => h.last_sent_on !== today);
+  const hooks = (await store.webhooksOfGuild(guild.id, guild.region)).filter((h) => h.last_sent_on !== today);
   if (!hooks.length) return 0;
   const page = await getGuildPage(deps, { region: guild.region, slug: guild.slug, id: guild.id });
   if (page.status !== 200) return 0;
@@ -610,10 +611,10 @@ async function postReports(deps, guild, started) {
     const since = hook.last_sent_on && hook.last_sent_on > addDays(today, -7) ? addDays(hook.last_sent_on, 1) : addDays(today, -1);
     const outcome = await discord.post(hook.url, dailyReport(page.body, since, now));
     if (outcome === "ok") {
-      await store.setWebhookSent(hook.user_id, today);
+      await store.setWebhookSent(hook.user_id, guild.region, today);
       sent++;
     } else if (outcome === "gone") {
-      await store.removeWebhook(hook.user_id);
+      await store.removeWebhook(hook.user_id, guild.region);
     }
   }
   return sent;
@@ -623,14 +624,16 @@ async function postReports(deps, guild, started) {
 async function saveHook(deps, user, body) {
   const { store, discord } = deps;
   const url = String(body?.url ?? "").trim();
+  const region = String(body?.region ?? "");
+  if (!isRegion(region)) return fail(400, "Unknown server.");
   if (!isWebhookUrl(url)) return fail(400, "Paste a Discord webhook link: Server settings → Integrations → Webhooks → Copy Webhook URL.");
-  const guild = await store.getMark(user.id);
+  const guild = await store.getMark(user.id, region);
   if (!guild) return fail(409, "Mark your guild first: the report is about the guild you marked.");
   const name = await discord.check(url);
   if (!name) return fail(400, "Discord does not know this webhook. Copy its link again.");
   const hello = await discord.post(url, helloMessage(guild));
   if (hello !== "ok") return fail(502, "Discord did not take the first message. Try again in a minute.");
-  await store.saveWebhook(user.id, url, name);
+  await store.saveWebhook(user.id, region, url, name);
   return ok({ hook: { name, lastSentOn: null } });
 }
 
@@ -704,8 +707,9 @@ export async function handleGuild(action, request, deps) {
     // mine, mark, unmark, hook: the signed-in player
     const user = token ? await deps.userFromToken(token) : null;
     if (action === "mine") {
-      const row = user && deps.store ? await deps.store.getMark(user.id) : null;
-      return ok({ guild: row ? guildRef(row) : null });
+      const rows = user && deps.store ? await deps.store.getMarks(user.id) : [];
+      // Europe first, so the list keeps its order
+      return ok({ guilds: rows.map(guildRef).sort((a, b) => a.region.localeCompare(b.region)) });
     }
     if (!user) return fail(401, SIGN_IN[action] ?? SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
@@ -714,14 +718,17 @@ export async function handleGuild(action, request, deps) {
     if (action === "hook-save" && deps.hookLimiter && !deps.hookLimiter.take(user.id)) return fail(429, "Too many webhooks tried. Wait a few minutes and try again.");
     if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
     if (action === "mark") return await mark(deps, user, body);
-    if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });
+    // unmark and the webhook are per server: one marked guild on each
+    const server = String((action === "hook" ? query.region : body?.region) ?? "");
+    if (!isRegion(server)) return fail(400, "Unknown server.");
+    if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id, server)) });
     if (action === "hook") {
-      const hook = await deps.store.getWebhook(user.id);
+      const hook = await deps.store.getWebhook(user.id, server);
       return ok({ hook: hook ? { name: hook.name ?? "Discord webhook", lastSentOn: hook.last_sent_on } : null });
     }
     if (!deps.discord) return fail(503, "The Discord report is not set up yet.");
     if (action === "hook-save") return await saveHook(deps, user, body);
-    return ok({ removed: await deps.store.removeWebhook(user.id) });
+    return ok({ removed: await deps.store.removeWebhook(user.id, server) });
   } catch (error) {
     if (error instanceof GameinfoError) {
       // the cause goes to the server log: a 502 alone does not tell a slow killboard from a block

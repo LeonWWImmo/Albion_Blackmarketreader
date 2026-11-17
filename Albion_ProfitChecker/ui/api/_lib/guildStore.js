@@ -37,26 +37,31 @@ export function createGuildStore(db) {
     async setTrackedSince(id, day) {
       must(await db.from("guilds").update({ tracked_since: day }).eq("id", id));
     },
-    /** The guild this player has marked, or null. */
-    async getMark(userId) {
-      const mark = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).maybeSingle());
+    /** The guild this player has marked on this server, or null. */
+    async getMark(userId, region) {
+      const mark = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).eq("region", region).maybeSingle());
       return mark ? getGuild(mark.guild_id) : null;
+    },
+    /** Every guild this player has marked (one per server). */
+    async getMarks(userId) {
+      const ids = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId)).map((m) => m.guild_id);
+      return ids.length ? must(await db.from("guilds").select("*").in("id", ids)) : [];
     },
     async countMarks(guildId) {
       const { count, error } = await db.from("guild_marks").select("user_id", { count: "exact", head: true }).eq("guild_id", guildId);
       if (error) throw new Error(`database: ${error.message}`);
       return count ?? 0;
     },
-    /** False when the player has a guild marked already (one per player: the primary key). */
-    async addMark(userId, guildId) {
-      const result = await db.from("guild_marks").insert({ user_id: userId, guild_id: guildId });
+    /** False when the player has a guild marked on this server already (one per server: the primary key). */
+    async addMark(userId, region, guildId) {
+      const result = await db.from("guild_marks").insert({ user_id: userId, region, guild_id: guildId });
       if (result.error?.code === UNIQUE_VIOLATION) return false;
       must(result);
       return true;
     },
-    /** Removes the player's mark; the guild it was on, or null. */
-    async removeMark(userId) {
-      const rows = must(await db.from("guild_marks").delete().eq("user_id", userId).select("guild_id"));
+    /** Removes the player's mark on this server; the guild it was on, or null. */
+    async removeMark(userId, region) {
+      const rows = must(await db.from("guild_marks").delete().eq("user_id", userId).eq("region", region).select("guild_id"));
       return rows[0]?.guild_id ?? null;
     },
     /** Marked guilds whose last sync is older than `before`, oldest first. */
@@ -92,25 +97,27 @@ export function createGuildStore(db) {
         must(await db.from("guild_snapshots").upsert(rows.slice(i, i + WRITE_CHUNK), { onConflict: "guild_id,player_id,day" }));
       }
     },
-    /** The player's Discord webhook ({ url, name, last_sent_on }), or null. */
-    async getWebhook(userId) {
-      return must(await db.from("guild_webhooks").select("*").eq("user_id", userId).maybeSingle());
+    /** The player's Discord webhook for this server ({ url, name, last_sent_on }), or null. */
+    async getWebhook(userId, region) {
+      return must(await db.from("guild_webhooks").select("*").eq("user_id", userId).eq("region", region).maybeSingle());
     },
-    async saveWebhook(userId, url, name) {
-      must(await db.from("guild_webhooks").upsert({ user_id: userId, url, name, last_sent_on: null }, { onConflict: "user_id" }));
+    async saveWebhook(userId, region, url, name) {
+      must(await db.from("guild_webhooks").upsert({ user_id: userId, region, url, name, last_sent_on: null }, { onConflict: "user_id,region" }));
     },
-    async removeWebhook(userId) {
-      return must(await db.from("guild_webhooks").delete().eq("user_id", userId).select("user_id")).length > 0;
+    async removeWebhook(userId, region) {
+      return must(await db.from("guild_webhooks").delete().eq("user_id", userId).eq("region", region).select("user_id")).length > 0;
     },
-    /** The webhooks of the players who have this guild marked. */
-    async webhooksOfGuild(guildId) {
+    /** The webhooks of the players who have this guild marked (each player's webhook for its server). */
+    async webhooksOfGuild(guildId, region) {
       const ids = must(await db.from("guild_marks").select("user_id").eq("guild_id", guildId)).map((m) => m.user_id);
       const hooks = [];
-      for (let i = 0; i < ids.length; i += ID_CHUNK) hooks.push(...must(await db.from("guild_webhooks").select("*").in("user_id", ids.slice(i, i + ID_CHUNK))));
+      for (let i = 0; i < ids.length; i += ID_CHUNK) {
+        hooks.push(...must(await db.from("guild_webhooks").select("*").eq("region", region).in("user_id", ids.slice(i, i + ID_CHUNK))));
+      }
       return hooks;
     },
-    async setWebhookSent(userId, day) {
-      must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId));
+    async setWebhookSent(userId, region, day) {
+      must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId).eq("region", region));
     },
     /** The deaths of one fight this player ticked as paid (kill event ids). */
     async getRegearPaid(userId, region, battleId) {

@@ -63,7 +63,7 @@ export function LegalPage() {
           <p>With an account, the following is saved to it, and only you can see it:</p>
           <ul>
             <li>
-              Marked guild: the guild you marked. While anyone has a guild marked, a snapshot of its members'
+              Marked guilds: the guild you marked on each server (one on Europe, one on America). While anyone has a guild marked, a snapshot of its members'
               public game data (name, fame, guild membership) is saved once a day, to show activity, who joined
               and who left.
             </li>

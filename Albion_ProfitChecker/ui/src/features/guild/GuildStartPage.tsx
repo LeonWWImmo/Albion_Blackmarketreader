@@ -85,7 +85,7 @@ export function GuildStartPage() {
 function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Region) => void }) {
   const my = useMyGuild();
   const token = my.token;
-  const mine = my.loaded ? my.guild : undefined;
+  const mine = my.loaded ? my.guilds : undefined;
 
   return (
     <main className="gd">
@@ -104,19 +104,26 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
       <TopGuilds region={region} />
 
       <div className="gd-section-title">
-        <h2>Your guild</h2>
-        <span>the guild you marked</span>
+        <h2>Your guilds</h2>
+        <span>one marked guild per server</span>
       </div>
       {mine === undefined ? (
         <div className="gd-skeleton is-row" />
-      ) : mine ? (
-        <Link className="gd-card gd-mine" to={guildPath(mine)}>
-          <div>
-            <b className="gd-guild-name">{mine.name}</b>
-            <p className="gd-muted">Marked · {mine.region === "eu" ? "Europe" : "America"}</p>
-          </div>
-          <span className="gd-btn is-primary">Open</span>
-        </Link>
+      ) : mine.length ? (
+        <>
+          {mine.map((g) => (
+            <Link key={g.id} className="gd-card gd-mine" to={guildPath(g)}>
+              <div>
+                <b className="gd-guild-name">{g.name}</b>
+                <p className="gd-muted">Marked · {g.region === "eu" ? "Europe" : "America"}</p>
+              </div>
+              <span className="gd-btn is-primary">Open</span>
+            </Link>
+          ))}
+          {mine.length < 2 ? (
+            <p className="gd-muted gd-mine-more">You can mark one more guild on {mine[0].region === "eu" ? "America" : "Europe"}: switch the server and press “Mark” on its page.</p>
+          ) : null}
+        </>
       ) : (
         <div className="gd-card gd-mine">
           <div>

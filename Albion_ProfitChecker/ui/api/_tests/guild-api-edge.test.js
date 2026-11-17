@@ -66,14 +66,14 @@ describe("guild API edge cases", () => {
     // the first check misses Ann's mark (another request was faster); the insert then fails
     const realGetMark = store.getMark;
     let first = true;
-    store.getMark = async (userId) => {
+    store.getMark = async (userId, region) => {
       if (first) {
         first = false;
         return null;
       }
-      return realGetMark(userId);
+      return realGetMark(userId, region);
     };
-    expect(await markAs("tok-ann", OTHER)).toMatchObject({ status: 409, body: { error: expect.stringContaining("You marked Angry fuzzies already") } });
+    expect(await markAs("tok-ann", OTHER)).toMatchObject({ status: 409, body: { error: expect.stringContaining("You marked Angry fuzzies on Europe already") } });
   });
 
   it("limits requests per visitor, but never the cron", async () => {

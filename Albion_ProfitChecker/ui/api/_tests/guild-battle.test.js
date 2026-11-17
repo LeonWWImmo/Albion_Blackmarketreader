@@ -181,11 +181,14 @@ const HOOK = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmn
 describe("Discord report webhook", () => {
   it("needs a signed-in player who marked a guild, and a Discord webhook link", async () => {
     const { call, markAs, deps } = setup();
-    expect((await call("hook-save", { method: "POST", body: { url: HOOK } })).status).toBe(401);
-    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } })).status).toBe(409);
+    expect((await call("hook-save", { method: "POST", body: { region: "eu", url: HOOK } })).status).toBe(401);
+    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } })).status).toBe(409);
     await markAs("tok-ann");
+    // the Europe mark is no mark on America
+    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "us", url: HOOK } })).status).toBe(409);
+    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } })).status).toBe(400);
     for (const url of ["https://evil.example/api/webhooks/1/2", "http://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz", HOOK + "/../x", ""]) {
-      expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { url } })).status).toBe(400);
+      expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url } })).status).toBe(400);
     }
     expect(deps.discord.check).not.toHaveBeenCalled();
   });
@@ -193,24 +196,25 @@ describe("Discord report webhook", () => {
   it("checks the webhook, greets it, and gives back only its name, never the link", async () => {
     const { call, markAs, deps, store } = setup();
     await markAs("tok-ann");
-    const saved = await call("hook-save", { method: "POST", token: "tok-ann", body: { url: ` ${HOOK} ` } });
+    const saved = await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: ` ${HOOK} ` } });
     expect(saved).toMatchObject({ status: 200, body: { hook: { name: "Guild news" } } });
     expect(JSON.stringify(saved.body)).not.toContain("webhooks");
     expect(deps.discord.post.mock.calls.find(([url]) => url === HOOK)[1].embeds[0].description).toContain("**Angry fuzzies**");
-    expect(store.webhooks.get("user-ann")).toMatchObject({ url: HOOK, name: "Guild news" });
-    const read = await call("hook", { token: "tok-ann" });
+    expect(store.webhooks.get("user-ann:eu")).toMatchObject({ url: HOOK, name: "Guild news" });
+    const read = await call("hook", { token: "tok-ann", query: { region: "eu" } });
     expect(read.body).toEqual({ hook: { name: "Guild news", lastSentOn: null } });
-    expect(await call("hook-remove", { method: "POST", token: "tok-ann" })).toMatchObject({ status: 200, body: { removed: true } });
-    expect((await call("hook", { token: "tok-ann" })).body).toEqual({ hook: null });
+    expect((await call("hook", { token: "tok-ann", query: { region: "us" } })).body).toEqual({ hook: null });
+    expect(await call("hook-remove", { method: "POST", token: "tok-ann", body: { region: "eu" } })).toMatchObject({ status: 200, body: { removed: true } });
+    expect((await call("hook", { token: "tok-ann", query: { region: "eu" } })).body).toEqual({ hook: null });
   });
 
   it("refuses a webhook Discord does not know or that does not take the first message", async () => {
     const { call, markAs, deps, store } = setup();
     await markAs("tok-ann");
     deps.discord.check.mockResolvedValueOnce(null);
-    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } })).status).toBe(400);
+    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } })).status).toBe(400);
     deps.discord.post.mockResolvedValueOnce("failed");
-    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } })).status).toBe(502);
+    expect((await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } })).status).toBe(502);
     expect(store.webhooks.size).toBe(0);
   });
 
@@ -218,8 +222,8 @@ describe("Discord report webhook", () => {
     const { call, markAs, deps, store } = setup();
     await markAs("tok-ann");
     await markAs("tok-bo");
-    await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } });
-    await call("hook-save", { method: "POST", token: "tok-bo", body: { url: HOOK.replace("123456789012345678", "999999999999999999") } });
+    await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } });
+    await call("hook-save", { method: "POST", token: "tok-bo", body: { region: "eu", url: HOOK.replace("123456789012345678", "999999999999999999") } });
     deps.discord.post.mockClear();
     deps.discord.post.mockImplementation(async (url) => (url.includes("999999999999999999") ? "gone" : "ok"));
     // the next day: the guild is due again
@@ -228,8 +232,8 @@ describe("Discord report webhook", () => {
     expect(sync.body).toMatchObject({ synced: 1, reports: 1 });
     const [, report] = deps.discord.post.mock.calls.find(([url]) => url === HOOK);
     expect(report.embeds[0]).toMatchObject({ title: "🛡️ [BOSSS] Angry fuzzies", url: "https://blackmarketreader.com/guild/eu/angry-fuzzies/activity" });
-    expect(store.webhooks.get("user-ann").last_sent_on).toBe("2026-11-15");
-    expect(store.webhooks.has("user-bo")).toBe(false);
+    expect(store.webhooks.get("user-ann:eu").last_sent_on).toBe("2026-11-15");
+    expect(store.webhooks.has("user-bo:eu")).toBe(false);
     // the same day again: nothing more
     deps.discord.post.mockClear();
     await store.saveGuild({ ...store.guilds.get(GID), last_synced_at: null });

@@ -1,11 +1,11 @@
 // The guild store (api/_lib/guildStore.js) in memory, with the database's rules: one marked guild per
-// player, any number of players per guild. For tests and `npm run dev`, which has no database key.
+// player and server, any number of players per guild. For tests and `npm run dev`, which has no database key.
 export function createMemoryGuildStore() {
   const guilds = new Map();
-  const marks = new Map(); // user id -> guild id
+  const marks = new Map(); // "user:region" -> guild id
   const players = new Map();
   const snapshots = new Map();
-  const webhooks = new Map(); // user id -> { user_id, url, name, last_sent_on }
+  const webhooks = new Map(); // "user:region" -> { user_id, region, url, name, last_sent_on }
   const regearPaid = new Map(); // "user:region:event" -> row
   const regearFights = new Map(); // "user:region:battle" -> row
   const bankLogs = new Map(); // "user:guild" -> rows
@@ -25,16 +25,17 @@ export function createMemoryGuildStore() {
     setTrackedSince: async (id, day) => {
       guilds.set(id, { ...guilds.get(id), tracked_since: day });
     },
-    getMark: async (userId) => (marks.has(userId) ? (guilds.get(marks.get(userId)) ?? null) : null),
+    getMark: async (userId, region) => guilds.get(marks.get(`${userId}:${region}`)) ?? null,
+    getMarks: async (userId) => [...marks].filter(([key]) => key.startsWith(`${userId}:`)).map(([, id]) => guilds.get(id)).filter(Boolean),
     countMarks: async (guildId) => [...marks.values()].filter((id) => id === guildId).length,
-    addMark: async (userId, guildId) => {
-      if (marks.has(userId)) return false;
-      marks.set(userId, guildId);
+    addMark: async (userId, region, guildId) => {
+      if (marks.has(`${userId}:${region}`)) return false;
+      marks.set(`${userId}:${region}`, guildId);
       return true;
     },
-    removeMark: async (userId) => {
-      const guildId = marks.get(userId) ?? null;
-      marks.delete(userId);
+    removeMark: async (userId, region) => {
+      const guildId = marks.get(`${userId}:${region}`) ?? null;
+      marks.delete(`${userId}:${region}`);
       return guildId;
     },
     dueGuilds: async (before, limit) =>
@@ -52,14 +53,15 @@ export function createMemoryGuildStore() {
     saveSnapshots: async (rows) => {
       for (const row of rows) snapshots.set(`${row.guild_id}:${row.player_id}:${row.day}`, row);
     },
-    getWebhook: async (userId) => webhooks.get(userId) ?? null,
-    saveWebhook: async (userId, url, name) => {
-      webhooks.set(userId, { user_id: userId, url, name, last_sent_on: null });
+    getWebhook: async (userId, region) => webhooks.get(`${userId}:${region}`) ?? null,
+    saveWebhook: async (userId, region, url, name) => {
+      webhooks.set(`${userId}:${region}`, { user_id: userId, region, url, name, last_sent_on: null });
     },
-    removeWebhook: async (userId) => webhooks.delete(userId),
-    webhooksOfGuild: async (guildId) => [...webhooks.values()].filter((w) => marks.get(w.user_id) === guildId),
-    setWebhookSent: async (userId, day) => {
-      if (webhooks.has(userId)) webhooks.set(userId, { ...webhooks.get(userId), last_sent_on: day });
+    removeWebhook: async (userId, region) => webhooks.delete(`${userId}:${region}`),
+    webhooksOfGuild: async (guildId, region) => [...webhooks.values()].filter((w) => w.region === region && marks.get(`${w.user_id}:${region}`) === guildId),
+    setWebhookSent: async (userId, region, day) => {
+      const key = `${userId}:${region}`;
+      if (webhooks.has(key)) webhooks.set(key, { ...webhooks.get(key), last_sent_on: day });
     },
     regearPaid,
     bankLogs,

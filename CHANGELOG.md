@@ -51,7 +51,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - New: Guild tools (still in development, ideas welcome). Search any guild on Europe or America and see who is active, quiet or inactive, its kills and deaths with full gear and values, every fight of the last 7 days with a full battle report, and who of the guild showed up to its fights.
 - Guild tools, Regear: pick the ZvZ by its size and see every death of your guild with what the gear was worth. Click a death for each item's value, the bag and who killed them. With a free account, tick who is paid and mark the fight to find it again later. A shopping list sums up the gear to buy.
 - Guild tools, Bank log: paste your guild chest log and see what each player put in and took out. Split one or more loot runs between the players, save it and tick who got their silver.
-- Guild tools: mark your guild for a daily snapshot (fame gained, who joined and who left) and get a daily report of it in your own Discord channel.
+- Guild tools: mark your guild for a daily snapshot (fame gained, who joined and who left) and get a daily report of it in your own Discord channel. One guild on Europe and one on America, each with its own report.
 - Every guild tab has its own guide, and you can now click any guide picture to see it big.
 - The server switch in the account panel is now a quick EU / US toggle.
 

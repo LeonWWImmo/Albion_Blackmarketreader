@@ -69,7 +69,9 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { guild, tracking } = data;
-  const markedHere = mine.guild?.id === guild.id;
+  // one marked guild per server: marking here asks to unmark the one marked on this server only
+  const markedOnServer = mine.on(guild.region);
+  const markedHere = markedOnServer?.id === guild.id;
   const others = Math.max(0, tracking.markedBy - (markedHere ? 1 : 0));
 
   const run = async (action: () => Promise<unknown>) => {
@@ -98,7 +100,7 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
     );
   } else if (markedHere) {
     body = (
-      <button type="button" className="gd-btn is-marked" disabled={busy} onClick={() => void run(() => unmarkGuild(token))} title="Remove your mark">
+      <button type="button" className="gd-btn is-marked" disabled={busy} onClick={() => void run(() => unmarkGuild(token, guild.region))} title="Remove your mark">
         ★ Marked
       </button>
     );
@@ -109,7 +111,11 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
         className="gd-btn is-primary"
         disabled={busy}
         onClick={() => void run(() => markGuild(token, guild.region, guild.id))}
-        title={mine.guild ? `You marked ${mine.guild.name}: marking this guild asks you to unmark that one first` : "Marked guilds get a daily snapshot: fame gained per day and week"}
+        title={
+          markedOnServer
+            ? `You marked ${markedOnServer.name} on this server: marking this guild asks you to unmark that one first`
+            : "Marked guilds get a daily snapshot: fame gained per day and week. One guild per server (Europe and America)."
+        }
       >
         {busy ? "Marking…" : "☆ Mark"}
       </button>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { GuildApiError, fetchHook, guildPath, removeHook, saveHook, type DiscordHook, type GuildPageData } from "../api";
+import type { Region } from "@shared/types";
 import type { MyGuild } from "../useMyGuild";
 import { Loading } from "./Loading";
 
@@ -11,7 +12,9 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
   const { guild } = data;
   const { pathname } = useLocation();
   const { token } = mine;
-  const markedHere = mine.guild?.id === guild.id;
+  // one marked guild and one report per server
+  const markedOnServer = mine.on(guild.region);
+  const markedHere = markedOnServer?.id === guild.id;
 
   return (
     <section className="gd-grid2">
@@ -32,9 +35,9 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
           <div className="gd-discord-body">
             <p className="gd-muted">
               The report is about the guild you marked.{" "}
-              {mine.guild ? (
+              {markedOnServer ? (
                 <>
-                  You marked <Link to={guildPath(mine.guild, "discord")}>{mine.guild.name}</Link>: set it up there, or unmark it and mark {guild.name}.
+                  You marked <Link to={guildPath(markedOnServer, "discord")}>{markedOnServer.name}</Link> on this server: set it up there, or unmark it and mark {guild.name}.
                 </>
               ) : (
                 <>Mark {guild.name} first (the ☆ Mark button above).</>
@@ -42,7 +45,7 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
             </p>
           </div>
         ) : (
-          <HookForm token={token} guildName={guild.name} />
+          <HookForm token={token} region={guild.region} guildName={guild.name} />
         )}
       </div>
       <div className="gd-card gd-discord">
@@ -68,7 +71,7 @@ export function DiscordTab({ data, mine }: { data: GuildPageData; mine: MyGuild 
   );
 }
 
-function HookForm({ token, guildName }: { token: string; guildName: string }) {
+function HookForm({ token, region, guildName }: { token: string; region: Region; guildName: string }) {
   const [hook, setHook] = useState<DiscordHook | null | undefined>(undefined);
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,7 +80,7 @@ function HookForm({ token, guildName }: { token: string; guildName: string }) {
 
   useEffect(() => {
     let alive = true;
-    fetchHook(token)
+    fetchHook(token, region)
       .then((next) => alive && setHook(next))
       .catch((err: unknown) => {
         if (!alive) return;
@@ -87,7 +90,7 @@ function HookForm({ token, guildName }: { token: string; guildName: string }) {
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [token, region]);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -102,13 +105,13 @@ function HookForm({ token, guildName }: { token: string; guildName: string }) {
   };
   const save = () =>
     run(async () => {
-      setHook(await saveHook(token, url.trim()));
+      setHook(await saveHook(token, region, url.trim()));
       setUrl("");
       setEditing(false);
     });
   const remove = () =>
     run(async () => {
-      await removeHook(token);
+      await removeHook(token, region);
       setHook(null);
     });
 

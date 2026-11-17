@@ -69,9 +69,9 @@ describe("marks", () => {
     store.setTrackedSince = vi.fn(store.setTrackedSince.bind(store));
     // counted before Bo's mark: Ann's; then Ann unmarks before Bo's mark is saved
     const realAdd = store.addMark.bind(store);
-    store.addMark = async (userId, guildId) => {
-      await store.removeMark("user-ann");
-      return realAdd(userId, guildId);
+    store.addMark = async (userId, region, guildId) => {
+      await store.removeMark("user-ann", "eu");
+      return realAdd(userId, region, guildId);
     };
     expect((await markAs("tok-bo")).status).toBe(200);
     expect(store.setTrackedSince).toHaveBeenCalled();
@@ -82,9 +82,9 @@ describe("marks", () => {
     const realGetMark = store.getMark;
     // the second request saw no mark yet, then lost the insert to the first one
     let calls = 0;
-    store.getMark = async (userId) => (calls++ === 0 ? null : realGetMark(userId));
-    store.addMark = vi.fn(async (userId, guildId) => {
-      store.marks.set(userId, guildId);
+    store.getMark = async (userId, region) => (calls++ === 0 ? null : realGetMark(userId, region));
+    store.addMark = vi.fn(async (userId, region, guildId) => {
+      store.marks.set(`${userId}:${region}`, guildId);
       return false;
     });
     expect(await markAs("tok-ann")).toMatchObject({ status: 200, body: { guild: { id: GID } } });
@@ -111,13 +111,13 @@ describe("marks", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect((await markAs("tok-ann")).status).toBe(200);
     spy.mockRestore();
-    expect(store.marks.get("user-ann")).toBe(GID);
+    expect(store.marks.get("user-ann:eu")).toBe(GID);
   });
 
   it("does not count the gap before a new mark as play", async () => {
     const { call, store, deps, markAs } = setup();
     await markAs("tok-ann"); // 11-14: first snapshot
-    await call("unmark", { method: "POST", token: "tok-ann" });
+    await call("unmark", { method: "POST", token: "tok-ann", body: { region: "eu" } });
     // three days later, unmarked in between: Ann's fame is higher, but that is the gap
     deps.now = () => new Date(NOW.getTime() + 3 * 24 * 3600 * 1000);
     deps.gameinfo.getMembers.mockResolvedValue([member("a", "Ann", 5000), member("b", "Bo")]);

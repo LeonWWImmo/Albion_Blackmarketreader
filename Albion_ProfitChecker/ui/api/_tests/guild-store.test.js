@@ -43,15 +43,15 @@ describe("guild store", () => {
     expect(pages.map((p) => p[1])).toEqual([0, 1000]);
   });
 
-  it("turns the database's one-guild-per-player rule into a refused mark", async () => {
-    const mark = (result) => createGuildStore(fakeDb({ results: { guild_marks: result } }).db).addMark("u", "g");
+  it("turns the database's one-guild-per-player-and-server rule into a refused mark", async () => {
+    const mark = (result) => createGuildStore(fakeDb({ results: { guild_marks: result } }).db).addMark("u", "eu", "g");
     expect(await mark({ data: null, error: { code: "23505", message: "duplicate key" } })).toBe(false);
     await expect(mark({ data: null, error: { code: "XX000", message: "boom" } })).rejects.toThrow("database: boom");
     expect(await mark({ data: null, error: null })).toBe(true);
   });
 
   it("tells which guild a removed mark was on", async () => {
-    const remove = (rows) => createGuildStore(fakeDb({ results: { guild_marks: { data: rows, error: null } } }).db).removeMark("u");
+    const remove = (rows) => createGuildStore(fakeDb({ results: { guild_marks: { data: rows, error: null } } }).db).removeMark("u", "eu");
     expect(await remove([{ guild_id: "g1" }])).toBe("g1");
     expect(await remove([])).toBeNull();
   });

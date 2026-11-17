@@ -130,7 +130,7 @@ describe("what one player can store", () => {
     deps.writeLimiter = null;
     deps.hookLimiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
     await markAs("tok-bo");
-    const hook = () => call("hook-save", { method: "POST", token: "tok-bo", body: { url: "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_ABCDEFG-123" } });
+    const hook = () => call("hook-save", { method: "POST", token: "tok-bo", body: { region: "eu", url: "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_ABCDEFG-123" } });
     expect((await hook()).status).toBe(200);
     expect((await hook()).status).toBe(429);
   });
@@ -174,7 +174,7 @@ describe("Discord report after a late mark", () => {
     for (let i = 0; i < 50; i++) {
       const id = `guildidguildid${String(i).padStart(8, "0")}`;
       store.guilds.set(id, { id, region: "eu", slug: `g${i}`, name: `G${i}`, tracked_since: "2026-11-01", last_synced_at: i < 45 ? "2026-11-15T01:00:00.000Z" : "2026-11-10T01:00:00.000Z" });
-      store.marks.set(`user-${i}`, id);
+      store.marks.set(`user-${i}:eu`, id);
     }
     const reported = [];
     deps.discord = { check: async () => "hook", post: async () => "ok" };
@@ -189,18 +189,18 @@ describe("Discord report after a late mark", () => {
     const { call, markAs, deps, store } = setup();
     deps.now = () => new Date("2026-11-14T22:00:00Z");
     await markAs("tok-ann");
-    await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } });
+    await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } });
     deps.discord.post.mockClear();
     deps.now = () => new Date("2026-11-15T03:30:00Z");
     expect((await call("sync", { authorization: "Bearer cron-123" })).body).toMatchObject({ synced: 1, reports: 1 });
-    expect(store.webhooks.get("user-ann").last_sent_on).toBe("2026-11-15");
+    expect(store.webhooks.get("user-ann:eu").last_sent_on).toBe("2026-11-15");
   });
 
   it("goes out when a mark took today's snapshot before the daily run", async () => {
     const { call, markAs, deps } = setup();
     deps.now = () => new Date("2026-11-15T01:00:00Z");
     await markAs("tok-ann");
-    await call("hook-save", { method: "POST", token: "tok-ann", body: { url: HOOK } });
+    await call("hook-save", { method: "POST", token: "tok-ann", body: { region: "eu", url: HOOK } });
     deps.discord.post.mockClear();
     deps.now = () => new Date("2026-11-15T03:30:00Z");
     expect((await call("sync", { authorization: "Bearer cron-123" })).body).toMatchObject({ synced: 0, reports: 1 });

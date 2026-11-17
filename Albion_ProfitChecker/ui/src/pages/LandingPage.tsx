@@ -395,6 +395,32 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className="section demo-section is-flipped" id="guild-tools-demo">
+          <div className="container demo-grid">
+            <div className="demo-copy">
+              <span className="section-eyebrow">Guild Tools</span>
+              <h2>Run your guild. Not spreadsheets.</h2>
+              <p>
+                Search any guild on Europe or America and see who plays, who went quiet and who left, its fights and
+                its killboard. Mark your guild for daily snapshots, regear after a ZvZ and split the loot from the chest
+                log.
+              </p>
+              <ul className="demo-points">
+                <li>Activity, battle reports and attendance</li>
+                <li>Regear list with paid ticks and a shopping list</li>
+                <li>Bank log, loot splits and a daily Discord report</li>
+              </ul>
+              <a className="premium-plus-cta" href="/guild">Open Guild Tools</a>
+            </div>
+            <DemoVideo
+              src={assetUrl("video/guild-demo.mp4")}
+              poster={assetUrl("video/guild-demo.jpg")}
+              url="blackmarketreader.com/guild"
+              label="Guild Tools demo: a guild's overview, activity, battles, regear and bank log"
+            />
+          </div>
+        </section>
+
         <section className="section screens" id="dashboard-views">
           <div className="container">
             <div className="section-head">

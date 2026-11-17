@@ -191,17 +191,19 @@ export const fetchBattle = (region: Region, id: number | string, signal?: AbortS
 export const fetchFights = (region: Region, id: string, signal?: AbortSignal) =>
   call<{ fights: AttendanceFight[]; days: number; complete: boolean }>(`fights?region=${region}&id=${encodeURIComponent(id)}`, { signal });
 
-export const fetchHook = (token: string) => call<{ hook: DiscordHook | null }>("hook", { token }).then((r) => r.hook);
+// one marked guild and one Discord report per server
+export const fetchHook = (token: string, region: Region) => call<{ hook: DiscordHook | null }>(`hook?region=${region}`, { token }).then((r) => r.hook);
 
-export const saveHook = (token: string, url: string) => call<{ hook: DiscordHook }>("hook-save", { token, method: "POST", body: { url } }).then((r) => r.hook);
+export const saveHook = (token: string, region: Region, url: string) =>
+  call<{ hook: DiscordHook }>("hook-save", { token, method: "POST", body: { region, url } }).then((r) => r.hook);
 
-export const removeHook = (token: string) => call<{ removed: boolean }>("hook-remove", { token, method: "POST", body: {} });
+export const removeHook = (token: string, region: Region) => call<{ removed: boolean }>("hook-remove", { token, method: "POST", body: { region } });
 
-export const fetchMyGuild = (token: string) => call<{ guild: GuildRef | null }>("mine", { token }).then((r) => r.guild);
+export const fetchMyGuilds = (token: string) => call<{ guilds: GuildRef[] }>("mine", { token }).then((r) => r.guilds);
 
 export const markGuild = (token: string, region: Region, id: string) => call<{ guild: GuildRef }>("mark", { token, method: "POST", body: { region, id } }).then((r) => r.guild);
 
-export const unmarkGuild = (token: string) => call<{ unmarked: boolean }>("unmark", { token, method: "POST", body: {} });
+export const unmarkGuild = (token: string, region: Region) => call<{ unmarked: boolean }>("unmark", { token, method: "POST", body: { region } });
 
 // The signed-in player's own data: private to their account.
 

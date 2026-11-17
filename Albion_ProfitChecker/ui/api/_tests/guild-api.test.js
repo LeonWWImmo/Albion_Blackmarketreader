@@ -155,31 +155,43 @@ describe("marking a guild", () => {
     expect([...store.players.values()].find((p) => p.player_id === "a").last_fight_at).toBe("2026-11-14T10:00:00Z");
     const page = await call("guild", { query: { region: "eu", slug: "angry-fuzzies" } });
     expect(page.body.tracking).toMatchObject({ tracked: true, since: "2026-11-14", markedBy: 1, canMark: true });
-    expect(await call("mine", { token: "tok-ann" })).toMatchObject({ status: 200, body: { guild: { id: GID } } });
-    expect(await call("mine", { token: "tok-bo" })).toMatchObject({ status: 200, body: { guild: null } });
-    expect(await call("mine")).toMatchObject({ status: 200, body: { guild: null } });
+    expect(await call("mine", { token: "tok-ann" })).toMatchObject({ status: 200, body: { guilds: [{ id: GID, region: "eu" }] } });
+    expect(await call("mine", { token: "tok-bo" })).toMatchObject({ status: 200, body: { guilds: [] } });
+    expect(await call("mine")).toMatchObject({ status: 200, body: { guilds: [] } });
   });
 
-  it("lets any number of players mark the same guild, each one guild", async () => {
+  it("lets any number of players mark the same guild, each one guild per server", async () => {
     const { call, store, markAs } = setup();
     await markAs("tok-ann");
     expect((await markAs("tok-bo")).status).toBe(200);
     expect(store.snapshots.size).toBe(2); // the second mark on the same day does not sync again
     expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking.markedBy).toBe(2);
-    expect(await markAs("tok-ann", OTHER)).toMatchObject({ status: 409, body: { error: expect.stringContaining("You marked Angry fuzzies already") } });
+    expect(await markAs("tok-ann", OTHER)).toMatchObject({ status: 409, body: { error: expect.stringContaining("You marked Angry fuzzies on Europe already") } });
     expect((await markAs("tok-ann")).status).toBe(200); // the same guild again: fine
     expect((await call("mark", { method: "POST", token: "tok-bo", body: { region: "eu", id: "bad" } })).status).toBe(400);
+  });
+
+  it("keeps one marked guild on each server, apart", async () => {
+    const { call, markAs } = setup();
+    await markAs("tok-ann");
+    const us = await call("mark", { method: "POST", token: "tok-ann", body: { region: "us", id: OTHER } });
+    expect(us).toMatchObject({ status: 200, body: { guild: { id: OTHER, region: "us" } } });
+    expect((await call("mine", { token: "tok-ann" })).body.guilds.map((g) => g.region)).toEqual(["eu", "us"]);
+    // unmarking one server leaves the other; a missing server is no unmark of both
+    expect((await call("unmark", { method: "POST", token: "tok-ann", body: {} })).status).toBe(400);
+    expect(await call("unmark", { method: "POST", token: "tok-ann", body: { region: "eu" } })).toMatchObject({ body: { unmarked: true } });
+    expect((await call("mine", { token: "tok-ann" })).body.guilds.map((g) => g.id)).toEqual([OTHER]);
   });
 
   it("keeps tracking while anyone still has the guild marked, and starts over after nobody had", async () => {
     const { call, store, markAs, deps } = setup();
     await markAs("tok-ann");
     await markAs("tok-bo");
-    expect(await call("unmark", { method: "POST", token: "tok-ann" })).toMatchObject({ status: 200, body: { unmarked: true } });
+    expect(await call("unmark", { method: "POST", token: "tok-ann", body: { region: "eu" } })).toMatchObject({ status: 200, body: { unmarked: true } });
     expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking).toMatchObject({ tracked: true, markedBy: 1 });
-    await call("unmark", { method: "POST", token: "tok-bo" });
+    await call("unmark", { method: "POST", token: "tok-bo", body: { region: "eu" } });
     expect((await call("guild", { query: { region: "eu", id: GID } })).body.tracking).toMatchObject({ tracked: false, markedBy: 0 });
-    expect(await call("unmark", { method: "POST", token: "tok-bo" })).toMatchObject({ body: { unmarked: false } });
+    expect(await call("unmark", { method: "POST", token: "tok-bo", body: { region: "eu" } })).toMatchObject({ body: { unmarked: false } });
     deps.now = () => new Date("2026-11-24T12:00:00Z");
     await markAs("tok-ann");
     expect(store.guilds.get(GID).tracked_since).toBe("2026-11-24");
@@ -224,7 +236,7 @@ describe("daily sync", () => {
   it("does not sync a guild nobody has marked", async () => {
     const { call, markAs, deps } = setup();
     await markAs("tok-ann");
-    await call("unmark", { method: "POST", token: "tok-ann" });
+    await call("unmark", { method: "POST", token: "tok-ann", body: { region: "eu" } });
     deps.now = () => new Date(NOW.getTime() + 2 * DAY_MS);
     expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 0 } });
   });
