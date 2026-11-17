@@ -46,6 +46,7 @@ import {
 import { useCraftingSpecs } from "./specs/useCraftingSpecs";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
+import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 
 type MarketRegion = "eu" | "us";
 
@@ -389,21 +390,6 @@ async function loadResultsByRegion(region: MarketRegion): Promise<ResultItem[]> 
   return all;
 }
 
-
-function sanitizeAvatarUrl(value?: string | null): string {
-  const fallback = "/picture/accountsymbol.png";
-  const trimmed = String(value || "").trim();
-  if (!trimmed) return fallback;
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return fallback;
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "blob:") return url.href;
-  } catch {
-    if (trimmed.startsWith("//")) return fallback;
-    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  }
-  return fallback;
-}
 
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   const [service] = useState(() => new RegionService("eu"));

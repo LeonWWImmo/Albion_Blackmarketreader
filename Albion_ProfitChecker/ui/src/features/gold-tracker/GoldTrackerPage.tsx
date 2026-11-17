@@ -41,6 +41,7 @@ import {
 } from "./goldStats";
 import { useGoldHistory, type GoldRegion } from "./useGoldHistory";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
+import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 
 const RANGES: ReadonlyArray<{ key: GoldRange; label: string }> = [
   { key: "24h", label: "24H" },
@@ -70,21 +71,6 @@ const allowedAvatars = [
   "/picture/Thefortwappen.png",
   "/picture/Fortsterlingwappen.png"
 ];
-
-function sanitizeAvatarUrl(value?: string | null): string {
-  const fallback = "/picture/accountsymbol.png";
-  const trimmed = String(value || "").trim();
-  if (!trimmed) return fallback;
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return fallback;
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "blob:") return url.href;
-  } catch {
-    if (trimmed.startsWith("//")) return fallback;
-    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  }
-  return fallback;
-}
 
 function readStoredRegion(): GoldRegion | null {
   const stored = (localStorage.getItem("region") || "").toLowerCase();

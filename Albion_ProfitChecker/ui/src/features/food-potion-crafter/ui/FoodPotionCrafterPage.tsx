@@ -19,6 +19,7 @@ import "../../crafting-calculator/craftingCalculator.css";
 import "./foodPotionCrafter.css";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
+import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 
 const KNOWN_CITIES: City[] = ["Caerleon", "Brecilien", "Bridgewatch", "Lymhurst", "Fort Sterling", "Martlock", "Thetford"];
 const PRICE_STORAGE_KEY = "food-potion-prices-v1";
@@ -159,22 +160,6 @@ function readManualPrices(): Record<string, string> {
     /* ignore */
   }
   return {};
-}
-
-function sanitizeAvatarUrl(value?: string | null): string {
-  const fallback = "/picture/accountsymbol.png";
-  const trimmed = String(value || "").trim();
-  if (!trimmed) return fallback;
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return fallback;
-  // Reject protocol-relative ("//host") and backslash tricks that escape our origin.
-  if (trimmed.startsWith("//") || trimmed.includes("\\")) return fallback;
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    if (url.protocol === "http:" || url.protocol === "https:" || url.protocol === "blob:") return url.href;
-  } catch {
-    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  }
-  return fallback;
 }
 
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
