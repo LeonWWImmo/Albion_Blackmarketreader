@@ -233,7 +233,7 @@ function BankLogBody({ data, token, saved }: { data: GuildPageData; token: strin
         <p className="gd-foot">
           <span>
             The log is saved to your account, per guild: only you see it. Paste a new copy now and then and the rows add up (Albion's own log shows the latest rows only).
-            {span ? ` Kept: ${entries.length} rows, ${new Date(span[0]).toLocaleDateString("en-GB")} to ${new Date(span[1]).toLocaleDateString("en-GB")}.` : ""}
+            {span ? ` Kept: ${entries.length} rows, ${new Date(span[0]).toLocaleDateString("en-GB", { timeZone: "UTC" })} to ${new Date(span[1]).toLocaleDateString("en-GB", { timeZone: "UTC" })} (game time, UTC).` : ""}
           </span>
         </p>
       </section>

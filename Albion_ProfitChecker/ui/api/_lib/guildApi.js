@@ -40,9 +40,9 @@ import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, s
 // mark synced it late the evening before.
 // one guild can take ~17 s when the killboard is slow (2 tries of 8 s): stop starting new ones
 // early enough to stay inside the function's 60 s
-const SYNC_BUDGET_MS = 30_000;
-/** Discord reports are not started after this long (a slow Discord must not cut the run off). */
-const REPORT_BUDGET_MS = 45_000;
+const SYNC_BUDGET_MS = 25_000;
+/** Discord reports are not started after this long: one report (guild page + Discord, ~16 s at worst) still ends inside 60 s. */
+const REPORT_BUDGET_MS = 38_000;
 const SYNC_BATCH = 40;
 const FIGHTS_SHOWN = 8;
 const KILLBOARD_SHOWN = 25;
@@ -576,7 +576,8 @@ async function syncDue(deps) {
     }
   }
   // the reports of every guild with today's snapshot: also the ones a mark took earlier today
-  const fresh = (await store.dueGuilds(FAR_FUTURE, SYNC_BATCH)).filter((g) => g.last_synced_at && dayOf(g.last_synced_at) === today);
+  // every marked guild, filtered before any limit: guilds behind on syncing must not take the places of today's
+  const fresh = (await store.dueGuilds(FAR_FUTURE, Infinity)).filter((g) => g.last_synced_at && dayOf(g.last_synced_at) === today);
   for (const guild of fresh) {
     if (Date.now() - started > REPORT_BUDGET_MS) break;
     try {
@@ -708,6 +709,9 @@ export async function handleGuild(action, request, deps) {
     }
     if (!user) return fail(401, SIGN_IN[action] ?? SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
+    // writes per player: a script cannot fill the database, nor use the webhook check to post to channels
+    if (POST_ACTIONS.has(action) && deps.writeLimiter && !deps.writeLimiter.take(user.id)) return fail(429, "Too many changes at once. Wait a minute and try again.");
+    if (action === "hook-save" && deps.hookLimiter && !deps.hookLimiter.take(user.id)) return fail(429, "Too many webhooks tried. Wait a few minutes and try again.");
     if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
     if (action === "mark") return await mark(deps, user, body);
     if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id)) });

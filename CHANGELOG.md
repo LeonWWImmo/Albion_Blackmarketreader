@@ -48,7 +48,12 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Tidier tool tabs: the four crafting tools now sit together under one Crafting menu, so the header fits on one line.
 - If a page cannot load (usually a weak connection), you now get a Reload button instead of an empty screen.
 - Price Checker: artefacts, resources, food, furniture and other items that only exist in Normal quality no longer show a quality picker, so you cannot end up on a quality nobody can sell.
-- New: Guild tools, first part. Search any guild and see which members are active, quiet or inactive, and its latest kills and deaths with both players' full gear. Mark a guild to get a daily snapshot with the fame each member gained, who joined and who left. Regear, attendance, bank log and a weekly Discord report follow.
+- New: Guild tools (still in development, ideas welcome). Search any guild on Europe or America and see who is active, quiet or inactive, its kills and deaths with full gear and values, every fight of the last 7 days with a full battle report, and who of the guild showed up to its fights.
+- Guild tools, Regear: pick the ZvZ by its size and see every death of your guild with what the gear was worth. Click a death for each item's value, the bag and who killed them. With a free account, tick who is paid and mark the fight to find it again later. A shopping list sums up the gear to buy.
+- Guild tools, Bank log: paste your guild chest log and see what each player put in and took out. Split one or more loot runs between the players, save it and tick who got their silver.
+- Guild tools: mark your guild for a daily snapshot (fame gained, who joined and who left) and get a daily report of it in your own Discord channel.
+- Every guild tab has its own guide, and you can now click any guide picture to see it big.
+- The server switch in the account panel is now a quick EU / US toggle.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

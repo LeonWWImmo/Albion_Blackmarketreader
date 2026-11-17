@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BANK_ROWS_MAX, bankRow, fightInfo, splitData } from "../_lib/guildPrivate.js";
+import { BANK_ROWS_MAX, GUILDS_MAX, bankRow, fightInfo, splitData } from "../_lib/guildPrivate.js";
+import { createRateLimiter } from "../_lib/rateLimit.js";
 import { GID, NOW, setup } from "./guild-kit.js";
 
 const SPLIT = {
@@ -101,6 +102,40 @@ describe("a player's own guild data", () => {
   });
 });
 
+describe("what one player can store", () => {
+  // guild ids of the killboard's shape, all made up
+  const guildIds = Array.from({ length: GUILDS_MAX + 1 }, (_, i) => `guildidguildid${String(i).padStart(8, "0")}`);
+
+  it("keeps chest logs and loot splits of at most GUILDS_MAX guilds", async () => {
+    const { call } = setup();
+    const row = [[1763150000000, "Ann", "Rune", 0, 1, 1]];
+    for (const guild of guildIds.slice(0, GUILDS_MAX)) expect((await call("bank-save", { method: "POST", token: "tok-ann", body: { guild, rows: row } })).status).toBe(200);
+    expect((await call("bank-save", { method: "POST", token: "tok-ann", body: { guild: guildIds[GUILDS_MAX], rows: row } })).status).toBe(409);
+    // one of the kept guilds still takes a new log, and another player is not held back
+    expect((await call("bank-save", { method: "POST", token: "tok-ann", body: { guild: guildIds[0], rows: row } })).status).toBe(200);
+    expect((await call("bank-save", { method: "POST", token: "tok-bo", body: { guild: guildIds[GUILDS_MAX], rows: row } })).status).toBe(200);
+
+    for (const guild of guildIds.slice(0, GUILDS_MAX)) await call("split-save", { method: "POST", token: "tok-ann", body: { guild, name: "x", data: SPLIT } });
+    expect((await call("split-save", { method: "POST", token: "tok-ann", body: { guild: guildIds[GUILDS_MAX], name: "x", data: SPLIT } })).status).toBe(409);
+  });
+
+  it("limits a player's changes per minute, and webhook tries more", async () => {
+    const { call, deps, markAs } = setup();
+    deps.writeLimiter = createRateLimiter({ limit: 3, windowMs: 60_000 });
+    const pay = (event) => call("regear-pay", { method: "POST", token: "tok-ann", body: { region: "eu", battle: 7, event, paid: true } });
+    expect([(await pay(1)).status, (await pay(2)).status, (await pay(3)).status, (await pay(4)).status]).toEqual([200, 200, 200, 429]);
+    // per player: the next one is still free
+    expect((await call("regear-pay", { method: "POST", token: "tok-bo", body: { region: "eu", battle: 7, event: 1, paid: true } })).status).toBe(200);
+
+    deps.writeLimiter = null;
+    deps.hookLimiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
+    await markAs("tok-bo");
+    const hook = () => call("hook-save", { method: "POST", token: "tok-bo", body: { url: "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_ABCDEFG-123" } });
+    expect((await hook()).status).toBe(200);
+    expect((await hook()).status).toBe(429);
+  });
+});
+
 describe("checking what the browser sends", () => {
   it("reads chest log rows", () => {
     expect(bankRow([1, " Ann ", "Rune", 0, 1, 5])).toEqual([1, "Ann", "Rune", 0, 1, 5]);
@@ -132,6 +167,22 @@ describe("checking what the browser sends", () => {
 });
 
 describe("Discord report after a late mark", () => {
+  it("goes to every guild synced today, also with more marked guilds than one run syncs", async () => {
+    const { call, deps, store } = setup();
+    deps.now = () => new Date("2026-11-15T03:30:00Z");
+    // 45 marked guilds synced today, 5 more far behind: the 45 get their report, the 5 are synced first
+    for (let i = 0; i < 50; i++) {
+      const id = `guildidguildid${String(i).padStart(8, "0")}`;
+      store.guilds.set(id, { id, region: "eu", slug: `g${i}`, name: `G${i}`, tracked_since: "2026-11-01", last_synced_at: i < 45 ? "2026-11-15T01:00:00.000Z" : "2026-11-10T01:00:00.000Z" });
+      store.marks.set(`user-${i}`, id);
+    }
+    const reported = [];
+    deps.discord = { check: async () => "hook", post: async () => "ok" };
+    store.webhooksOfGuild = async (id) => (reported.push(id), []);
+    await call("sync", { authorization: "Bearer cron-123" });
+    expect(new Set(reported.filter((id) => Number(id.slice(-8)) < 45)).size).toBe(45);
+  });
+
   const HOOK = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_ABCDEFG-123";
 
   it("goes out the next morning when the guild was marked the evening before", async () => {

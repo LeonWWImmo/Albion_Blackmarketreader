@@ -123,12 +123,12 @@ function useMarkedFights(token: string | null, region: GuildPageData["guild"]["r
   const toggle = (fight: PickFight) => {
     if (!token) return;
     const on = !marked.some((m) => m.id === fight.id);
-    const before = marked;
     const info = { id: fight.id, startTime: fight.startTime, players: fight.players, ours: fight.ours, kills: fight.kills, deaths: fight.deaths, enemy: fight.enemy ?? null };
     setMarked(on ? [{ ...info, markedAt: new Date().toISOString() }, ...marked] : marked.filter((m) => m.id !== fight.id));
     setError("");
     setRegearFight(token, region, guildId, info, on).catch((err: unknown) => {
-      setMarked(before);
+      // only this fight goes back: another one marked meanwhile stays
+      setMarked((list) => (on ? list.filter((m) => m.id !== fight.id) : [{ ...info, markedAt: new Date().toISOString() }, ...list]));
       setError(err instanceof GuildApiError ? err.message : "The fight could not be marked. Try again.");
     });
   };

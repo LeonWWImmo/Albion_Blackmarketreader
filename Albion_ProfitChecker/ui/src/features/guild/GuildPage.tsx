@@ -38,7 +38,10 @@ function GuildBody() {
     return hit ? { key, data: hit.data } : null;
   });
   const [error, setError] = useState<GuildApiError | null>(null);
-  const [version, setVersion] = useState(0);
+  // asks this guild again past the caches (after a mark or a retry); another guild starts at 0
+  const [forced, setForced] = useState({ key: "", n: 0 });
+  const version = forced.key === key ? forced.n : 0;
+  const setVersion = (next: (v: number) => number) => setForced({ key, n: next(version) });
   // never another guild's data under this address (two guilds can share a name)
   const data = loaded?.key === key && (!idFromSearch || loaded.data.guild.id === idFromSearch) ? loaded.data : null;
   // read by the redirect when an answer arrives: the tab the visitor is on by then

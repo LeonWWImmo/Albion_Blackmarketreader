@@ -9,6 +9,9 @@ import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { clientAddress, createRateLimiter } from "./_lib/rateLimit.js";
 
 const limiter = createRateLimiter({ limit: 60, windowMs: 60_000 });
+// per signed-in player: ticking a big regear is many quick clicks, trying webhooks is not
+const writeLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
+const hookLimiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
 
 function readBody(raw) {
   const text = Buffer.isBuffer(raw) ? raw.toString("utf8") : raw;
@@ -41,6 +44,8 @@ export default async function handler(req, res) {
       now: () => new Date(),
       cronSecret: process.env.CRON_SECRET,
       limiter,
+      writeLimiter,
+      hookLimiter,
       values: loadValues,
       discord: { check: checkWebhook, post: postWebhook }
     }

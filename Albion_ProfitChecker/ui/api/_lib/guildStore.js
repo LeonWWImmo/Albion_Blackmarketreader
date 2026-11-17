@@ -135,6 +135,19 @@ export function createGuildStore(db) {
       if (info) must(await db.from("guild_regear_fights").upsert({ user_id: userId, region, guild_id: guildId, battle_id: battleId, info, created_at: at }, { onConflict: "user_id,region,battle_id" }));
       else must(await db.from("guild_regear_fights").delete().eq("user_id", userId).eq("region", region).eq("battle_id", battleId));
     },
+    async countRegearPaid(userId) {
+      const { count, error } = await db.from("guild_regear_paid").select("event_id", { count: "exact", head: true }).eq("user_id", userId);
+      if (error) throw new Error(`database: ${error.message}`);
+      return count ?? 0;
+    },
+    /** The guilds a player keeps a chest log of. */
+    async bankLogGuilds(userId) {
+      return must(await db.from("guild_bank_logs").select("guild_id").eq("user_id", userId)).map((r) => r.guild_id);
+    },
+    /** The guilds a player keeps loot splits of. */
+    async splitGuilds(userId) {
+      return [...new Set(must(await db.from("guild_splits").select("guild_id").eq("user_id", userId)).map((r) => r.guild_id))];
+    },
     async getBankLog(userId, guildId) {
       const row = must(await db.from("guild_bank_logs").select("rows").eq("user_id", userId).eq("guild_id", guildId).maybeSingle());
       return row?.rows ?? [];

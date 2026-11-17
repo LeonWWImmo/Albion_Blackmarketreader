@@ -79,6 +79,9 @@ export function createMemoryGuildStore() {
       if (info) regearFights.set(key, { user_id: userId, region, guild_id: guildId, battle_id: battleId, info, created_at: at });
       else regearFights.delete(key);
     },
+    countRegearPaid: async (userId) => [...regearPaid.values()].filter((r) => r.user_id === userId).length,
+    bankLogGuilds: async (userId) => [...bankLogs.keys()].filter((k) => k.startsWith(`${userId}:`)).map((k) => k.slice(userId.length + 1)),
+    splitGuilds: async (userId) => [...new Set([...splits.values()].filter((s) => s.user_id === userId).map((s) => s.guild_id))],
     getBankLog: async (userId, guildId) => bankLogs.get(`${userId}:${guildId}`) ?? [],
     saveBankLog: async (userId, guildId, rows) => {
       if (rows.length) bankLogs.set(`${userId}:${guildId}`, rows);

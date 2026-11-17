@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { shortPrice } from "../../price-checker/ui/format";
 import { groupTrips, netStacks, type LogEntry } from "../../loot-split/core/lootLog";
 import { fromInput, toInput } from "../../loot-split/core/timeline";
@@ -23,6 +23,8 @@ const runsLabel = (ranges: Range[]) =>
 const rangeKey = (r: Range) => `${r.from}-${r.to}`;
 
 type Range = { from: number; to: number };
+/** A picked range: a run of the log (`run`, found again by its start) or a time set by hand. */
+type Pick = Range & { run?: boolean };
 type ItemIdOf = (name: string, enchant: number) => string | null;
 type Item = SplitData["items"][number];
 
@@ -82,7 +84,16 @@ export function LootSplits({
         }}
       />
       {splits ? (
-        <SavedSplits token={token} guildId={guildId} splits={splits} onChange={setSplits} open={open} setOpen={setOpen} idOf={idOf} />
+        <SavedSplits
+          token={token}
+          guildId={guildId}
+          splits={splits}
+          onChange={(update) => setSplits((list) => (list ? update(list) : list))}
+          onReload={() => setVersion((v) => v + 1)}
+          open={open}
+          setOpen={setOpen}
+          idOf={idOf}
+        />
       ) : error ? (
         <p className="gd-error" role="alert">
           {error}{" "}
@@ -149,7 +160,7 @@ function NewSplit({
 }) {
   // newest run first; rows without a readable time cannot be placed in a run
   const runs = useMemo(() => groupTrips(entries).filter((t) => Number.isFinite(t.start)).reverse(), [entries]);
-  const [picked, setPicked] = useState<Range[] | null>(null);
+  const [picked, setPicked] = useState<Pick[] | null>(null);
   const [runsShown, setRunsShown] = useState(RUNS_SHOWN);
   const [custom, setCustom] = useState<Range | null>(null);
   const [excluded, setExcluded] = useState<Set<string> | null>(null);
@@ -161,7 +172,15 @@ function NewSplit({
   const [note, setNote] = useState("");
 
   // the newest run until others are picked
-  const ranges = picked ?? (runs[0] ? [{ from: runs[0].start, to: runs[0].end }] : []);
+  // a picked run takes its current end: a later paste can add deposits to it
+  const ranges: Pick[] = picked
+    ? picked.map((r) => {
+        const t = r.run ? runs.find((x) => x.start === r.from) : undefined;
+        return t ? { from: t.start, to: t.end, run: true } : r;
+      })
+    : runs[0]
+      ? [{ from: runs[0].start, to: runs[0].end, run: true }]
+      : [];
   const rangesKey = ranges.map(rangeKey).join(",");
   const used = useMemo(
     () => entries.filter((e) => Number.isFinite(e.time) && ranges.some((r) => e.time >= r.from && e.time < r.to + MINUTE)),
@@ -213,7 +232,7 @@ function NewSplit({
     );
   }
 
-  const toggleRange = (r: Range) => {
+  const toggleRange = (r: Pick) => {
     const key = rangeKey(r);
     const next = ranges.some((x) => rangeKey(x) === key) ? ranges.filter((x) => rangeKey(x) !== key) : [...ranges, r];
     setPicked(next.sort((a, b) => b.from - a.from));
@@ -262,7 +281,7 @@ function NewSplit({
     }
   };
 
-  const customRuns = ranges.filter((r) => !runs.some((t) => t.start === r.from && t.end === r.to));
+  const customRuns = ranges.filter((r) => !r.run);
 
   return (
     <section className="gd-card gd-split-new">
@@ -280,7 +299,7 @@ function NewSplit({
             const on = ranges.some((r) => r.from === t.start && r.to === t.end);
             const deposits = t.entries.filter((e) => e.amount > 0).reduce((n, e) => n + e.amount, 0);
             return (
-              <button key={t.id} type="button" className={`gd-split-run${on ? " is-on" : ""}`} aria-pressed={on} onClick={() => toggleRange({ from: t.start, to: t.end })}>
+              <button key={t.id} type="button" className={`gd-split-run${on ? " is-on" : ""}`} aria-pressed={on} onClick={() => toggleRange({ from: t.start, to: t.end, run: true })}>
                 <span className="gd-split-box" aria-hidden="true">
                   {on ? "✓" : ""}
                 </span>
@@ -456,6 +475,7 @@ function SavedSplits({
   guildId,
   splits,
   onChange,
+  onReload,
   open,
   setOpen,
   idOf
@@ -463,32 +483,54 @@ function SavedSplits({
   token: string;
   guildId: string;
   splits: SavedSplit[];
-  onChange: (next: SavedSplit[]) => void;
+  /** Changes the list from its latest state: answers that come back late do not undo other changes. */
+  onChange: (update: (list: SavedSplit[]) => SavedSplit[]) => void;
+  onReload: () => void;
   open: string | null;
   setOpen: (id: string | null) => void;
   idOf: ItemIdOf;
 }) {
   const [error, setError] = useState("");
 
-  const replace = (next: SavedSplit) => onChange(splits.map((s) => (s.id === next.id ? next : s)));
-  /** Saves who is paid: shown at once, put back when it could not be saved. */
-  const savePaid = async (split: SavedSplit, paid: (p: SplitData["players"][number]) => boolean) => {
-    const data = { ...split.data, players: split.data.players.map((p) => ({ ...p, paid: paid(p) })) };
-    replace({ ...split, data });
+  // per split: what the player ticked last, and the saves in a row. Ticks clicked fast go out one
+  // after the other, each with every tick so far, so none is lost on the screen or on the server.
+  const latest = useRef(splits);
+  latest.current = splits;
+  const wanted = useRef(new Map<string, SavedSplit>());
+  const queue = useRef(new Map<string, Promise<void>>());
+
+  /** Saves who is paid: shown at once; when it could not be saved, the list loads again from the account. */
+  const savePaid = (id: string, paid: (p: SplitData["players"][number]) => boolean) => {
+    const base = wanted.current.get(id) ?? latest.current.find((s) => s.id === id);
+    if (!base) return;
+    const next = { ...base, data: { ...base.data, players: base.data.players.map((p) => ({ ...p, paid: paid(p) })) } };
+    wanted.current.set(id, next);
+    onChange((list) => list.map((s) => (s.id === id ? next : s)));
     setError("");
-    try {
-      replace(await saveSplit(token, guildId, { id: split.id, name: split.name, data }));
-    } catch (err) {
-      replace(split);
-      setError(err instanceof GuildApiError ? err.message : "The tick could not be saved. Try again.");
-    }
+    const run: Promise<void> = (queue.current.get(id) ?? Promise.resolve()).then(async () => {
+      const send = wanted.current.get(id);
+      if (!send) return;
+      try {
+        await saveSplit(token, guildId, { id, name: send.name, data: send.data });
+      } catch (err) {
+        wanted.current.delete(id);
+        setError(err instanceof GuildApiError ? err.message : "The tick could not be saved. Try again.");
+        onReload();
+      } finally {
+        if (queue.current.get(id) === run) {
+          queue.current.delete(id);
+          wanted.current.delete(id);
+        }
+      }
+    });
+    queue.current.set(id, run);
   };
   const remove = async (split: SavedSplit) => {
     if (!window.confirm(`Remove the split "${split.name}"?`)) return;
     setError("");
     try {
       await removeSplit(token, split.id);
-      onChange(splits.filter((s) => s.id !== split.id));
+      onChange((list) => list.filter((s) => s.id !== split.id));
     } catch (err) {
       setError(err instanceof GuildApiError ? err.message : "The split could not be removed. Try again.");
     }
@@ -546,7 +588,7 @@ function SavedSplits({
                   {s.data.players.map((p) => (
                     <li key={p.name}>
                       <label className={`gd-split-person${p.paid ? " is-paid" : ""}`}>
-                        <input type="checkbox" checked={p.paid} onChange={() => void savePaid(s, (x) => (x.name === p.name ? !x.paid : x.paid))} />
+                        <input type="checkbox" checked={p.paid} onChange={() => savePaid(s.id, (x) => (x.name === p.name ? !x.paid : x.paid))} />
                         <span>
                           <b>{p.name}</b>
                           <small>{p.paid ? "paid" : "not paid yet"}</small>
@@ -558,7 +600,7 @@ function SavedSplits({
                 </ul>
                 <div className="gd-actions-row">
                   {unpaid.length ? (
-                    <button type="button" className="gd-btn is-primary" onClick={() => void savePaid(s, () => true)}>
+                    <button type="button" className="gd-btn is-primary" onClick={() => savePaid(s.id, () => true)}>
                       Everyone paid
                     </button>
                   ) : null}

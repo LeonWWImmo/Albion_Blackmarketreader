@@ -2,6 +2,7 @@
 // (search, guild, killboard) are the same for everyone, so the CDN and the cache in core/cache.ts
 // keep them; only mine / mark / unmark carry the player's token.
 import type { Region } from "@shared/types";
+import { freshToken } from "./useAccessToken";
 
 /** killFame and deathFame are null when the guild's info did not load in time. */
 export type GuildHit = { id: string; name: string; slug: string; allianceName: string | null; killFame: number | null; deathFame: number | null };
@@ -161,7 +162,8 @@ export class GuildApiError extends Error {
 
 async function call<T>(path: string, { token, method = "GET", body, signal }: { token?: string | null; method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  // the session's latest token: the one a page started with is renewed about once an hour
+  if (token) headers.Authorization = `Bearer ${freshToken(token)}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(`/api/guild/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
   const data = (await res.json().catch(() => null)) as (T & { error?: string }) | null;

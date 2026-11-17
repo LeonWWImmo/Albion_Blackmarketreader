@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate, useNavigationType, useParams } from "react-router-dom";
 import { childGuides, findGuideBySlug, GUIDES, TOOL_CONTENT } from "@shared/content/toolContentData";
 import { assetUrl } from "@shared/assets/assets";
 import { DemoVideo } from "@shared/ui/DemoVideo";
@@ -16,21 +16,37 @@ function anchorId(heading: string): string {
     .replace(/^-|-$/g, "");
 }
 
-/** A guide picture full size over the page: closed by Escape, the button or a click anywhere. */
+/**
+ * A guide picture full size over the page: closed by Escape, the button or a click anywhere. The
+ * keyboard stays on its close button while it is open and goes back to the picture after.
+ */
 function ZoomedImage({ src, title, onClose }: { src: string; title: string; onClose: () => void }) {
+  const close = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+      else if (e.key === "Tab") {
+        // the close button is the only thing to reach in here
+        e.preventDefault();
+        close.current?.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    close.current?.focus();
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
+      opener?.focus({ preventScroll: true });
     };
-  }, [onClose]);
+  }, []);
   return (
     <div className="guide-zoom" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <button type="button" className="guide-zoom-close" aria-label="Close" autoFocus onClick={onClose}>
+      <button ref={close} type="button" className="guide-zoom-close" aria-label="Close" onClick={onClose}>
         ×
       </button>
       <figure onClick={onClose}>
@@ -72,10 +88,15 @@ export function GuidePage() {
     };
   }, []);
 
-  // another guide opens at its top, so the reader sees the page changed; only on a new guide, a link
-  // to a section scrolls there below
+  // another guide opens at its top, so the reader sees the page changed, and without the last one's
+  // picture open. Back and forward keep the browser's place; a link to a section scrolls there below.
+  const navigationType = useNavigationType();
+  const shownSlug = useRef(slug);
   useEffect(() => {
-    if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (shownSlug.current === slug) return;
+    shownSlug.current = slug;
+    setZoom(null);
+    if (!location.hash && navigationType !== "POP") window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [slug]);
 
   // a link to a folded section opens it

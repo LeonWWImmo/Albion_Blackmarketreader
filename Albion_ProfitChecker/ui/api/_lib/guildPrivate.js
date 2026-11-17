@@ -9,6 +9,10 @@ export const BANK_ROWS_MAX = 20_000;
 export const SPLITS_MAX = 200;
 /** Fights a player can keep marked, over all guilds. */
 export const REGEAR_FIGHTS_MAX = 500;
+/** Deaths a player can keep ticked as paid, over all fights. */
+export const REGEAR_PAID_MAX = 20_000;
+/** Guilds a player can keep a chest log or loot splits of. */
+export const GUILDS_MAX = 10;
 const SPLIT_RUNS_MAX = 50;
 const SPLIT_ITEMS_MAX = 2_000;
 const SPLIT_PLAYERS_MAX = 100;
@@ -67,6 +71,12 @@ export function fightInfo(info) {
   return { startTime: start, players: count(info.players), ours: count(info.ours), kills: count(info.kills), deaths: count(info.deaths), enemy: enemy || null };
 }
 
+/** True when the player keeps data of GUILDS_MAX other guilds already. */
+async function tooManyGuilds(guildsOf, userId, guild) {
+  const guilds = await guildsOf(userId);
+  return !guilds.includes(guild) && guilds.length >= GUILDS_MAX;
+}
+
 const splitOut = (row) => ({ id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at, data: row.data });
 
 /** The actions on a player's own data; `user` is signed in, `store` is there. Null for any other action. */
@@ -82,6 +92,7 @@ export async function handlePrivate(action, { query, body }, { store, now }, use
     const battle = String(body?.battle ?? "");
     const event = String(body?.event ?? "");
     if (!isRegion(region) || !isBattleId(battle) || !EVENT_ID.test(event)) return fail(400, "Pick a death first.");
+    if (body?.paid === true && (await store.countRegearPaid(user.id)) >= REGEAR_PAID_MAX) return fail(409, `You have ${REGEAR_PAID_MAX} deaths ticked as paid. That is the most we keep.`);
     await store.setRegearPaid(user.id, region, Number(battle), Number(event), body?.paid === true);
     return ok({ paid: body?.paid === true });
   }
@@ -118,6 +129,7 @@ export async function handlePrivate(action, { query, body }, { store, now }, use
     if (!Array.isArray(body?.rows)) return fail(400, "No chest log rows.");
     // the newest rows when there are too many: the browser sends them oldest first
     const rows = body.rows.slice(-BANK_ROWS_MAX).map(bankRow).filter(Boolean);
+    if (rows.length && (await tooManyGuilds(store.bankLogGuilds, user.id, guild))) return fail(409, `You keep chest logs of ${GUILDS_MAX} guilds. Remove one first.`);
     await store.saveBankLog(user.id, guild, rows, now().toISOString());
     return ok({ count: rows.length });
   }
@@ -139,6 +151,7 @@ export async function handlePrivate(action, { query, body }, { store, now }, use
       const row = await store.updateSplit(user.id, id, { name, data, updated_at: at });
       return row ? ok({ split: splitOut(row) }) : fail(404, "This split is gone. Reload the page.");
     }
+    if (await tooManyGuilds(store.splitGuilds, user.id, guild)) return fail(409, `You keep loot splits of ${GUILDS_MAX} guilds. Remove the splits of one first.`);
     if ((await store.countSplits(user.id, guild)) >= SPLITS_MAX) return fail(409, `You have ${SPLITS_MAX} saved splits for this guild. Remove old ones first.`);
     return ok({ split: splitOut(await store.addSplit({ user_id: user.id, guild_id: guild, name, data, created_at: at, updated_at: at })) });
   }

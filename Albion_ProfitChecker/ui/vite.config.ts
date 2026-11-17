@@ -46,6 +46,10 @@ function devApi(): Plugin {
             values: loadValues
           };
         })();
+        // a failed start (missing public/env.js, a broken import) is tried again on the next request
+        guildDeps.catch(() => {
+          guildDeps = null;
+        });
         const url = new URL(req.url || "/", "http://localhost");
         const chunks: Buffer[] = [];
         for await (const chunk of req) chunks.push(chunk as Buffer);

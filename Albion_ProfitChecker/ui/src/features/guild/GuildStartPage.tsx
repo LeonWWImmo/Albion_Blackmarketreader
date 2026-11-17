@@ -168,11 +168,17 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const [showQuiet, setShowQuiet] = useState(false);
   const q = normalizeQuery(query);
   const cacheKey = `${region}:${q}`;
+  const hitsRegion = useRef(region);
 
   useEffect(() => {
     setError("");
     setActive(0);
     setShowQuiet(false);
+    // the other server's results would link to guilds that are not on this one
+    if (hitsRegion.current !== region) {
+      hitsRegion.current = region;
+      setHits(null);
+    }
     if (q.length < 2) {
       setHits(null);
       setLoading(false);
