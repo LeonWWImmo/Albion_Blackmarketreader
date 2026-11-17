@@ -54,6 +54,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Guild tools: mark your guild for a daily snapshot (fame gained, who joined and who left) and get a daily report of it in your own Discord channel. One guild on Europe and one on America, each with its own report.
 - Every guild tab has its own guide, and you can now click any guide picture to see it big.
 - The server switch in the account panel is now a quick EU / US toggle.
+- See how good the prices are: the account panel now shows how many materials have a price in each city of your server, and our Discord has a new price-coverage channel with the numbers for Europe and America every day.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

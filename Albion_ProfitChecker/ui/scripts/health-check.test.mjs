@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ago, auditSummary, buildCard, cardHtml, cityCoverage, coverageProblems, killboardSection, oldErrorPosts, overall } from "./health-check.mjs";
+import { ago, auditSummary, buildCard, buildCoverageMessage, cardHtml, cityCoverage, coverageCardHtml, coverageProblems, killboardSection, oldErrorPosts, overall } from "./health-check.mjs";
 
 const at = Date.parse("2026-11-04T14:02:00Z");
 const ok = (label) => ({ label, status: "ok", value: "1/1", caption: "fine", summary: "1/1 fine", problems: [] });
@@ -123,6 +123,28 @@ describe("price coverage", () => {
     expect(html).toContain("PRICE COVERAGE");
     expect(html).toContain("<th>CAE</th>");
     expect(html).toContain('<span style="--c:#ef4444">25</span>');
+  });
+
+  it("draws the public picture per server, with the age of the prices", () => {
+    const at = Date.parse("2026-11-17T14:00:00Z");
+    const coverage = [
+      { region: "us", cities: cityCoverage(data), generatedAt: "2026-11-17T08:00:00Z" },
+      { region: "eu", cities: [{ city: "Lymhurst", percent: 90 }], generatedAt: null }
+    ];
+    const html = coverageCardHtml({ at, coverage });
+    expect(html.indexOf("Europe")).toBeLessThan(html.indexOf("America"));
+    expect(html).toContain("prices from 6 h ago");
+    expect(html).toContain("<b>Brecilien</b><strong>25<small>%</small>");
+    expect(html).not.toContain("Vercel");
+  });
+
+  it("posts one line per server with its thinnest city, and the way to more prices", () => {
+    const message = buildCoverageMessage({ coverage: [{ region: "us", cities: cityCoverage(data) }, { region: "eu", cities: [{ city: "Lymhurst", percent: 90 }] }] });
+    const json = JSON.stringify(message);
+    expect(json).toContain("**Europe** · 90% average · thinnest: Lymhurst 90%");
+    expect(json).toContain("**America** · 50% average · thinnest: Caerleon 25%");
+    expect(json).toContain("albion-online-data.com");
+    expect(message.attachments).toEqual([{ id: 0, filename: "coverage-card.png" }]);
   });
 });
 

@@ -47,6 +47,7 @@ import { useCraftingSpecs } from "./specs/useCraftingSpecs";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
+import { PriceCoverage } from "@shared/account/PriceCoverage";
 
 type MarketRegion = "eu" | "us";
 
@@ -1581,6 +1582,8 @@ export function CraftingCalculatorPage() {
             <span aria-hidden="true"> &rsaquo;</span>
           </a>
         </div>
+
+        <PriceCoverage region={region} open={showAccount} />
 
         <div className="account-actions">
           {!isGuest() && (

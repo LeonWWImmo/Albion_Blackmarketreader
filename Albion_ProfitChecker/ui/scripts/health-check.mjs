@@ -5,8 +5,10 @@
 //   node scripts/health-check.mjs check            GitHub workflows, Vercel deploy, live website
 //                                                  (Playwright), data freshness, Discord
 //                                                  -> health-report.json + health-card.png
-//   node scripts/health-check.mjs post [--dry-run] the card to DISCORD_WEBHOOK_STATUS, then deletes
-//                                                  #errors posts older than 30 days (DISCORD_BOT_TOKEN)
+//   node scripts/health-check.mjs post [--dry-run] the card to DISCORD_WEBHOOK_STATUS, the price
+//                                                  coverage picture to the public #price-coverage
+//                                                  (DISCORD_WEBHOOK_COVERAGE), then deletes #errors
+//                                                  posts older than 30 days (DISCORD_BOT_TOKEN)
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -21,6 +23,7 @@ const RUN_URL = process.env.GITHUB_RUN_ID ? `https://github.com/${REPO}/actions/
 const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
 const REPORT_FILE = path.join(ROOT, "health-report.json");
 const CARD_FILE = path.join(ROOT, "health-card.png");
+const COVERAGE_FILE = path.join(ROOT, "coverage-card.png");
 const HOUR = 36e5;
 // a daily job runs every ~24 h, but GitHub's schedule can start it up to ~9 h late
 const STALE_HOURS = 48;
@@ -267,7 +270,7 @@ async function checkData(now, coverage) {
       const coverageRegion = /^materials-cities-(eu|us)\.json$/.exec(file)?.[1];
       if (coverageRegion) {
         const cities = cityCoverage(data);
-        coverage.push({ region: coverageRegion, cities });
+        coverage.push({ region: coverageRegion, cities, generatedAt: data.generatedAt ?? null });
         const found = coverageProblems(coverageRegion, cities);
         problems.push(...found.problems);
         if (found.level === "fail" || (found.level && !level)) level = found.level;
@@ -474,6 +477,12 @@ async function runChecks() {
     // the post step then sends the text version
     console.error("status picture failed:", error.message);
   }
+  try {
+    if (report.coverage.length) await renderCard(chromium, report, coverageCardHtml, COVERAGE_FILE);
+  } catch (error) {
+    // the post step then skips the public coverage post
+    console.error("coverage picture failed:", error.message);
+  }
   return overall(sections);
 }
 
@@ -593,13 +602,70 @@ export function cardHtml(report) {
 </div></body></html>`;
 }
 
-async function renderCard(chromium, report) {
+const SERVERS = { eu: "Europe", us: "America" };
+const meanPercent = (cities) => (cities.length ? cities.reduce((sum, c) => sum + c.percent, 0) / cities.length : 0);
+
+/** The public price coverage picture: per server, the share of materials with a price in each city. */
+export function coverageCardHtml(report) {
+  const date = new Date(report.at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  const regions = [...(report.coverage ?? [])].sort((a, b) => a.region.localeCompare(b.region));
+  const rows = regions
+    .map((r) => {
+      const avg = meanPercent(r.cities);
+      const age = r.generatedAt ? `prices from ${ago(report.at - Date.parse(r.generatedAt))} ago` : "";
+      const tiles = r.cities
+        .map((c) => `<div class="city" style="--c:${coverageColor(c.city, c.percent)}"><b>${escapeHtml(c.city)}</b><strong>${Math.round(c.percent)}<small>%</small></strong><i><u style="width:${Math.max(2, Math.min(100, c.percent))}%"></u></i></div>`)
+        .join("");
+      return `<div class="region">
+        <div class="region-head"><span class="name">${escapeHtml(SERVERS[r.region] ?? r.region.toUpperCase())}</span><span class="avg" style="--c:${coverageColor("", avg)}">${Math.round(avg)}% average</span><span class="age">${escapeHtml(age)}</span></div>
+        <div class="cities" style="grid-template-columns:repeat(${Math.max(r.cities.length, 1)},1fr)">${tiles}</div>
+      </div>`;
+    })
+    .join("");
+  return `<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=JetBrains+Mono:wght@700&display=block" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #070b16; font-family: Inter, "Segoe UI", Ubuntu, "DejaVu Sans", sans-serif; color: #e8edf7; }
+  .card { width: 1200px; padding: 44px 48px 36px; position: relative; overflow: hidden;
+    background: radial-gradient(900px 320px at 12% -10%, rgba(245, 185, 66, .2), transparent 70%), linear-gradient(180deg, #0d1426, #070b16); }
+  .card::before { content: ""; position: absolute; inset: 0; border-top: 6px solid #f5b942; pointer-events: none; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+  .kicker { font-size: 19px; letter-spacing: .22em; font-weight: 700; color: #8b97b3; }
+  .headline { font-size: 50px; font-weight: 800; margin-top: 10px; letter-spacing: -.02em; }
+  .sub { font-size: 18px; color: #8b97b3; margin-top: 8px; font-weight: 500; }
+  .date { font-size: 34px; font-weight: 800; text-align: right; }
+  .region { background: #111a30; border: 1px solid #1e2a45; border-radius: 22px; padding: 22px 24px 24px; margin-top: 16px; }
+  .region-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 16px; }
+  .name { font-size: 28px; font-weight: 800; }
+  .avg { font-family: "JetBrains Mono", Consolas, monospace; font-size: 20px; font-weight: 700; color: var(--c); }
+  .age { margin-left: auto; font-size: 16px; color: #8b97b3; font-weight: 500; }
+  .cities { display: grid; gap: 12px; }
+  .city { background: color-mix(in srgb, var(--c) 10%, #0d1426); border: 1px solid color-mix(in srgb, var(--c) 38%, transparent); border-radius: 16px; padding: 14px 14px 16px; }
+  .city b { display: block; font-size: 15px; font-weight: 700; color: #c3cbe0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .city strong { display: block; margin-top: 6px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 40px; font-weight: 700; color: var(--c); letter-spacing: -.03em; }
+  .city small { font-size: 20px; margin-left: 2px; }
+  .city i { display: block; height: 8px; border-radius: 99px; background: #1e2a45; margin-top: 10px; overflow: hidden; }
+  .city u { display: block; height: 100%; background: var(--c); border-radius: 99px; }
+  .foot { margin-top: 22px; display: flex; justify-content: space-between; font-size: 16px; color: #5f6b88; font-weight: 500; }
+</style></head><body>
+<div class="card">
+  <div class="head">
+    <div><div class="kicker">DAILY PRICE COVERAGE</div><div class="headline">Which cities have prices</div><div class="sub">Share of the refined materials with a price today, per city</div></div>
+    <div class="date">${escapeHtml(date)}</div>
+  </div>
+  ${rows}
+  <div class="foot"><span>blackmarketreader.com</span><span>green ≥ 80% · amber ≥ 50% · red below · Brecilien has fewer traders, so half</span></div>
+</div></body></html>`;
+}
+
+async function renderCard(chromium, report, html = cardHtml, file = CARD_FILE) {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1.5 });
-    await page.setContent(cardHtml(report), { waitUntil: "networkidle", timeout: 30000 });
+    await page.setContent(html(report), { waitUntil: "networkidle", timeout: 30000 });
     await page.evaluate(() => document.fonts.ready);
-    await page.locator(".card").screenshot({ path: CARD_FILE });
+    await page.locator(".card").screenshot({ path: file });
   } finally {
     await browser.close();
   }
@@ -647,6 +713,62 @@ export function buildCard(report, { picture = true, runUrl = RUN_URL } = {}) {
   };
 }
 
+const COVERAGE_NAME = "coverage-card.png";
+const DATA_CLIENT = "https://www.albion-online-data.com/";
+
+/** The public coverage post: the picture, one line per server, how players make it better. */
+export function buildCoverageMessage(report) {
+  const regions = [...(report.coverage ?? [])].sort((a, b) => a.region.localeCompare(b.region));
+  const lines = regions.map((r) => {
+    const worst = [...r.cities].sort((a, b) => a.percent - b.percent)[0];
+    return `**${SERVERS[r.region] ?? r.region.toUpperCase()}** · ${Math.round(meanPercent(r.cities))}% average${worst ? ` · thinnest: ${worst.city} ${Math.round(worst.percent)}%` : ""}`;
+  });
+  return {
+    username: "Blackmarket Reader",
+    flags: 1 << 15,
+    allowed_mentions: { parse: [] },
+    attachments: [{ id: 0, filename: COVERAGE_NAME }],
+    components: [
+      {
+        type: 17,
+        accent_color: 0xf5b942,
+        components: [
+          text("-# 📊 DAILY PRICE COVERAGE"),
+          { type: 12, items: [{ media: { url: `attachment://${COVERAGE_NAME}` }, description: "Share of the refined materials with a price, per city" }] },
+          text(lines.join("\n")),
+          { type: 14, divider: true, spacing: 1 },
+          text("-# Prices come from players who run the Albion Data Client while they play. Run it too and your city gets better prices for everyone."),
+          { type: 1, components: [linkButton("Open the tools", "🌐", SITE), linkButton("Albion Data Client", "📡", DATA_CLIENT)] }
+        ]
+      }
+    ]
+  };
+}
+
+/** Posts a message with one picture to a webhook; one retry for a Discord hiccup, errors never include the URL. */
+async function postWithPicture(webhook, message, file, name) {
+  const send = () => {
+    const form = new FormData();
+    form.append("payload_json", JSON.stringify(message));
+    if (file) form.append("files[0]", new Blob([readFileSync(file)], { type: "image/png" }), name);
+    return fetch(`${webhook}?wait=true&with_components=true`, { method: "POST", body: form, signal: AbortSignal.timeout(30000) });
+  };
+  let res = await send().catch(() => null);
+  if (!res || res.status >= 500 || res.status === 429) res = await send().catch((error) => ({ ok: false, status: error.name, text: async () => "" }));
+  if (!res.ok) throw new Error(`Discord: HTTP ${res.status} ${await res.text()}`);
+}
+
+async function postCoverage(report, dryRun) {
+  if (!report.coverage?.length || !existsSync(COVERAGE_FILE)) return console.log("coverage post skipped: no coverage picture");
+  const message = buildCoverageMessage(report);
+  if (dryRun || !process.env.DISCORD_WEBHOOK_COVERAGE) {
+    if (dryRun) console.log(JSON.stringify(message, null, 2));
+    return console.log(dryRun ? "coverage post: dry run" : "coverage post skipped: DISCORD_WEBHOOK_COVERAGE is not set");
+  }
+  await postWithPicture(process.env.DISCORD_WEBHOOK_COVERAGE, message, COVERAGE_FILE, COVERAGE_NAME);
+  console.log("posted to #price-coverage");
+}
+
 async function runPost(dryRun) {
   const report = existsSync(REPORT_FILE)
     ? JSON.parse(readFileSync(REPORT_FILE, "utf8"))
@@ -655,20 +777,14 @@ async function runPost(dryRun) {
   const message = buildCard(report, { picture });
   if (dryRun || !process.env.DISCORD_WEBHOOK_STATUS) {
     console.log(JSON.stringify(message, null, 2));
+    await postCoverage(report, true);
     if (!dryRun) throw new Error("DISCORD_WEBHOOK_STATUS is not set");
     return;
   }
-  const send = () => {
-    const form = new FormData();
-    form.append("payload_json", JSON.stringify(message));
-    if (picture) form.append("files[0]", new Blob([readFileSync(CARD_FILE)], { type: "image/png" }), CARD_NAME);
-    return fetch(`${process.env.DISCORD_WEBHOOK_STATUS}?wait=true&with_components=true`, { method: "POST", body: form, signal: AbortSignal.timeout(30000) });
-  };
-  // one retry for a Discord hiccup; errors never include the webhook URL
-  let res = await send().catch(() => null);
-  if (!res || res.status >= 500 || res.status === 429) res = await send().catch((error) => ({ ok: false, status: error.name, text: async () => "" }));
-  if (!res.ok) throw new Error(`Discord: HTTP ${res.status} ${await res.text()}`);
+  await postWithPicture(process.env.DISCORD_WEBHOOK_STATUS, message, picture ? CARD_FILE : null, CARD_NAME);
   console.log("posted to #status");
+  // the public post never fails the private status post
+  await postCoverage(report, false).catch((error) => console.log("coverage post failed:", error.message));
   await pruneErrors(Date.now()).catch((error) => console.log("errors cleanup skipped:", error.message));
 }
 

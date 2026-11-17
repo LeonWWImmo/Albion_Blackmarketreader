@@ -1,0 +1,72 @@
+/* Account panel: price coverage per city (PriceCoverage.tsx). Works inside every tool's panel. */
+.pcov .pcov-note {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.pcov-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.pcov-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.pcov-row.is-good { --pcov: #22c55e; }
+.pcov-row.is-thin { --pcov: #f59e0b; }
+.pcov-row.is-poor { --pcov: #ef4444; }
+
+.pcov-city {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+
+.pcov-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(127, 127, 127, 0.22);
+  overflow: hidden;
+}
+.pcov-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--pcov);
+}
+
+.pcov-pct {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--pcov);
+}
+
+.pcov-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--fx-accent-rgb, 245, 185, 66), 0.22);
+  background: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.08);
+  color: var(--fx-accent, #f5b942);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.pcov-link:hover {
+  background: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.14);
+  border-color: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.4);
+}

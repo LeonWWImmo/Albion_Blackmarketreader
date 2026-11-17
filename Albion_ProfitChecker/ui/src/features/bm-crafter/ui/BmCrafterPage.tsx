@@ -24,6 +24,7 @@ import "./bmCrafter.css";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
+import { PriceCoverage } from "@shared/account/PriceCoverage";
 
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   const [service] = useState(() => new RegionService("eu"));
@@ -548,6 +549,8 @@ export function BmCrafterPage() {
             <span aria-hidden="true"> &rsaquo;</span>
           </a>
         </div>
+
+        <PriceCoverage region={region} open={showAccount} />
 
         <div className="account-actions">
           {!isGuest() && (

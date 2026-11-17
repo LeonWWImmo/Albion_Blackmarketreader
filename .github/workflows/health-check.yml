@@ -2,6 +2,7 @@ name: Daily Health Check
 
 # Once a day: GitHub workflows, the Vercel deploy, the live website (every page on desktop and
 # phone), data freshness and the Discord bot, as one status picture in the private #status
+# channel, and the price coverage per city as its own picture in the public #price-coverage
 # channel. Vercel Cron starts it at 14:00 UTC (api/cron/health-check.js), because GitHub's own
 # schedule can run hours late. See Albion_ProfitChecker/ui/scripts/health-check.mjs.
 on:
@@ -61,6 +62,7 @@ jobs:
         if: always()
         env:
           DISCORD_WEBHOOK_STATUS: ${{ secrets.DISCORD_WEBHOOK_STATUS }}
+          DISCORD_WEBHOOK_COVERAGE: ${{ secrets.DISCORD_WEBHOOK_COVERAGE }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |

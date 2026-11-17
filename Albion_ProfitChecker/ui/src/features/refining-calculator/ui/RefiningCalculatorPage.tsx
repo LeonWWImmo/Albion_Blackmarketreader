@@ -16,6 +16,7 @@ import { RefiningRowDetail } from "./RefiningRowDetail";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
+import { PriceCoverage } from "@shared/account/PriceCoverage";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
 type ManualOverrides = {
@@ -1057,6 +1058,8 @@ export function RefiningCalculatorPage() {
             <span aria-hidden="true"> &rsaquo;</span>
           </a>
         </div>
+
+        <PriceCoverage region={region} open={showAccount} />
 
         <div className="account-actions">
           {isGuest() ? (
