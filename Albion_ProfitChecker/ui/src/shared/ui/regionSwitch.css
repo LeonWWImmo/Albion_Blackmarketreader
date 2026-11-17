@@ -1,0 +1,134 @@
+/* The server switch of the account panel (RegionSwitch.tsx): a pill of two sides, the picked one
+   under a sliding thumb in the faction accent. */
+
+.region-switch {
+  --rs-accent: var(--fx-accent, #5cf0c8);
+  --rs-accent-rgb: var(--fx-accent-rgb, 92, 240, 200);
+  display: grid;
+  gap: 8px;
+}
+
+.region-switch-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.region-switch-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(var(--rs-accent-rgb), 0.32), rgba(var(--rs-accent-rgb), 0.12));
+  border: 1px solid rgba(var(--rs-accent-rgb), 0.65);
+  box-shadow:
+    0 0 18px rgba(var(--rs-accent-rgb), 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: transform 0.28s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+
+.region-switch-track.is-us .region-switch-thumb {
+  transform: translateX(100%);
+}
+
+.region-switch-option {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: rgba(226, 232, 240, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.region-switch-option:hover {
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.region-switch-option:focus-visible {
+  outline: 2px solid rgba(var(--rs-accent-rgb), 0.7);
+  outline-offset: 1px;
+}
+
+.region-switch-option.is-on {
+  color: #fff;
+}
+
+.region-switch-option svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  transition: transform 0.4s ease, color 0.2s ease;
+}
+
+.region-switch-option.is-on svg {
+  color: var(--rs-accent);
+  transform: rotate(-20deg);
+}
+
+.region-switch-text {
+  display: grid;
+  text-align: left;
+  line-height: 1.1;
+}
+
+.region-switch-text b {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.region-switch-text small {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.region-switch-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: rgba(226, 232, 240, 0.6);
+  font-size: 12px;
+}
+
+.region-switch-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--rs-accent);
+  box-shadow: 0 0 0 3px rgba(var(--rs-accent-rgb), 0.18);
+  animation: region-switch-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes region-switch-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(var(--rs-accent-rgb), 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .region-switch-thumb,
+  .region-switch-option svg {
+    transition: none;
+  }
+  .region-switch-dot {
+    animation: none;
+  }
+}

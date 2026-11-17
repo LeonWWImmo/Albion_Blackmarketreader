@@ -18,6 +18,7 @@ import "../../bm-crafter/ui/bmCrafter.css";
 import "../../crafting-calculator/craftingCalculator.css";
 import "./foodPotionCrafter.css";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 const KNOWN_CITIES: City[] = ["Caerleon", "Brecilien", "Bridgewatch", "Lymhurst", "Fort Sterling", "Martlock", "Thetford"];
 const PRICE_STORAGE_KEY = "food-potion-prices-v1";
@@ -623,10 +624,7 @@ export function FoodPotionCrafterPage() {
 
           <div className="panel-section">
             <h4>Data region</h4>
-            <select className="city-select" value={region} onChange={(e) => onRegionSave(e.target.value === "us" ? "us" : "eu")}>
-              <option value="us">America</option>
-              <option value="eu">Europe</option>
-            </select>
+            <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
           </div>
 
           <div className="panel-section">

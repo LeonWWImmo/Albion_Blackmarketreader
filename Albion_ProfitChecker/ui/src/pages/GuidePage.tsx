@@ -72,6 +72,12 @@ export function GuidePage() {
     };
   }, []);
 
+  // another guide opens at its top, so the reader sees the page changed; only on a new guide, a link
+  // to a section scrolls there below
+  useEffect(() => {
+    if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [slug]);
+
   // a link to a folded section opens it
   useEffect(() => {
     let id = "";

@@ -21,6 +21,7 @@ describe("Discord report", () => {
     const report = dailyReport(
       {
         guild: { name: "Angry fuzzies", region: "eu", slug: "angry-fuzzies", memberCount: 4, allianceTag: "FUZ" },
+        tracking: { since: "2026-11-01" },
         activity: {
           counts: { active: 2, quiet: 1, inactive: 1, unknown: 0 },
           members: [member("Ann", "2026-11-10", 5_000_000), member("Bo", "2026-11-14", 12_000), member("Cy", null, 0), member("Di", "2026-11-15", null)],
@@ -43,26 +44,36 @@ describe("Discord report", () => {
     expect(embed.title).toBe("🛡️ [FUZ] Angry fuzzies");
     expect(embed.url).toBe("https://blackmarketreader.com/guild/eu/angry-fuzzies/activity");
     expect(embed.description).toContain("Sunday 15 November · Europe");
+    expect(embed.description).toContain("👥 **4 members**");
     expect(embed.description).toContain("🟩 2 active · 🟨 1 quiet · 🟥 1 inactive");
-    expect(field("Members").value).toBe("**4**");
-    expect(field("New")).toMatchObject({ name: "📥 New (2)", value: "Bo, Di" });
-    expect(field("Gone")).toMatchObject({ name: "📤 Gone (1)", value: "Eve" });
-    expect(field("Last 24 hours").value).toMatch(/^\*\*2\*\* fights · 🗡️ 6 kills · 💀 3 deaths/);
+    expect(field("Joined")).toMatchObject({ name: "📥 Joined (2)", value: "Bo, Di" });
+    expect(field("Left")).toMatchObject({ name: "📤 Left (1)", value: "Eve" });
+    expect(field("Fights, 24h").value).toBe("**2**");
+    expect(field("Kills").value).toBe("**6**");
+    expect(field("Deaths").value).toBe("**3** · [regear](https://blackmarketreader.com/guild/eu/angry-fuzzies/regear)");
     expect(field("Most fame").value).toBe("🥇 **Ann** · 5m\n🥈 **Bo** · 12k");
     expect(field("Open").value).toContain("[Regear](https://blackmarketreader.com/guild/eu/angry-fuzzies/regear)");
     expect(report.allowed_mentions).toEqual({ parse: [] });
     expect(embed.timestamp).toBe("2026-11-15T03:30:00.000Z");
   });
 
-  it("leaves out the name lists on a quiet day", () => {
-    const report = dailyReport(
-      { guild: { name: "G", region: "us", slug: "g", memberCount: 1 }, activity: { counts: { active: 1, quiet: 0, inactive: 0 }, members: [member("Ann", null, 0)], left: [] } },
-      "2026-11-15",
-      new Date("2026-11-15T03:30:00Z")
-    );
-    const names = report.embeds[0].fields.map((f) => f.name);
-    expect(names.some((n) => n.includes("New") || n.includes("Gone"))).toBe(false);
-    expect(report.embeds[0].fields.find((f) => f.name.includes("Last 24 hours")).value).toBe("No listed fight.");
+  it("counts nobody as joined on the guild's first snapshot", () => {
+    const first = (trackedSince) =>
+      dailyReport(
+        {
+          guild: { name: "G", region: "us", slug: "g", memberCount: 2 },
+          tracking: { since: trackedSince },
+          activity: { counts: { active: 2, quiet: 0, inactive: 0 }, members: [member("Ann", "2026-11-15", 0), member("Bo", "2026-11-15", 0)], left: [] }
+        },
+        "2026-11-15",
+        new Date("2026-11-15T03:30:00Z")
+      ).embeds[0].fields;
+    const fields = first("2026-11-15");
+    expect(fields.some((f) => f.name.startsWith("📥 Joined ("))).toBe(false);
+    expect(fields.find((f) => f.name.includes("Joined and")).value).toMatch(/first snapshot/);
+    expect(fields.find((f) => f.name.includes("Fights")).value).toBe("**0**");
+    // tracked from before: the same members did join today
+    expect(first("2026-11-10").find((f) => f.name.startsWith("📥 Joined (")).value).toBe("Ann, Bo");
   });
 
   it("draws the members as a bar of 12 squares", () => {
@@ -80,8 +91,8 @@ describe("Discord report", () => {
 
   it("cuts a long name list at Discord's field limit", () => {
     const many = Array.from({ length: 200 }, (_, i) => member(`Player${String(i).padStart(3, "0")}`, "2026-11-15", 0));
-    const report = dailyReport({ guild: { name: "G", region: "us", slug: "g", memberCount: 200 }, activity: { counts: { active: 0, quiet: 0, inactive: 0 }, members: many, left: [] } }, "2026-11-15", new Date());
-    const joined = report.embeds[0].fields.find((f) => f.name.includes("New"));
+    const report = dailyReport({ guild: { name: "G", region: "us", slug: "g", memberCount: 200 }, tracking: { since: "2026-11-01" }, activity: { counts: { active: 0, quiet: 0, inactive: 0 }, members: many, left: [] } }, "2026-11-15", new Date());
+    const joined = report.embeds[0].fields.find((f) => f.name.startsWith("📥 Joined"));
     expect(joined.value.length).toBeLessThanOrEqual(1024);
     expect(joined.value).toMatch(/\+\d+ more$/);
   });

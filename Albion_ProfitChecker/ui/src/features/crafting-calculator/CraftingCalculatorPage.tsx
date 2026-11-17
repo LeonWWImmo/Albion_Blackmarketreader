@@ -45,6 +45,7 @@ import {
 } from "./specs/data";
 import { useCraftingSpecs } from "./specs/useCraftingSpecs";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 type MarketRegion = "eu" | "us";
 
@@ -1584,10 +1585,7 @@ export function CraftingCalculatorPage() {
 
         <div className="panel-section">
           <h4>Data region</h4>
-          <select className="city-select" value={region} onChange={(e) => onRegionSave(e.target.value === "us" ? "us" : "eu")}>
-            <option value="us">America</option>
-            <option value="eu">Europe</option>
-          </select>
+          <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
         </div>
 
         <div className="panel-section">

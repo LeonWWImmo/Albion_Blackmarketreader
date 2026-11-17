@@ -57,14 +57,17 @@ export function statusBar({ active = 0, quiet = 0, inactive = 0 }) {
 }
 
 /**
- * The daily report of one guild, from its guild page answer (guild, activity, fights): who is
- * active, who joined or left since `since` (a day, inclusive), the fights of the last day and who
- * gained the most fame in 7 days. One Discord embed, with links to the guild's tabs.
+ * The daily report of one guild, from its guild page answer (guild, tracking, activity, fights):
+ * the members as a bar, the fights of the last day, who joined or left since `since` (a day,
+ * inclusive) and who gained the most fame in 7 days. One Discord embed, with links to the tabs.
  */
-export function dailyReport({ guild, activity, fights = [] }, since, now) {
+export function dailyReport({ guild, tracking, activity, fights = [] }, since, now) {
   const { counts, members, left } = activity;
-  const joined = members.filter((m) => m.joinedOn && m.joinedOn >= since).map((m) => m.name);
-  const gone = left.filter((m) => m.leftOn >= since).map((m) => m.name);
+  // the first snapshot lists everyone who was in the guild already: joins and leaves count from the next day
+  const trackedSince = tracking?.since ?? null;
+  const fresh = !trackedSince || trackedSince >= since;
+  const joined = fresh ? [] : members.filter((m) => m.joinedOn && m.joinedOn > trackedSince && m.joinedOn >= since).map((m) => m.name);
+  const gone = fresh ? [] : left.filter((m) => m.leftOn >= since).map((m) => m.name);
   const gainers = members
     .filter((m) => (m.gains["7"]?.total ?? 0) > 0)
     .sort((a, b) => b.gains["7"].total - a.gains["7"].total)
@@ -84,22 +87,24 @@ export function dailyReport({ guild, activity, fights = [] }, since, now) {
         author,
         title: `🛡️ ${guild.allianceTag ? `[${guild.allianceTag}] ` : ""}${guild.name}`,
         url: guildUrl(guild, "activity"),
-        description: [`**Daily report** · ${date} · ${REGION[guild.region] ?? guild.region.toUpperCase()}`, bar, `🟩 ${counts.active} active · 🟨 ${counts.quiet} quiet · 🟥 ${counts.inactive} inactive (14+ days)`]
-          .filter(Boolean)
-          .join("\n"),
+        description: [
+          `**Daily report** · ${date} · ${REGION[guild.region] ?? guild.region.toUpperCase()}`,
+          "",
+          `👥 **${guild.memberCount} members**`,
+          ...(bar ? [bar] : []),
+          `🟩 ${counts.active} active · 🟨 ${counts.quiet} quiet · 🟥 ${counts.inactive} inactive (14+ days)`
+        ].join("\n"),
         color: ACCENT,
         fields: [
-          { name: "👥 Members", value: `**${guild.memberCount}**`, inline: true },
-          { name: "📥 Joined", value: `**${joined.length}**`, inline: true },
-          { name: "📤 Left", value: `**${gone.length}**`, inline: true },
-          ...(joined.length ? [{ name: `📥 New (${joined.length})`, value: nameList(joined) }] : []),
-          ...(gone.length ? [{ name: `📤 Gone (${gone.length})`, value: nameList(gone) }] : []),
-          {
-            name: "⚔️ Last 24 hours",
-            value: lastDay.length
-              ? `**${lastDay.length}** ${lastDay.length === 1 ? "fight" : "fights"} · 🗡️ ${kills} ${kills === 1 ? "kill" : "kills"} · 💀 ${deaths} ${deaths === 1 ? "death" : "deaths"} · [regear](${guildUrl(guild, "regear")})`
-              : "No listed fight."
-          },
+          { name: "⚔️ Fights, 24h", value: `**${lastDay.length}**`, inline: true },
+          { name: "🗡️ Kills", value: `**${kills}**`, inline: true },
+          { name: "💀 Deaths", value: deaths ? `**${deaths}** · [regear](${guildUrl(guild, "regear")})` : "**0**", inline: true },
+          ...(fresh
+            ? [{ name: "📥 Joined and 📤 left", value: "From the next report on: today is the guild's first snapshot." }]
+            : [
+                { name: `📥 Joined (${joined.length})`, value: joined.length ? nameList(joined) : "Nobody", inline: true },
+                { name: `📤 Left (${gone.length})`, value: gone.length ? nameList(gone) : "Nobody", inline: true }
+              ]),
           { name: "🏆 Most fame, 7 days", value: gainers.length ? gainers.join("\n") : "Shows after a week of daily snapshots." },
           {
             name: "🔗 Open",
@@ -129,7 +134,7 @@ export function helloMessage(guild) {
         fields: [
           { name: "🕓 When", value: "Every day, 03:30 to 04:30 UTC", inline: true },
           { name: "🔕 Pings", value: "None", inline: true },
-          { name: "📋 In the report", value: "Active, quiet and inactive members · who joined and left · the fights of the last day · the top fame gainers of the week" }
+          { name: "📋 In the report", value: "Active, quiet and inactive members · the fights of the last day · who joined and left · the top fame gainers of the week" }
         ],
         footer: { text: "Change or remove it in the Discord tab of the guild page", icon_url: ICON }
       }

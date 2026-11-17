@@ -40,6 +40,7 @@ import {
   type GoldRange
 } from "./goldStats";
 import { useGoldHistory, type GoldRegion } from "./useGoldHistory";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 const RANGES: ReadonlyArray<{ key: GoldRange; label: string }> = [
   { key: "24h", label: "24H" },
@@ -499,14 +500,7 @@ export function GoldTrackerPage() {
 
         <div className="panel-section">
           <h4>Data region</h4>
-          <select
-            className="city-select"
-            value={region}
-            onChange={(e) => onRegionSave(e.target.value === "us" ? "us" : "eu")}
-          >
-            <option value="us">America</option>
-            <option value="eu">Europe</option>
-          </select>
+          <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
         </div>
 
         <div className="panel-section">

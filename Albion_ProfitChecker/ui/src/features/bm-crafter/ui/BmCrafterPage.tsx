@@ -22,6 +22,7 @@ import { CrafterInsight } from "./CrafterInsight";
 import { formatNumber, formatPct, isSuspectPrice, tierLabel } from "./format";
 import "./bmCrafter.css";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   const [service] = useState(() => new RegionService("eu"));
@@ -551,14 +552,7 @@ export function BmCrafterPage() {
 
         <div className="panel-section">
           <h4>Data region</h4>
-          <select
-            className="city-select"
-            value={region}
-            onChange={(e) => onRegionSave(e.target.value === "us" ? "us" : "eu")}
-          >
-            <option value="us">America</option>
-            <option value="eu">Europe</option>
-          </select>
+          <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
         </div>
 
         <div className="panel-section">

@@ -7,6 +7,7 @@ import "./dashboard.css";
 import { PhoneDealDetail, PhoneDealRow, PhoneOverview, type PhoneCity, type PhoneDeal } from "./DashboardPhone";
 import { DashboardEvents } from "./DashboardEvents";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 type Region = "us" | "eu";
 type City = "ALL" | "Lymhurst" | "Martlock" | "Fort Sterling" | "Thetford" | "Bridgewatch" | "Caerleon";
@@ -1295,10 +1296,7 @@ export function DashboardPage() {
 
           <div className="panel-section">
             <h4>Data region</h4>
-            <select className="city-select" value={region} onChange={(e) => onRegionSave(e.target.value === "eu" ? "eu" : "us")}>
-              <option value="us">America</option>
-              <option value="eu">Europe</option>
-            </select>
+            <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
           </div>
 
           <div className="panel-section">

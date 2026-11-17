@@ -16,6 +16,7 @@ import {
   useFactionTheme
 } from "../index";
 import type { Faction } from "../theme/factions";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 type Region = "eu" | "us";
 type UserState = { id: string; email: string | null; avatar: string; region: Region | null };
@@ -299,10 +300,7 @@ export function useToolAccount(
 
         <div className="panel-section">
           <h4>Data region</h4>
-          <select className="city-select" value={region} onChange={(e) => onRegionSave(e.target.value === "us" ? "us" : "eu")}>
-            <option value="us">America</option>
-            <option value="eu">Europe</option>
-          </select>
+          <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
         </div>
 
         <div className="panel-section">

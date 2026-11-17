@@ -14,6 +14,7 @@ import "../../bm-crafter/ui/bmCrafter.css";
 import "./refiningCalculator.css";
 import { RefiningRowDetail } from "./RefiningRowDetail";
 import { ToolGuideLink } from "@shared/content/ToolGuideLink";
+import { RegionSwitch } from "@shared/ui/RegionSwitch";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
 type ManualOverrides = {
@@ -1061,7 +1062,7 @@ export function RefiningCalculatorPage() {
         </div>
         <div className="panel-section">
           <h4>Data region</h4>
-          <select className="city-select" value={region} onChange={(event) => void onRegionSave(event.target.value === "us" ? "us" : "eu")}><option value="us">America</option><option value="eu">Europe</option></select>
+          <RegionSwitch value={region} onChange={(next) => void onRegionSave(next)} />
         </div>
         <div className="panel-section">
           <h4>Guides</h4>
