@@ -1209,6 +1209,14 @@ export function DashboardPage() {
           </span>
           <span className="tool-rail-label">Price Checker</span>
         </a>
+        <a className="tool-rail-link" href="/guild" title="Guild Tools">
+          <span className="tool-rail-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M12 2 4 5v6c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5l-8-3Zm0 2.2 6 2.25V11c0 4.1-2.5 7.9-6 8.9-3.5-1-6-4.8-6-8.9V6.45l6-2.25Z" />
+            </svg>
+          </span>
+          <span className="tool-rail-label">Guild Tools</span>
+        </a>
       </aside>
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
@@ -1231,6 +1239,7 @@ export function DashboardPage() {
           <a className="nav-link" href="/gold-tracker">Gold Tracker</a>
           <a className="nav-link" href="/loot-split">Loot Split</a>
           <a className="nav-link" href="/prices">Price Checker</a>
+          <a className="nav-link" href="/guild">Guild</a>
           <a className="nav-link" href="/community">Community</a>
         </nav>
         <div className="topbar-right">
