@@ -128,6 +128,8 @@ jobs:
             BANNER="https://blackmarketreader.com/picture/loot-split-preview.png"
           elif printf '%s' "$NOTES" | grep -q 'Gold Tracker'; then
             BANNER="https://blackmarketreader.com/picture/gold-tracker-preview.png"
+          elif printf '%s' "$NOTES" | grep -qi 'Guild tools'; then
+            BANNER="https://blackmarketreader.com/picture/guild-tools-preview.png"
           else
             BANNER="https://blackmarketreader.com/picture/hero-forge-1280.jpg"
           fi
