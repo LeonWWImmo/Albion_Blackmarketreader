@@ -13,7 +13,7 @@ describe("sanitizeAvatarUrl", () => {
 
   it("keeps other web addresses and refuses scripts and tricks", () => {
     expect(sanitizeAvatarUrl("https://render.albiononline.com/v1/item/T4_BAG.png", SITE)).toBe("https://render.albiononline.com/v1/item/T4_BAG.png");
-    for (const bad of ["javascript:alert(1)", "data:image/png;base64,AAAA", "//evil.example/a.png", "/picture\\..\\x.png", "", null, undefined]) {
+    for (const bad of ["javascript:alert(1)", "data:image/png;base64,AAAA", "//evil.example/a.png", "/picture\\..\\x.png", "/\t/evil.example/a.png", "/\n/evil.example/a.png", "", null, undefined]) {
       expect(sanitizeAvatarUrl(bad, SITE)).toBe("/picture/accountsymbol.png");
     }
   });

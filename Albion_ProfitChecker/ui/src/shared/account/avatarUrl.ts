@@ -10,10 +10,13 @@ export function sanitizeAvatarUrl(value?: string | null, origin = typeof window 
   const trimmed = String(value || "").trim();
   if (!trimmed) return FALLBACK;
   if (/^(javascript|data|vbscript|file):/i.test(trimmed)) return FALLBACK;
-  // protocol-relative ("//host") and backslash tricks that escape our origin
-  if (trimmed.startsWith("//") || trimmed.includes("\\")) return FALLBACK;
+  // protocol-relative ("//host") and backslash tricks that escape our origin; the URL parser drops
+  // tabs and line breaks, so "/\t/host" would turn into "//host"
+  if (trimmed.startsWith("//") || /[\\\t\r\n]/.test(trimmed)) return FALLBACK;
   try {
     const url = new URL(trimmed, origin);
+    // a path must stay on our own site
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && url.origin !== new URL(origin).origin) return FALLBACK;
     if (url.protocol === "http:" || url.protocol === "https:") return url.pathname.startsWith("/picture/") ? url.pathname : url.href;
     if (url.protocol === "blob:") return url.href;
   } catch {
