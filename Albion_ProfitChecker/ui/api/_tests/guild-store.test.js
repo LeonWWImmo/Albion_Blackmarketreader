@@ -8,13 +8,14 @@ import { createRateLimiter } from "../_lib/rateLimit.js";
  */
 function fakeDb({ tables = {}, results = {} } = {}) {
   const pages = [];
+  const orders = [];
   const from = (name) => {
     const q = {
       select: () => q,
       eq: () => q,
       gte: () => q,
       in: () => q,
-      order: () => q,
+      order: (column) => (orders.push([name, column]), q),
       insert: () => q,
       delete: () => q,
       update: () => q,
@@ -27,7 +28,7 @@ function fakeDb({ tables = {}, results = {} } = {}) {
     };
     return q;
   };
-  return { db: { from }, pages };
+  return { db: { from }, pages, orders };
 }
 
 describe("guild store", () => {
@@ -57,7 +58,7 @@ describe("guild store", () => {
   });
 
   it("finds the marked guilds that are due, oldest sync first, each once", async () => {
-    const { db } = fakeDb({
+    const { db, orders } = fakeDb({
       tables: { guild_marks: [{ guild_id: "a" }, { guild_id: "b" }, { guild_id: "a" }, { guild_id: "c" }] },
       results: {
         guilds: {
@@ -72,6 +73,8 @@ describe("guild store", () => {
     });
     const due = await createGuildStore(db).dueGuilds("2026-11-14T00:00:00Z", 10);
     expect(due.map((g) => g.id)).toEqual(["b", "a"]);
+    // read page by page: a player has a mark per server, so the order needs the server too
+    expect(orders.filter(([t]) => t === "guild_marks").map(([, c]) => c)).toEqual(["user_id", "region"]);
   });
 });
 

@@ -66,7 +66,8 @@ export function createGuildStore(db) {
     },
     /** Marked guilds whose last sync is older than `before`, oldest first. */
     async dueGuilds(before, limit) {
-      const marks = await allPages(() => db.from("guild_marks").select("guild_id").order("user_id", { ascending: true }));
+      // paged: the order must have no ties (a player has a row per server)
+      const marks = await allPages(() => db.from("guild_marks").select("guild_id").order("user_id", { ascending: true }).order("region", { ascending: true }));
       const ids = [...new Set(marks.map((m) => m.guild_id))];
       if (!ids.length) return [];
       const guilds = [];
