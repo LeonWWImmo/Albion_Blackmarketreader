@@ -1,0 +1,24 @@
+# Line endings: the repository stores text with LF (LF on checkout too), whatever editor or
+# core.autocrlf setting a machine has. A file with CRLF or mixed endings can no longer turn
+# into a full-file diff.
+* text=auto eol=lf
+
+# Windows-only files keep CRLF
+*.sln text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# binaries: never converted, never diffed as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.webm binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.pdf binary
