@@ -88,6 +88,17 @@ const ROSTER_DROP_MIN = 10;
 
 const ok = (body, maxAge = 0) => ({ status: 200, body, maxAge });
 const fail = (status, error) => ({ status, body: { error }, maxAge: 0 });
+const SERVER_NAMES = { eu: "Europe", us: "America" };
+/**
+ * Albion's killboard of one server failed us (it is unofficial and goes down for hours at times):
+ * say whose problem it is, and point to the other server. `down` lets the page offer the switch.
+ */
+function killboardDown(status, region) {
+  const name = SERVER_NAMES[region];
+  const other = SERVER_NAMES[region === "eu" ? "us" : "eu"];
+  const error = `Albion's API for ${name} is down right now. That is on Albion's side, not this site: no ${name} data until it is back. Try ${other} in the meantime.`;
+  return { status, body: { error, down: region }, maxAge: 0 };
+}
 const NOT_FOUND = "No guild with that name on this server.";
 const SERVER = { eu: "Europe", us: "America" };
 const UNIQUE_VIOLATION = "23505";
@@ -733,6 +744,7 @@ export async function handleGuild(action, request, deps) {
     if (error instanceof GameinfoError) {
       // the cause goes to the server log: a 502 alone does not tell a slow killboard from a block
       if (error.status !== 404) console.warn("guild api", action, error.message);
+      if (error.status !== 404 && PUBLIC_ACTIONS.has(action) && isRegion(region)) return killboardDown(error.status, region);
       return fail(error.status, error.status === 404 ? NOT_FOUND : "Albion's killboard is not answering right now. Try again in a minute.");
     }
     console.error("guild api", action, error);

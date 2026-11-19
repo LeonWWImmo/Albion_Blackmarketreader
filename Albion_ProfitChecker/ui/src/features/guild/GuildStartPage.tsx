@@ -8,6 +8,7 @@ import { loadOnce, peek } from "./core/cache";
 import { prefetchGuild } from "./core/guildData";
 import { GUILD_TOOLS } from "./core/tools";
 import { GuildShell } from "./GuildShell";
+import { ErrorNote, shownError, type ShownError } from "./ui/ErrorNote";
 import { useMyGuild } from "./useMyGuild";
 
 const SEARCH_DELAY_MS = 150;
@@ -101,7 +102,7 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
 
       <GuildSearch region={region} setRegion={setRegion} />
 
-      <TopGuilds region={region} />
+      <TopGuilds region={region} setRegion={setRegion} />
 
       <div className="gd-section-title">
         <h2>Your guilds</h2>
@@ -169,7 +170,7 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<GuildHit[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ShownError | null>(null);
   const [active, setActive] = useState(0);
   const [minFame, setMinFame] = useState(0);
   const [showQuiet, setShowQuiet] = useState(false);
@@ -178,7 +179,7 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
   const hitsRegion = useRef(region);
 
   useEffect(() => {
-    setError("");
+    setError(null);
     setActive(0);
     setShowQuiet(false);
     // the other server's results would link to guilds that are not on this one
@@ -218,7 +219,7 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
           setLoading(false);
-          setError(err instanceof Error ? err.message : "Search failed.");
+          setError(shownError(err, "Search failed."));
         });
     }, SEARCH_DELAY_MS);
     return () => {
@@ -303,7 +304,7 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
                 ? `None of the ${found.length} guilds found has ${fameFilter.label} kill fame. Albion's search shows the first 10 names only: type more of the name.`
                 : ""}
       </p>
-      {error ? <p className="gd-error">{error}</p> : null}
+      {error ? <ErrorNote error={error} setRegion={setRegion} /> : null}
       {shown?.length ? (
         <div className={`gd-hits${loading ? " is-stale" : ""}`} id={listId} role="listbox" aria-label="Guilds">
           {shown.map((hit, i) => (
@@ -343,20 +344,20 @@ function GuildSearch({ region, setRegion }: { region: Region; setRegion: (next: 
 }
 
 /** The guilds with the most kill fame this week or month: one click opens their page. */
-function TopGuilds({ region }: { region: Region }) {
+function TopGuilds({ region, setRegion }: { region: Region; setRegion: (next: Region) => void }) {
   const [range, setRange] = useState<TopRange>("week");
   const [, setVersion] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ShownError | null>(null);
   const hover = useHoverPrefetch(region);
   const key = `top:${region}:${range}`;
 
   useEffect(() => {
-    setError("");
+    setError(null);
     if ((peek(key)?.age ?? Infinity) < TOP_FRESH_MS) return;
     let live = true;
     loadOnce(key, () => fetchTopGuilds(region, range))
       .then(() => live && setVersion((v) => v + 1))
-      .catch((err: unknown) => live && setError(err instanceof Error ? err.message : "The top guilds could not load."));
+      .catch((err: unknown) => live && setError(shownError(err, "The top guilds could not load.")));
     return () => {
       live = false;
     };
@@ -408,7 +409,7 @@ function TopGuilds({ region }: { region: Region }) {
           ))}
         </ol>
       ) : error ? (
-        <p className="gd-error">{error}</p>
+        <ErrorNote error={error} setRegion={setRegion} />
       ) : guilds ? (
         <p className="gd-card gd-muted gd-top-empty">No big fights on the {serverName(region)} server {current.note} yet.</p>
       ) : (

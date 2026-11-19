@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { shouldReport } from "./errorReporter";
+import { isAutomated, shouldReport } from "./errorReporter";
 
 const ours = { message: "TypeError: x is undefined", stack: "at h (https://blackmarketreader.com/assets/index.js:1:2)", source: "" };
+
+describe("isAutomated", () => {
+  it("knows crawlers and headless browsers, not real visitors", () => {
+    expect(isAutomated("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/131.0.0.0 Safari/537.36")).toBe(true);
+    expect(isAutomated("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/131.0.0.0 Safari/537.36")).toBe(true);
+    expect(isAutomated("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm) Chrome/131 Safari/537.36")).toBe(true);
+    expect(isAutomated("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")).toBe(false);
+    expect(isAutomated("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")).toBe(false);
+  });
+});
 
 describe("shouldReport", () => {
   it("reports the site's own errors", () => {

@@ -15,6 +15,9 @@ type Report = { message: string; stack: string; source: string };
 /** Chrome's page translation marks <html>; worth knowing for errors that only translated pages hit. */
 const translated = () => /\btranslated-(ltr|rtl)\b/.test(document.documentElement.className);
 
+/** Crawlers and headless browsers: their errors are not what visitors see. */
+export const isAutomated = (agent: string) => /HeadlessChrome|bot\b|crawl|spider|slurp|Lighthouse|Google-InspectionTool|PageSpeed/i.test(agent);
+
 export function shouldReport({ message, stack, source }: Report): boolean {
   return !!message && !IGNORED.test(message) && !FOREIGN.test(`${stack}\n${source}`);
 }
@@ -47,8 +50,9 @@ export function reportCaughtError(error: unknown): void {
 export function installErrorReporter(): void {
   // dev runs on localhost and previews on vercel.app, so this is the live build only.
   // Automated browsers (scrapers, test bots) often block stylesheets and scripts on purpose: their
-  // "Unable to preload CSS" reports say nothing about what visitors see.
-  if (location.hostname !== LIVE_HOST || navigator.webdriver) return;
+  // "Unable to preload CSS" reports say nothing about what visitors see. Search engines render with
+  // a headless Chrome on Linux too and skip files as they like.
+  if (location.hostname !== LIVE_HOST || navigator.webdriver || isAutomated(navigator.userAgent)) return;
   const seen = new Set<string>();
   const report = (raw: Report) => {
     // a thrown object can carry anything in these fields

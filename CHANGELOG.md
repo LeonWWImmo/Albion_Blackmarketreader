@@ -55,6 +55,7 @@ Keep them short and player-friendly (not technical), and without emoji.
 - Every guild tab has its own guide, and you can now click any guide picture to see it big.
 - The server switch in the account panel is now a quick EU / US toggle.
 - See how good the prices are: the account panel now shows how many materials have a price in each city of your server, and our Discord has a new price-coverage channel with the numbers for Europe and America every day.
+- Guild tools: when Albion's own killboard is down for a server (it happens, sometimes for hours), the page now says so plainly and lets you switch to the other server in one click.
 
 <!-- Add new bullets below as "- ..." lines, without emoji. Examples
      (indented so they are not posted by accident):

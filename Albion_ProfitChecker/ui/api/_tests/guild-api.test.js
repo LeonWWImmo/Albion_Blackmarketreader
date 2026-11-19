@@ -56,10 +56,15 @@ describe("guild page", () => {
     expect((await call("guild", { query: { region: "xx", slug: "angry-fuzzies" } })).status).toBe(400);
   });
 
-  it("reports a killboard outage as 502", async () => {
+  it("reports a killboard outage as 502: Albion's side, which server, and the other one to try", async () => {
     const { call, deps } = setup();
     deps.gameinfo.getMembers.mockRejectedValueOnce(new GameinfoError("down", 502));
-    expect(await call("guild", { query: { region: "eu", id: GID } })).toMatchObject({ status: 502, body: { error: expect.stringContaining("not answering") } });
+    expect(await call("guild", { query: { region: "eu", id: GID } })).toMatchObject({
+      status: 502,
+      body: { error: expect.stringMatching(/Albion's API for Europe is down.*Try America/), down: "eu" }
+    });
+    deps.gameinfo.searchGuilds.mockRejectedValueOnce(new GameinfoError("down", 502));
+    expect(await call("search", { query: { region: "us", q: "angry" } })).toMatchObject({ status: 502, body: { error: expect.stringContaining("America is down"), down: "us" } });
   });
 
   it("keeps the public page up when the database fails, without tracking, mark button or cache", async () => {

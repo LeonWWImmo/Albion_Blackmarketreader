@@ -154,7 +154,9 @@ export type DiscordHook = { name: string; lastSentOn: string | null };
 export class GuildApiError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
+    /** the server whose Albion killboard is down (not our fault): the page offers the other one */
+    readonly down: Region | null = null
   ) {
     super(message);
   }
@@ -166,8 +168,11 @@ async function call<T>(path: string, { token, method = "GET", body, signal }: { 
   if (token) headers.Authorization = `Bearer ${freshToken(token)}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(`/api/guild/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
-  const data = (await res.json().catch(() => null)) as (T & { error?: string }) | null;
-  if (!res.ok || !data) throw new GuildApiError(data?.error ?? "Something went wrong. Try again in a minute.", res.status);
+  const data = (await res.json().catch(() => null)) as (T & { error?: string; down?: string }) | null;
+  if (!res.ok || !data) {
+    const down = data?.down === "eu" || data?.down === "us" ? data.down : null;
+    throw new GuildApiError(data?.error ?? "Something went wrong. Try again in a minute.", res.status, down);
+  }
   return data;
 }
 

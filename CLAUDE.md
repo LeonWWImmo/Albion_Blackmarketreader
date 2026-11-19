@@ -72,4 +72,5 @@ guild sync + Discord reports (03:30 UTC).
 - `CHANGELOG.md`: player-friendly bullets under `## Unreleased`, no emoji.
 - Guild data is private per account for now (shared guild-wide data is a later step).
 - Albion's killboard (gameinfo API) is unofficial and goes down at times (502, timeouts, a whole
-  server for hours): the UI shows "Albion's killboard is not answering"; it is not our bug.
+  server for hours): the public guild pages say "Albion's API for <server> is down" and offer the
+  other server (`down` in the error answer); it is not our bug.

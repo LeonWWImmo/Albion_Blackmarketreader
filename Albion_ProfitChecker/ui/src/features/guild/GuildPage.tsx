@@ -19,12 +19,12 @@ import { RegearTab } from "./ui/RegearTab";
 import { useMyGuild } from "./useMyGuild";
 
 export function GuildPage() {
-  return <GuildShell>{() => <GuildBody />}</GuildShell>;
+  return <GuildShell>{(_region, setRegion) => <GuildBody setRegion={setRegion} />}</GuildShell>;
 }
 
 type Loaded = { key: string; data: GuildPageData };
 
-function GuildBody() {
+function GuildBody({ setRegion }: { setRegion: (next: Region) => void }) {
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,7 +80,20 @@ function GuildBody() {
   }, [region, slug, idFromSearch, version]);
 
   if (!region) return <Problem text="Guild pages are on the Europe (eu) or America (us) server." />;
-  if (error && !data) return <Problem text={error.message} retry={error.status === 404 ? undefined : () => setVersion((v) => v + 1)} />;
+  if (error && !data) {
+    // Albion's killboard of this server is down: the guild search on the other server still works
+    const other: Region = error.down === "eu" ? "us" : "eu";
+    const toOther = error.down
+      ? {
+          name: other === "eu" ? "Europe" : "America",
+          go: () => {
+            setRegion(other);
+            navigate("/guild");
+          }
+        }
+      : undefined;
+    return <Problem text={error.message} retry={error.status === 404 ? undefined : () => setVersion((v) => v + 1)} toOther={toOther} />;
+  }
   if (!data) {
     return (
       <main className="gd" aria-busy="true">
@@ -123,7 +136,7 @@ function GuildBody() {
   );
 }
 
-function Problem({ text, retry }: { text: string; retry?: () => void }) {
+function Problem({ text, retry, toOther }: { text: string; retry?: () => void; toOther?: { name: string; go: () => void } }) {
   return (
     <main className="gd">
       <p className="gd-error" role="alert">
@@ -133,6 +146,11 @@ function Problem({ text, retry }: { text: string; retry?: () => void }) {
         {retry ? (
           <button type="button" className="gd-btn" onClick={retry}>
             Try again
+          </button>
+        ) : null}
+        {toOther ? (
+          <button type="button" className="gd-btn" onClick={toOther.go}>
+            Search on {toOther.name}
           </button>
         ) : null}
         <Link className="gd-btn" to="/guild">
