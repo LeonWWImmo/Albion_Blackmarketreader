@@ -1,36 +1,37 @@
-// Premium subscriptions, sold through Lemon Squeezy (merchant of record: it bills, handles VAT and
-// pays affiliates). /api/billing/<action>:
-// - webhook  (POST, from Lemon Squeezy): a subscription changed; signed with the webhook secret
+// Premium subscriptions, sold through Stripe. /api/billing/<action>:
+// - webhook  (POST, from Stripe): a subscription changed; signed with the endpoint's secret
 // - status   (GET, signed in): does this player have premium, until when
-// - checkout (GET, signed in): the checkout link, with the player's id so the webhook knows who paid
-// Pure logic with the store and env given in, like guildApi.js; api/billing.js wires it to Vercel.
+// - checkout (POST, signed in): a Stripe Checkout for this player, created here so the
+//   subscription carries their id (nobody can buy premium onto another account)
+// - portal   (POST, signed in): Stripe's customer portal to change the card or cancel
+// Pure logic with the store, Stripe client and env given in, like guildApi.js; api/billing.js wires
+// it to Vercel.
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// how old a signed webhook may be (Stripe's own default): older ones could be replayed
+const SIGNATURE_TOLERANCE_S = 300;
+const SUBSCRIPTION_EVENTS = new Set(["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted", "customer.subscription.paused", "customer.subscription.resumed"]);
 
 const answer = (status, body) => ({ status, body, maxAge: 0 });
 
-/** True when `signature` (hex) is the HMAC-SHA256 of the raw body with the webhook secret. */
-export function isValidSignature(secret, rawBody, signature) {
-  if (!secret || !rawBody || !/^[0-9a-f]{64}$/i.test(signature ?? "")) return false;
-  const expected = createHmac("sha256", secret).update(rawBody).digest();
-  return timingSafeEqual(expected, Buffer.from(signature, "hex"));
-}
-
 /**
- * The checkout link carries the player's id, and a player could edit it before paying. It is
- * signed here, so a payment can only ever land on the account that started the checkout.
+ * True when the Stripe-Signature header ("t=...,v1=...") signs "<t>.<raw body>" with the endpoint
+ * secret (HMAC-SHA256) and is not older than five minutes.
  */
-export const userSignature = (secret, userId) => createHmac("sha256", secret).update(`user:${userId}`).digest("hex");
-
-function isSignedUser(secret, userId, signature) {
-  if (!secret || !userId || !/^[0-9a-f]{64}$/i.test(signature ?? "")) return false;
-  return timingSafeEqual(Buffer.from(userSignature(secret, userId), "hex"), Buffer.from(signature, "hex"));
+export function isValidSignature(secret, rawBody, header, now) {
+  if (!secret || !rawBody || typeof header !== "string") return false;
+  const parts = header.split(",").map((p) => p.split("="));
+  const t = Number(parts.find(([k]) => k === "t")?.[1]);
+  const signatures = parts.filter(([k, v]) => k === "v1" && /^[0-9a-f]{64}$/i.test(v ?? "")).map(([, v]) => Buffer.from(v, "hex"));
+  if (!Number.isFinite(t) || !signatures.length || Math.abs(now.getTime() / 1000 - t) > SIGNATURE_TOLERANCE_S) return false;
+  const expected = createHmac("sha256", secret).update(`${t}.`).update(rawBody).digest();
+  return signatures.some((s) => s.length === expected.length && timingSafeEqual(s, expected));
 }
 
 /**
- * Premium while on trial, active or past due (Lemon Squeezy still retries the payment), or
- * cancelled but paid until ends_at. Same rule as public.is_premium() in the database.
+ * Premium while on trial, active or past due (Stripe still retries the payment), or cancelled but
+ * paid until ends_at. Same rule as public.is_premium() in the database.
  */
 export function isPremium(row, now) {
   if (!row) return false;
@@ -38,30 +39,46 @@ export function isPremium(row, now) {
   return row.status === "cancelled" && row.endsAt !== null && new Date(row.endsAt) > now;
 }
 
-/** The subscription row a webhook event describes (user id still to be found), or null for other events. */
-export function rowFromEvent(event) {
-  const data = event?.data;
-  if (data?.type !== "subscriptions" || !data.id || !data.attributes?.status) return null;
-  const a = data.attributes;
-  const custom = event.meta?.custom_data ?? {};
-  const customUser = custom.user_id;
+const iso = (seconds) => (typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : null);
+
+/**
+ * Stripe's subscription in the stored form. The statuses are the ones is_premium() knows:
+ * on_trial, active, past_due, cancelled (still paid until ends_at), expired (over), and Stripe's
+ * own for the rest (unpaid, incomplete, incomplete_expired, paused), which give no premium.
+ */
+export function rowFromSubscription(sub, eventCreated) {
+  // the period end moved from the subscription to its items in newer Stripe API versions
+  const periodEnd = iso(sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end);
+  const userId = sub.metadata?.user_id;
+  let status = sub.status;
+  let renewsAt = periodEnd;
+  let endsAt = null;
+  if (sub.status === "trialing") status = "on_trial";
+  else if (sub.status === "canceled") {
+    status = "expired";
+    renewsAt = null;
+    endsAt = iso(sub.ended_at) ?? periodEnd;
+  } else if (sub.status === "active" && (sub.cancel_at_period_end || sub.cancel_at)) {
+    status = "cancelled";
+    renewsAt = null;
+    endsAt = iso(sub.cancel_at) ?? periodEnd;
+  }
   return {
-    userId: typeof customUser === "string" && UUID.test(customUser) ? customUser : null,
-    userSignature: typeof custom.user_sig === "string" ? custom.user_sig : null,
-    subscriptionId: String(data.id),
-    customerId: a.customer_id == null ? null : String(a.customer_id),
-    variantId: a.variant_id == null ? null : String(a.variant_id),
-    status: String(a.status),
-    renewsAt: a.renews_at ?? null,
-    endsAt: a.ends_at ?? null,
-    testMode: Boolean(a.test_mode ?? event.meta?.test_mode),
-    providerUpdatedAt: a.updated_at ?? new Date(0).toISOString()
+    userId: typeof userId === "string" && UUID.test(userId) ? userId : null,
+    subscriptionId: String(sub.id),
+    customerId: typeof sub.customer === "string" ? sub.customer : (sub.customer?.id ?? null),
+    variantId: sub.items?.data?.[0]?.price?.id ?? null,
+    status,
+    renewsAt,
+    endsAt,
+    testMode: sub.livemode === false,
+    providerUpdatedAt: iso(eventCreated) ?? new Date(0).toISOString()
   };
 }
 
-async function webhook(req, { store, env }) {
+async function webhook(req, { store, env, now }) {
   if (req.method !== "POST") return answer(405, { error: "POST only" });
-  if (!isValidSignature(env.webhookSecret, req.rawBody, req.signature)) return answer(401, { error: "bad signature" });
+  if (!isValidSignature(env.webhookSecret, req.rawBody, req.signature, now())) return answer(401, { error: "bad signature" });
   if (!store) return answer(503, { error: "no database" });
   let event;
   try {
@@ -69,17 +86,16 @@ async function webhook(req, { store, env }) {
   } catch {
     return answer(400, { error: "not JSON" });
   }
-  const row = rowFromEvent(event);
-  // orders, invoices and the like: nothing to store, but Lemon Squeezy must not retry them
-  if (!row) return answer(200, { ok: true, ignored: "not a subscription event" });
-  if (row.testMode && !env.allowTestMode) return answer(200, { ok: true, ignored: "test mode" });
-  const known = await store.getBySubscription(row.subscriptionId);
-  // the player: whoever this subscription already belongs to, else the signed id from the checkout
-  const signed = isSignedUser(env.webhookSecret, row.userId, row.userSignature) ? row.userId : null;
-  const userId = known?.userId ?? signed;
-  // without the player's id nobody can be given premium: a 500 lets Lemon Squeezy retry and shows up in its log
-  if (!userId) return answer(500, { error: "subscription without a valid player id" });
-  const { userSignature: _sig, ...next } = { ...row, userId };
+  // other events: nothing to store, but Stripe must not retry them
+  if (!SUBSCRIPTION_EVENTS.has(event?.type) || event.data?.object?.object !== "subscription") return answer(200, { ok: true, ignored: "not a subscription event" });
+  const next0 = rowFromSubscription(event.data.object, event.created);
+  if (next0.testMode && !env.allowTestMode) return answer(200, { ok: true, ignored: "test mode" });
+  const known = await store.getBySubscription(next0.subscriptionId);
+  // the player: whoever this subscription already belongs to, else the id our checkout put on it
+  const userId = known?.userId ?? next0.userId;
+  // a subscription made outside our checkout (by hand in Stripe): nobody to give premium to
+  if (!userId) return answer(200, { ok: true, ignored: "subscription without a player id" });
+  const next = { ...next0, userId };
   const current = known ?? (await store.getByUser(userId));
   if (current && current.subscriptionId === next.subscriptionId) {
     // events can arrive out of order: keep the newest state of a subscription
@@ -88,15 +104,14 @@ async function webhook(req, { store, env }) {
     // another subscription of the same player (they subscribed again): a late event of a dead one
     // must not replace a running one, and a test purchase never replaces a real one
     if (current.testMode === false && next.testMode) return answer(200, { ok: true, ignored: "test subscription next to a real one" });
-    const now = new Date(next.providerUpdatedAt);
-    if (isPremium(current, now) && !isPremium(next, now)) return answer(200, { ok: true, ignored: "ended subscription next to a running one" });
+    const at = new Date(next.providerUpdatedAt);
+    if (isPremium(current, at) && !isPremium(next, at)) return answer(200, { ok: true, ignored: "ended subscription next to a running one" });
   }
   await store.save(next);
   return answer(200, { ok: true });
 }
 
 async function status(req, { store, userFromToken, now, env }) {
-  const open = Boolean(env.checkoutUrl);
   const user = await userFromToken(req.token);
   if (!user) return answer(401, { error: "Sign in to see your premium." });
   const row = store ? await store.getByUser(user.id) : null;
@@ -105,27 +120,52 @@ async function status(req, { store, userFromToken, now, env }) {
     status: row?.status ?? null,
     renewsAt: row?.renewsAt ?? null,
     endsAt: row?.endsAt ?? null,
-    open,
-    portalUrl: row ? env.portalUrl || null : null
+    open: Boolean(env.priceId && env.stripe),
+    // the customer portal needs a Stripe customer, which only a checkout creates
+    manage: Boolean(row?.customerId && env.stripe)
   });
 }
 
+/** Where Stripe sends the player back: a path on our own site only (no open redirect). */
+const backTo = (env, path) => `${env.siteUrl}${typeof path === "string" && /^\/[A-Za-z0-9/_-]*$/.test(path) ? path : "/"}`;
+
 async function checkout(req, { store, userFromToken, now, env }) {
-  if (!env.checkoutUrl || !env.webhookSecret) return answer(503, { error: "Premium is not open yet." });
+  if (req.method !== "POST") return answer(405, { error: "POST only" });
+  if (!env.priceId || !env.stripe) return answer(503, { error: "Premium is not open yet." });
   const user = await userFromToken(req.token);
   if (!user) return answer(401, { error: "Sign in to get premium." });
   const row = store ? await store.getByUser(user.id) : null;
   if (isPremium(row, now())) return answer(409, { error: "You already have premium." });
-  const url = new URL(env.checkoutUrl);
-  url.searchParams.set("checkout[custom][user_id]", user.id);
-  url.searchParams.set("checkout[custom][user_sig]", userSignature(env.webhookSecret, user.id));
-  if (user.email) url.searchParams.set("checkout[email]", user.email);
-  return answer(200, { url: url.toString() });
+  const back = backTo(env, req.body?.path);
+  const session = await env.stripe("POST", "checkout/sessions", {
+    mode: "subscription",
+    line_items: [{ price: env.priceId, quantity: 1 }],
+    client_reference_id: user.id,
+    // a returning player keeps their Stripe customer (and card), a new one is created
+    ...(row?.customerId ? { customer: row.customerId } : user.email ? { customer_email: user.email } : {}),
+    subscription_data: { metadata: { user_id: user.id } },
+    metadata: { user_id: user.id },
+    allow_promotion_codes: true,
+    success_url: `${back}${back.includes("?") ? "&" : "?"}premium=welcome`,
+    cancel_url: back
+  });
+  return answer(200, { url: session.url });
 }
 
-const ACTIONS = { webhook, status, checkout };
+async function portal(req, { store, userFromToken, env }) {
+  if (req.method !== "POST") return answer(405, { error: "POST only" });
+  if (!env.stripe) return answer(503, { error: "Premium is not open yet." });
+  const user = await userFromToken(req.token);
+  if (!user) return answer(401, { error: "Sign in to manage premium." });
+  const row = store ? await store.getByUser(user.id) : null;
+  if (!row?.customerId) return answer(404, { error: "No subscription to manage." });
+  const session = await env.stripe("POST", "billing_portal/sessions", { customer: row.customerId, return_url: backTo(env, req.body?.path) });
+  return answer(200, { url: session.url });
+}
 
-/** req: { method, rawBody (Buffer, webhook only), signature, token }. */
+const ACTIONS = { webhook, status, checkout, portal };
+
+/** req: { method, rawBody (Buffer, webhook only), signature, token, body }. */
 export async function handleBilling(action, req, deps) {
   const run = ACTIONS[action];
   if (!run) return answer(404, { error: "unknown action" });

@@ -1,4 +1,4 @@
-// Premium subscription, client side: the status and checkout link come from /api/billing (the
+// Premium subscription (Stripe), client side: the status, checkout and portal come from /api/billing (the
 // server decides; nothing here unlocks anything). Premium data itself is guarded by the database.
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 
@@ -16,14 +16,14 @@ export function premiumVisible(): boolean {
 
 export type PremiumStatus = {
   premium: boolean;
-  /** Lemon Squeezy's status (active, cancelled, ...), null without a subscription */
+  /** stored status (active, cancelled, past_due, ...), null without a subscription */
   status: string | null;
   renewsAt: string | null;
   endsAt: string | null;
-  /** false while the shop is not open yet (no checkout link on the server) */
+  /** false while the shop is not open yet (no Stripe price on the server) */
   open: boolean;
-  /** where the player manages or cancels, null without a subscription */
-  portalUrl: string | null;
+  /** true when there is a subscription to manage in Stripe's customer portal */
+  manage: boolean;
 };
 
 let auth: AuthService | null = null;
@@ -36,8 +36,13 @@ async function accessToken(): Promise<string | null> {
   return session?.user?.email_confirmed_at ? session.access_token : null;
 }
 
-async function billing<T>(action: string, token: string): Promise<T> {
-  const res = await fetch(`/api/billing/${action}`, { headers: { Authorization: `Bearer ${token}` } });
+async function billing<T>(action: string, token: string, post = false): Promise<T> {
+  const res = await fetch(`/api/billing/${action}`, {
+    method: post ? "POST" : "GET",
+    headers: { Authorization: `Bearer ${token}`, ...(post ? { "Content-Type": "application/json" } : {}) },
+    // Stripe sends the player back to the page they came from
+    body: post ? JSON.stringify({ path: window.location.pathname }) : undefined
+  });
   const data = await res.json().catch(() => null);
   if (!res.ok || !data) throw new Error(data?.error || "Something went wrong, try again.");
   return data as T;
@@ -49,9 +54,16 @@ export async function loadPremium(): Promise<PremiumStatus | "guest"> {
   return token ? billing<PremiumStatus>("status", token) : "guest";
 }
 
-/** The Lemon Squeezy checkout for this player (it carries their id, so the payment lands on their account). */
+/** A Stripe Checkout for this player, made by the server (it carries their id, so the payment lands on their account). */
 export async function checkoutUrl(): Promise<string> {
   const token = await accessToken();
   if (!token) throw new Error("Sign in to get premium.");
-  return (await billing<{ url: string }>("checkout", token)).url;
+  return (await billing<{ url: string }>("checkout", token, true)).url;
+}
+
+/** Stripe's customer portal for this player: change the card, see invoices, cancel. */
+export async function portalUrl(): Promise<string> {
+  const token = await accessToken();
+  if (!token) throw new Error("Sign in to manage premium.");
+  return (await billing<{ url: string }>("portal", token, true)).url;
 }

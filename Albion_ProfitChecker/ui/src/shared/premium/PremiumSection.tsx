@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { checkoutUrl, loadPremium, premiumVisible, type PremiumStatus } from "./premium";
+import { checkoutUrl, loadPremium, portalUrl, premiumVisible, type PremiumStatus } from "./premium";
 import "./premium.css";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -28,11 +28,11 @@ export function PremiumSection({ open }: { open: boolean }) {
 
   if (!visible) return null;
 
-  async function onGet() {
+  async function go(url: () => Promise<string>) {
     setBusy(true);
     setError("");
     try {
-      window.location.assign(await checkoutUrl());
+      window.location.assign(await url());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong, try again.");
       setBusy(false);
@@ -66,17 +66,22 @@ export function PremiumSection({ open }: { open: boolean }) {
                 : "active"}
           </p>
           {state.status === "past_due" ? <p className="prem-note">Your last payment did not go through: update your card to keep premium.</p> : null}
-          {state.portalUrl ? (
-            <a className="prem-btn" href={state.portalUrl} target="_blank" rel="noopener noreferrer">
-              Manage subscription
+          {state.manage ? (
+            <button type="button" className="prem-btn" onClick={() => void go(portalUrl)} disabled={busy}>
+              {busy ? "Opening…" : "Manage subscription"}
               <span aria-hidden="true"> &rsaquo;</span>
-            </a>
+            </button>
+          ) : null}
+          {error ? (
+            <p className="prem-error" role="alert">
+              {error}
+            </p>
           ) : null}
         </>
       ) : state.open ? (
         <>
           <p className="prem-note">Price alerts, longer price history and more guild tools. Every tool stays free.</p>
-          <button type="button" className="prem-btn" onClick={() => void onGet()} disabled={busy}>
+          <button type="button" className="prem-btn" onClick={() => void go(checkoutUrl)} disabled={busy}>
             {busy ? "Opening checkout…" : "Get premium"}
           </button>
           {error ? (

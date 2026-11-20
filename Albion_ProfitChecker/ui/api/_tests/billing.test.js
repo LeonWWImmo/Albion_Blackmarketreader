@@ -1,196 +1,242 @@
 import { createHmac } from "node:crypto";
-import { describe, expect, it } from "vitest";
-import { handleBilling, isPremium, isValidSignature, userSignature } from "../_lib/billing.js";
+import { describe, expect, it, vi } from "vitest";
+import { handleBilling, isPremium, isValidSignature, rowFromSubscription } from "../_lib/billing.js";
 import { createMemoryBillingStore } from "../_lib/billingStore.js";
+import { formEncode } from "../_lib/stripeApi.js";
 
-const SECRET = "whsec-test";
+const SECRET = "whsec_test";
 const NOW = new Date("2026-11-21T12:00:00Z");
+const NOW_S = NOW.getTime() / 1000;
 const ANN = "11111111-2222-4333-8444-555555555555";
 const BO = "66666666-7777-4888-9999-000000000000";
-const CHECKOUT = "https://blackmarketreader.lemonsqueezy.com/buy/abc-123";
+const DAY = 86400;
 
-const sign = (raw) => createHmac("sha256", SECRET).update(raw).digest("hex");
+const sign = (raw, t = NOW_S, secret = SECRET) => `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${raw}`).digest("hex")}`;
 
-function subscriptionEvent({ name = "subscription_created", id = "42", user = ANN, sig, status = "active", updatedAt = "2026-11-21T10:00:00Z", endsAt = null, testMode = false } = {}) {
-  const custom = user ? { user_id: user, user_sig: sig === undefined ? userSignature(SECRET, user) : sig } : null;
+function subscription({ id = "sub_A", user = ANN, status = "active", cancelAtPeriodEnd = false, periodEnd = NOW_S + 30 * DAY, endedAt = null, livemode = true, customer = "cus_1" } = {}) {
   return {
-    meta: { event_name: name, test_mode: testMode, ...(custom ? { custom_data: custom } : {}) },
-    data: {
-      type: "subscriptions",
-      id,
-      attributes: { customer_id: 7, variant_id: 9, status, renews_at: "2026-12-21T10:00:00Z", ends_at: endsAt, test_mode: testMode, updated_at: updatedAt }
-    }
+    object: "subscription",
+    id,
+    customer,
+    status,
+    cancel_at_period_end: cancelAtPeriodEnd,
+    cancel_at: null,
+    ended_at: endedAt,
+    livemode,
+    metadata: user ? { user_id: user } : {},
+    items: { data: [{ current_period_end: periodEnd, price: { id: "price_1" } }] }
   };
 }
+
+const event = (sub, { type = "customer.subscription.updated", created = NOW_S - 60 } = {}) => ({ id: "evt_1", type, created, data: { object: sub } });
 
 function setup({ env = {} } = {}) {
   const store = createMemoryBillingStore();
   const users = { "token-ann": { id: ANN, email: "ann@example.com" }, "token-bo": { id: BO, email: null } };
+  const stripe = vi.fn(async (method, path, params) => ({ url: `https://stripe.test/${path}`, params }));
   const deps = {
     store,
     userFromToken: async (token) => users[token] ?? null,
     now: () => NOW,
-    env: { webhookSecret: SECRET, checkoutUrl: CHECKOUT, portalUrl: "https://blackmarketreader.lemonsqueezy.com/billing", allowTestMode: false, ...env }
+    env: { stripe, priceId: "price_1", webhookSecret: SECRET, allowTestMode: false, siteUrl: "https://blackmarketreader.com", ...env }
   };
-  const hook = (event, signature) => {
-    const raw = Buffer.from(JSON.stringify(event));
+  const hook = (body, signature) => {
+    const raw = Buffer.from(JSON.stringify(body));
     return handleBilling("webhook", { method: "POST", rawBody: raw, signature: signature === undefined ? sign(raw) : signature, token: null }, deps);
   };
-  const get = (action, token) => handleBilling(action, { method: "GET", rawBody: null, signature: null, token }, deps);
-  return { store, deps, hook, get };
+  const call = (action, token, { method = "POST", body = null } = {}) => handleBilling(action, { method, rawBody: null, signature: null, token, body }, deps);
+  return { store, stripe, deps, hook, call };
 }
 
 describe("isValidSignature", () => {
-  it("accepts only the HMAC of the exact body", () => {
-    const raw = Buffer.from('{"a":1}');
-    expect(isValidSignature(SECRET, raw, sign(raw))).toBe(true);
-    expect(isValidSignature(SECRET, Buffer.from('{"a": 1}'), sign(raw))).toBe(false);
-    expect(isValidSignature("other", raw, sign(raw))).toBe(false);
-    expect(isValidSignature(SECRET, raw, "nothex")).toBe(false);
-    expect(isValidSignature(undefined, raw, sign(raw))).toBe(false);
+  const raw = Buffer.from('{"a":1}');
+  it("accepts Stripe's signature of the exact body", () => {
+    expect(isValidSignature(SECRET, raw, sign(raw), NOW)).toBe(true);
+    expect(isValidSignature(SECRET, raw, `${sign(raw)},v1=${"0".repeat(64)}`, NOW)).toBe(true);
+  });
+  it("refuses a changed body, another secret, an old signature or garbage", () => {
+    expect(isValidSignature(SECRET, Buffer.from('{"a": 1}'), sign(raw), NOW)).toBe(false);
+    expect(isValidSignature(SECRET, raw, sign(raw, NOW_S, "whsec_other"), NOW)).toBe(false);
+    expect(isValidSignature(SECRET, raw, sign(raw, NOW_S - 301), NOW)).toBe(false);
+    expect(isValidSignature(SECRET, raw, "t=1,v1=zz", NOW)).toBe(false);
+    expect(isValidSignature(SECRET, raw, null, NOW)).toBe(false);
+    expect(isValidSignature(undefined, raw, sign(raw), NOW)).toBe(false);
   });
 });
 
 describe("isPremium", () => {
   const row = (status, endsAt = null) => ({ status, endsAt });
-  it("follows Lemon Squeezy's statuses", () => {
+  it("knows the stored statuses", () => {
     expect(isPremium(null, NOW)).toBe(false);
     for (const s of ["on_trial", "active", "past_due"]) expect(isPremium(row(s), NOW)).toBe(true);
-    for (const s of ["paused", "unpaid", "expired"]) expect(isPremium(row(s), NOW)).toBe(false);
+    for (const s of ["paused", "unpaid", "expired", "incomplete", "incomplete_expired"]) expect(isPremium(row(s), NOW)).toBe(false);
     expect(isPremium(row("cancelled", "2026-11-30T00:00:00Z"), NOW)).toBe(true);
     expect(isPremium(row("cancelled", "2026-11-20T00:00:00Z"), NOW)).toBe(false);
-    expect(isPremium(row("cancelled"), NOW)).toBe(false);
+  });
+});
+
+describe("rowFromSubscription", () => {
+  it("maps Stripe's statuses", () => {
+    expect(rowFromSubscription(subscription(), NOW_S)).toMatchObject({ userId: ANN, subscriptionId: "sub_A", customerId: "cus_1", variantId: "price_1", status: "active", endsAt: null, testMode: false });
+    expect(rowFromSubscription(subscription({ status: "trialing" }), NOW_S).status).toBe("on_trial");
+    const cancelled = rowFromSubscription(subscription({ cancelAtPeriodEnd: true }), NOW_S);
+    expect(cancelled).toMatchObject({ status: "cancelled", renewsAt: null, endsAt: new Date((NOW_S + 30 * DAY) * 1000).toISOString() });
+    expect(rowFromSubscription(subscription({ status: "canceled", endedAt: NOW_S }), NOW_S)).toMatchObject({ status: "expired", endsAt: NOW.toISOString() });
+    expect(rowFromSubscription(subscription({ status: "unpaid" }), NOW_S).status).toBe("unpaid");
+  });
+  it("reads the period end from older API versions too", () => {
+    const old = { ...subscription(), current_period_end: NOW_S + DAY, items: { data: [{ price: { id: "price_1" } }] } };
+    expect(rowFromSubscription(old, NOW_S).renewsAt).toBe(new Date((NOW_S + DAY) * 1000).toISOString());
   });
 });
 
 describe("webhook", () => {
-  it("stores a new subscription for the player in the checkout's custom data", async () => {
-    const { store, hook, get } = setup();
-    expect((await hook(subscriptionEvent())).status).toBe(200);
-    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "42", customerId: "7", variantId: "9", status: "active" });
-    expect((await get("status", "token-ann")).body).toMatchObject({ premium: true, status: "active", renewsAt: "2026-12-21T10:00:00Z", open: true });
+  it("stores the subscription of the player our checkout put on it", async () => {
+    const { store, hook, call } = setup();
+    expect((await hook(event(subscription(), { type: "customer.subscription.created" }))).status).toBe(200);
+    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "sub_A", status: "active" });
+    expect((await call("status", "token-ann", { method: "GET" })).body).toMatchObject({ premium: true, status: "active", open: true, manage: true });
   });
 
   it("refuses a missing or wrong signature and stores nothing", async () => {
     const { store, hook } = setup();
-    expect((await hook(subscriptionEvent(), "0".repeat(64))).status).toBe(401);
-    expect((await hook(subscriptionEvent(), null)).status).toBe(401);
+    expect((await hook(event(subscription()), `t=${NOW_S},v1=${"0".repeat(64)}`)).status).toBe(401);
+    expect((await hook(event(subscription()), null)).status).toBe(401);
     expect(store.rows.size).toBe(0);
   });
 
-  it("finds the player of a later event by the subscription id", async () => {
-    const { store, hook } = setup();
-    await hook(subscriptionEvent());
-    await hook(subscriptionEvent({ name: "subscription_cancelled", user: null, status: "cancelled", endsAt: "2026-12-21T10:00:00Z", updatedAt: "2026-11-21T11:00:00Z" }));
-    expect(store.rows.get(ANN)).toMatchObject({ status: "cancelled", endsAt: "2026-12-21T10:00:00Z" });
+  it("follows the subscription to its cancellation and end", async () => {
+    const { store, hook, call } = setup();
+    await hook(event(subscription(), { created: NOW_S - 300 }));
+    await hook(event(subscription({ cancelAtPeriodEnd: true }), { created: NOW_S - 200 }));
+    expect((await call("status", "token-ann", { method: "GET" })).body).toMatchObject({ premium: true, status: "cancelled" });
+    await hook(event(subscription({ status: "canceled", endedAt: NOW_S - 100 }), { type: "customer.subscription.deleted", created: NOW_S - 100 }));
+    expect(store.rows.get(ANN).status).toBe("expired");
+    expect((await call("status", "token-ann", { method: "GET" })).body.premium).toBe(false);
   });
 
   it("keeps the newest state when events arrive out of order", async () => {
     const { store, hook } = setup();
-    await hook(subscriptionEvent({ status: "expired", updatedAt: "2026-11-21T11:00:00Z" }));
-    const late = await hook(subscriptionEvent({ name: "subscription_updated", status: "active", updatedAt: "2026-11-21T10:00:00Z" }));
-    expect(late.body.ignored).toBe("older event");
+    await hook(event(subscription({ status: "canceled", endedAt: NOW_S }), { created: NOW_S - 10 }));
+    expect((await hook(event(subscription(), { created: NOW_S - 50 }))).body.ignored).toBe("older event");
     expect(store.rows.get(ANN).status).toBe("expired");
   });
 
-  it("ignores test-mode subscriptions unless testing is switched on", async () => {
-    const off = setup();
-    expect((await off.hook(subscriptionEvent({ testMode: true }))).body.ignored).toBe("test mode");
-    expect(off.store.rows.size).toBe(0);
-    const on = setup({ env: { allowTestMode: true } });
-    await on.hook(subscriptionEvent({ testMode: true }));
-    expect(on.store.rows.get(ANN).testMode).toBe(true);
-  });
-
-  it("answers 200 to other events and 500 to a subscription nobody can be found for", async () => {
-    const { store, hook } = setup();
-    expect((await hook({ meta: { event_name: "order_created" }, data: { type: "orders", id: "1", attributes: {} } })).body.ignored).toBeTruthy();
-    expect((await hook(subscriptionEvent({ user: null }))).status).toBe(500);
-    expect((await hook(subscriptionEvent({ user: "not-a-uuid" }))).status).toBe(500);
-    expect(store.rows.size).toBe(0);
-  });
-
-  it("gives nothing to a player id that was edited in the checkout link", async () => {
-    const { store, hook } = setup();
-    expect((await hook(subscriptionEvent({ user: BO, sig: userSignature(SECRET, ANN) }))).status).toBe(500);
-    expect((await hook(subscriptionEvent({ user: BO, sig: null }))).status).toBe(500);
-    expect((await hook(subscriptionEvent({ user: BO, sig: userSignature("guessed", BO) }))).status).toBe(500);
-    expect(store.rows.size).toBe(0);
-  });
-
   it("a player who subscribes again: the late end of the old subscription does not replace the new one", async () => {
-    const { store, hook, get } = setup();
-    await hook(subscriptionEvent({ id: "A", updatedAt: "2026-10-01T00:00:00Z" }));
-    await hook(subscriptionEvent({ id: "B", updatedAt: "2026-11-21T09:00:00Z" }));
-    const late = await hook(subscriptionEvent({ name: "subscription_expired", id: "A", status: "expired", updatedAt: "2026-11-21T10:00:00Z" }));
+    const { store, hook } = setup();
+    await hook(event(subscription({ id: "sub_A" }), { created: NOW_S - 900 }));
+    await hook(event(subscription({ id: "sub_B" }), { created: NOW_S - 600 }));
+    const late = await hook(event(subscription({ id: "sub_A", status: "canceled", endedAt: NOW_S - 100 }), { created: NOW_S - 100 }));
     expect(late.body.ignored).toBe("ended subscription next to a running one");
-    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "B", status: "active" });
-    expect((await get("status", "token-ann")).body.premium).toBe(true);
+    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "sub_B", status: "active" });
   });
 
   it("a new subscription replaces one that has ended", async () => {
     const { store, hook } = setup();
-    await hook(subscriptionEvent({ id: "A", status: "expired", updatedAt: "2026-10-01T00:00:00Z" }));
-    await hook(subscriptionEvent({ id: "B" }));
-    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "B", status: "active" });
+    await hook(event(subscription({ id: "sub_A", status: "canceled", endedAt: NOW_S - 900 }), { created: NOW_S - 900 }));
+    await hook(event(subscription({ id: "sub_B" }), { created: NOW_S - 60 }));
+    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "sub_B", status: "active" });
   });
 
-  it("a test purchase never replaces a real subscription, even while testing is on", async () => {
-    const { store, hook } = setup({ env: { allowTestMode: true } });
-    await hook(subscriptionEvent({ id: "real" }));
-    expect((await hook(subscriptionEvent({ id: "test", testMode: true }))).body.ignored).toBe("test subscription next to a real one");
-    expect(store.rows.get(ANN)).toMatchObject({ subscriptionId: "real", testMode: false });
+  it("test mode: ignored unless testing is on, and never over a real subscription", async () => {
+    const off = setup();
+    expect((await off.hook(event(subscription({ livemode: false })))).body.ignored).toBe("test mode");
+    const on = setup({ env: { allowTestMode: true } });
+    await on.hook(event(subscription({ id: "sub_real" }), { created: NOW_S - 300 }));
+    expect((await on.hook(event(subscription({ id: "sub_test", livemode: false })))).body.ignored).toBe("test subscription next to a real one");
+    expect(on.store.rows.get(ANN).subscriptionId).toBe("sub_real");
+  });
+
+  it("ignores other events and subscriptions made outside our checkout", async () => {
+    const { store, hook } = setup();
+    expect((await hook({ id: "evt", type: "invoice.paid", created: NOW_S, data: { object: { object: "invoice" } } })).body.ignored).toBe("not a subscription event");
+    expect((await hook(event(subscription({ user: null })))).body.ignored).toBe("subscription without a player id");
+    expect((await hook(event(subscription({ user: "not-a-uuid" })))).body.ignored).toBe("subscription without a player id");
+    expect(store.rows.size).toBe(0);
   });
 
   it("only takes POST", async () => {
-    const { deps } = setup();
-    expect((await handleBilling("webhook", { method: "GET", rawBody: null, signature: null, token: null }, deps)).status).toBe(405);
+    const { call } = setup();
+    expect((await call("webhook", null, { method: "GET" })).status).toBe(405);
   });
 });
 
-describe("status and checkout", () => {
+describe("status, checkout and portal", () => {
   it("need a signed-in player", async () => {
-    const { get } = setup();
-    expect((await get("status", null)).status).toBe(401);
-    expect((await get("checkout", "nope")).status).toBe(401);
+    const { call } = setup();
+    expect((await call("status", null, { method: "GET" })).status).toBe(401);
+    expect((await call("checkout", "nope")).status).toBe(401);
+    expect((await call("portal", null)).status).toBe(401);
   });
 
-  it("status without a subscription: free, no portal link", async () => {
-    const { get } = setup();
-    expect((await get("status", "token-bo")).body).toEqual({ premium: false, status: null, renewsAt: null, endsAt: null, open: true, portalUrl: null });
+  it("status without a subscription: free, nothing to manage", async () => {
+    const { call } = setup();
+    expect((await call("status", "token-bo", { method: "GET" })).body).toEqual({ premium: false, status: null, renewsAt: null, endsAt: null, open: true, manage: false });
   });
 
-  it("checkout carries the player's id and email", async () => {
-    const { get } = setup();
-    const { body } = await get("checkout", "token-ann");
-    const url = new URL(body.url);
-    expect(url.origin + url.pathname).toBe(CHECKOUT);
-    expect(url.searchParams.get("checkout[custom][user_id]")).toBe(ANN);
-    expect(url.searchParams.get("checkout[custom][user_sig]")).toBe(userSignature(SECRET, ANN));
-    expect(url.searchParams.get("checkout[email]")).toBe("ann@example.com");
-    expect(new URL((await get("checkout", "token-bo")).body.url).searchParams.has("checkout[email]")).toBe(false);
+  it("checkout is created by the server with the player's id on the subscription", async () => {
+    const { call, stripe } = setup();
+    const res = await call("checkout", "token-ann", { body: { path: "/gold-tracker" } });
+    expect(res.body.url).toBe("https://stripe.test/checkout/sessions");
+    const [method, path, params] = stripe.mock.calls[0];
+    expect([method, path]).toEqual(["POST", "checkout/sessions"]);
+    expect(params).toMatchObject({
+      mode: "subscription",
+      line_items: [{ price: "price_1", quantity: 1 }],
+      client_reference_id: ANN,
+      customer_email: "ann@example.com",
+      subscription_data: { metadata: { user_id: ANN } },
+      success_url: "https://blackmarketreader.com/gold-tracker?premium=welcome",
+      cancel_url: "https://blackmarketreader.com/gold-tracker"
+    });
   });
 
-  it("checkout refuses a second subscription", async () => {
-    const { hook, get } = setup();
-    await hook(subscriptionEvent());
-    expect((await get("checkout", "token-ann")).status).toBe(409);
+  it("checkout sends players back to our own site only", async () => {
+    const { call, stripe } = setup();
+    await call("checkout", "token-bo", { body: { path: "//evil.example/x" } });
+    expect(stripe.mock.calls[0][2]).toMatchObject({ cancel_url: "https://blackmarketreader.com/" });
+    expect(stripe.mock.calls[0][2].customer_email).toBeUndefined();
   });
 
-  it("is closed while no checkout link is set", async () => {
-    const { get } = setup({ env: { checkoutUrl: undefined } });
-    expect((await get("checkout", "token-ann")).status).toBe(503);
-    expect((await get("status", "token-ann")).body.open).toBe(false);
+  it("checkout refuses a second subscription and reuses the Stripe customer of an ended one", async () => {
+    const { call, hook, stripe } = setup();
+    await hook(event(subscription()));
+    expect((await call("checkout", "token-ann")).status).toBe(409);
+    await hook(event(subscription({ status: "canceled", endedAt: NOW_S }), { created: NOW_S }));
+    await call("checkout", "token-ann");
+    expect(stripe.mock.calls[0][2]).toMatchObject({ customer: "cus_1" });
   });
 
-  it("works without a database (local dev): nobody has premium", async () => {
-    const { deps } = setup();
-    const res = await handleBilling("status", { method: "GET", rawBody: null, signature: null, token: "token-ann" }, { ...deps, store: null });
-    expect(res.body.premium).toBe(false);
+  it("portal opens Stripe's customer portal for the player's own customer", async () => {
+    const { call, hook, stripe } = setup();
+    expect((await call("portal", "token-ann")).status).toBe(404);
+    await hook(event(subscription()));
+    expect((await call("portal", "token-ann", { body: { path: "/dashboard" } })).status).toBe(200);
+    expect(stripe.mock.calls.at(-1)).toEqual(["POST", "billing_portal/sessions", { customer: "cus_1", return_url: "https://blackmarketreader.com/dashboard" }]);
+  });
+
+  it("is closed without a price or Stripe key", async () => {
+    const { call } = setup({ env: { priceId: undefined } });
+    expect((await call("checkout", "token-ann")).status).toBe(503);
+    expect((await call("status", "token-ann", { method: "GET" })).body.open).toBe(false);
+  });
+
+  it("a Stripe failure is a plain 500, not a crash", async () => {
+    const { call, stripe } = setup();
+    stripe.mockRejectedValueOnce(new Error("Stripe POST checkout/sessions -> 500"));
+    expect((await call("checkout", "token-ann")).status).toBe(500);
   });
 
   it("unknown actions are 404", async () => {
-    const { get } = setup();
-    expect((await get("refund", "token-ann")).status).toBe(404);
+    const { call } = setup();
+    expect((await call("refund", "token-ann")).status).toBe(404);
+  });
+});
+
+describe("formEncode", () => {
+  it("writes Stripe's nested form keys", () => {
+    expect(decodeURIComponent(formEncode({ mode: "subscription", line_items: [{ price: "p", quantity: 1 }], meta: { a: "b" }, skip: undefined }).toString())).toBe(
+      "mode=subscription&line_items[0][price]=p&line_items[0][quantity]=1&meta[a]=b"
+    );
   });
 });

@@ -33,7 +33,7 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `api/` | Vercel functions; shared code in `api/_lib/`, tests in `api/_tests/` |
 | `api/guild.js` → `api/_lib/guildApi.js` | the guild API, one function, `/api/guild/<action>` |
 | `api/_lib/guildStore.js` / `guildMemoryStore.js` | Supabase store / in-memory store (tests, `npm run dev`) |
-| `api/billing.js` → `api/_lib/billing.js` | premium via Lemon Squeezy: `/api/billing/webhook`, `status`, `checkout` (env `LEMONSQUEEZY_*`) |
+| `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`) |
 | `src/shared/premium/` | premium status + account-panel section; hidden until launch (`PREMIUM_OPEN`, preview: `localStorage["bmr-premium-preview"]="1"`) |
 | `scripts/` | data refresh jobs, prerender, health check; `scripts/e2e/` browser checks |
 | `public/data/`, `public/results-*.js` | market data, refreshed by bots on `main` (never edit by hand) |

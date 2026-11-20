@@ -69,7 +69,7 @@ function devApi(): Plugin {
         sendResult(res, result);
       });
 
-      // premium: nobody has it locally (no database, no checkout link), the panel shows that state
+      // premium: nobody has it locally (no database, no Stripe key), the panel shows that state
       server.middlewares.use("/api/billing", async (req, res) => {
         const url = new URL(req.url || "/", "http://localhost");
         const [{ handleBilling }, { createMemoryBillingStore }, { sendResult }, { createClient }, envJs] = await Promise.all([
