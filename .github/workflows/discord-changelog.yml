@@ -1,16 +1,9 @@
 name: Discord Changelog
 
-# New CHANGELOG entries never go straight to the public updates channel. A push to main that adds
-# bullets posts them to the private tester channel first, to check the text and the banner. Once
-# that looks right, start this workflow by hand with target "public" to post the same card there.
-#
-# The `paths` filter means data-refresh bot commits (which never touch CHANGELOG.md) do not
-# trigger this workflow at all.
+# Changelog posts are only ever started by hand (the owner decides when, nothing posts on a push).
+# Run it with target "tester" first to check the text and the banner in the private tester channel;
+# once that looks right, run it again with target "public" to post the same card there.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'CHANGELOG.md'
   workflow_dispatch:
     inputs:
       target:
@@ -36,30 +29,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history so we can diff the push range
+          fetch-depth: 0 # full history so we can diff CHANGELOG.md
 
       - name: Extract newly added changelog entries
         id: notes
         env:
           SINCE: ${{ inputs.since }}
-          TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'tester' }}
+          TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "$SINCE" ]; then
-              # a mistyped commit must not quietly fall back to "the last commit" below
-              if ! git cat-file -e "${SINCE}^{commit}" 2>/dev/null; then echo "since: $SINCE is not a commit"; exit 1; fi
-              BEFORE="$SINCE"
-            else
-              BEFORE="$(git log -1 --format=%H -- CHANGELOG.md)~1"
-            fi
-            AFTER="HEAD"
+          if [ -n "$SINCE" ]; then
+            # a mistyped commit must not quietly fall back to "the last commit" below
+            if ! git cat-file -e "${SINCE}^{commit}" 2>/dev/null; then echo "since: $SINCE is not a commit"; exit 1; fi
+            BEFORE="$SINCE"
           else
-            BEFORE="${{ github.event.before }}"
-            AFTER="${{ github.event.after }}"
+            BEFORE="$(git log -1 --format=%H -- CHANGELOG.md)~1"
           fi
+          AFTER="HEAD"
 
-          # First push / new branch: `before` is all zeroes and not a real commit.
+          # The first commit of CHANGELOG.md has no parent.
           if ! git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
             BEFORE="$(git rev-parse "${AFTER}~1" 2>/dev/null || echo '')"
           fi
@@ -99,13 +87,13 @@ jobs:
         if: steps.notes.outputs.has_notes == 'true'
         env:
           NOTES: ${{ steps.notes.outputs.notes }}
-          TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'tester' }}
+          TARGET: ${{ inputs.target }}
           IMAGE: ${{ inputs.image }}
           PUBLIC_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TESTER_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_TESTER }}
         run: |
           set -euo pipefail
-          # public only when started by hand with target "public"; every push previews in the tester channel
+          # public only with target "public"; the tester channel is the preview
           if [ "$TARGET" = "public" ]; then
             DISCORD_WEBHOOK_URL="$PUBLIC_WEBHOOK"
           else
@@ -113,7 +101,7 @@ jobs:
           fi
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
             echo "No Discord webhook for target $TARGET; nothing posted."
-            # a public post asked for by hand must fail loudly; a push preview just skips
+            # a public post must fail loudly; a missing tester webhook just skips
             if [ "$TARGET" = "public" ]; then exit 1; fi
             exit 0
           fi
@@ -133,8 +121,8 @@ jobs:
           else
             BANNER="https://blackmarketreader.com/picture/hero-forge-1280.jpg"
           fi
-          # a push to main starts this before Vercel has deployed: a banner that is new in this push
-          # would still be missing, and Discord keeps the broken image. Wait until it is online.
+          # started right after a release, Vercel may not have deployed yet: a banner that is new in
+          # that release would still be missing, and Discord keeps the broken image. Wait until it is online.
           for _ in $(seq 1 40); do
             if curl -sfI "$BANNER" > /dev/null; then break; fi
             sleep 15

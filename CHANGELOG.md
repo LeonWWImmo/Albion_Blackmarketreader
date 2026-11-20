@@ -2,10 +2,10 @@
 
 What's new on [blackmarketreader.com](https://blackmarketreader.com).
 
-Add updates as bullet points under `## Unreleased`. On every push to `main`, the
-**newly added** bullets are posted to the private Discord tester channel first, as a
-preview. Once text and banner are approved, run the "Discord Changelog" workflow by
-hand with target `public` to post them to the updates channel.
+Add updates as bullet points under `## Unreleased`. Nothing is posted automatically:
+run the "Discord Changelog" workflow by hand with target `tester` to preview the
+**newly added** bullets in the private Discord tester channel, and once text and banner
+are approved, run it again with target `public` to post them to the updates channel.
 Keep them short and player-friendly (not technical), and without emoji.
 
 ## Unreleased

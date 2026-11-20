@@ -62,8 +62,8 @@ guild sync + Discord reports (03:30 UTC).
    back to `dev`.
 3. Wait for the Vercel production deployment (`gh api repos/{owner}/{repo}/deployments?sha=...`),
    then the live check: `E2E_BASE=https://blackmarketreader.com node scripts/e2e/guild.e2e.mjs`.
-4. A changed `CHANGELOG.md` posts to the tester channel by itself; the public post is the
-   "Discord Changelog" workflow with target `public` once the user approves.
+4. Changelog posts are manual only, never automatic: when the user asks, run the "Discord Changelog"
+   workflow with target `tester`, and with target `public` only after the user approved that preview.
 
 ## Conventions
 
