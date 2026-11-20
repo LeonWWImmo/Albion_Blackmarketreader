@@ -115,6 +115,9 @@ Open a **GitHub Issue** for questions or feature requests, join the **[Discord](
 
 ## 📜 License / Disclaimer
 
+Copyright (c) 2025-2026 Leon Neuhaus. All rights reserved. The source is public to read, not to reuse:
+copying, hosting or building on this code needs written permission. See [LICENSE](LICENSE).
+
 This software is provided "as is", without warranty of any kind, either express or implied, including but not limited to merchantability or fitness for a particular purpose.
 
 In no event shall the author be liable for any damages, data loss, or other issues arising directly or indirectly from the use of this software, regardless of whether such liability arises from contract, negligence, or any other legal theory.
