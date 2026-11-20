@@ -96,7 +96,7 @@ npm run refresh:food-potion-data:us  # US only
 - **react-router-dom** for routing
 - **@supabase/supabase-js** for auth (email/password + reset)
 - **@vercel/analytics** + **@vercel/speed-insights** for metrics
-- **stripe** for payment flows (Pro tier)
+- **Lemon Squeezy** for premium subscriptions (`api/billing.js`, webhook + checkout link, no SDK)
 
 ## Project Conventions
 

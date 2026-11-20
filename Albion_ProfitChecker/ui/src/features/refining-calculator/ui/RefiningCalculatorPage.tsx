@@ -17,6 +17,7 @@ import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
+import { PremiumSection } from "@shared/premium/PremiumSection";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
 type ManualOverrides = {
@@ -1060,6 +1061,7 @@ export function RefiningCalculatorPage() {
         </div>
 
         <PriceCoverage region={region} open={showAccount} />
+        <PremiumSection open={showAccount} />
 
         <div className="account-actions">
           {isGuest() ? (

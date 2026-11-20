@@ -68,6 +68,34 @@ function devApi(): Plugin {
         );
         sendResult(res, result);
       });
+
+      // premium: nobody has it locally (no database, no checkout link), the panel shows that state
+      server.middlewares.use("/api/billing", async (req, res) => {
+        const url = new URL(req.url || "/", "http://localhost");
+        const [{ handleBilling }, { createMemoryBillingStore }, { sendResult }, { createClient }, envJs] = await Promise.all([
+          import("./api/_lib/billing.js"),
+          import("./api/_lib/billingStore.js"),
+          import("./api/_lib/aodp.js"),
+          import("@supabase/supabase-js"),
+          readFile(path.join(rootDir, "public/env.js"), "utf8")
+        ]);
+        const env = (name: string) => envJs.match(new RegExp(`${name}:\\s*"([^"]+)"`))?.[1] ?? "";
+        const auth = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } }).auth;
+        const result = await handleBilling(
+          url.pathname.replace(/^\/+/, ""),
+          { method: req.method, rawBody: null, signature: null, token: (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "") || null },
+          {
+            store: createMemoryBillingStore(),
+            userFromToken: async (token: string) => {
+              const { data } = await auth.getUser(token);
+              return data?.user?.email_confirmed_at ? { id: data.user.id, email: data.user.email ?? null } : null;
+            },
+            now: () => new Date(),
+            env: {}
+          }
+        );
+        sendResult(res, result);
+      });
     }
   };
 }

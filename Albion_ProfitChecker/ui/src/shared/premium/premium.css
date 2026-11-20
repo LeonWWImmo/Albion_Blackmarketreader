@@ -1,0 +1,57 @@
+/* Account panel: premium (PremiumSection.tsx). Works inside every tool's panel, like PriceCoverage. */
+.prem .prem-note {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.prem-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 10px;
+  font-size: 13px;
+}
+
+.prem-badge {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.16);
+  color: var(--fx-accent, #f5b942);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.prem-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--fx-accent-rgb, 245, 185, 66), 0.22);
+  background: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.08);
+  color: var(--fx-accent, #f5b942);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.prem-btn:hover:not(:disabled) {
+  background: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.14);
+  border-color: rgba(var(--fx-accent-rgb, 245, 185, 66), 0.4);
+}
+.prem-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.prem-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #ef4444;
+}

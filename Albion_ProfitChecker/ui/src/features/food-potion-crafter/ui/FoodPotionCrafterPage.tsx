@@ -21,6 +21,7 @@ import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
+import { PremiumSection } from "@shared/premium/PremiumSection";
 
 const KNOWN_CITIES: City[] = ["Caerleon", "Brecilien", "Bridgewatch", "Lymhurst", "Fort Sterling", "Martlock", "Thetford"];
 const PRICE_STORAGE_KEY = "food-potion-prices-v1";
@@ -622,6 +623,7 @@ export function FoodPotionCrafterPage() {
         </div>
 
         <PriceCoverage region={region} open={showAccount} />
+        <PremiumSection open={showAccount} />
 
         <div className="account-actions">
             {!isGuest() && (

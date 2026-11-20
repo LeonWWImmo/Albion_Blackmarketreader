@@ -205,5 +205,5 @@ export async function userFromToken(db, token) {
   if (!token) return null;
   const { data, error } = await db.auth.getUser(token);
   if (error || !data?.user?.email_confirmed_at) return null;
-  return { id: data.user.id };
+  return { id: data.user.id, email: data.user.email ?? null };
 }

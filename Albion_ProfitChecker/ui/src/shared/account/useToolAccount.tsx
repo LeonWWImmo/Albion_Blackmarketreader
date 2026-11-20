@@ -19,6 +19,7 @@ import type { Faction } from "../theme/factions";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "./avatarUrl";
 import { PriceCoverage } from "./PriceCoverage";
+import { PremiumSection } from "@shared/premium/PremiumSection";
 
 type Region = "eu" | "us";
 type UserState = { id: string; email: string | null; avatar: string; region: Region | null };
@@ -299,6 +300,7 @@ export function useToolAccount(
         </div>
 
         <PriceCoverage region={region} open={showAccount} />
+        <PremiumSection open={showAccount} />
 
         <div className="account-actions">
           {!isGuest() && (

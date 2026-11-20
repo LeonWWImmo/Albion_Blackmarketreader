@@ -10,6 +10,7 @@ import { ToolGuideLink } from "@shared/content/ToolGuideLink";
 import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
+import { PremiumSection } from "@shared/premium/PremiumSection";
 
 type Region = "us" | "eu";
 type City = "ALL" | "Lymhurst" | "Martlock" | "Fort Sterling" | "Thetford" | "Bridgewatch" | "Caerleon";
@@ -1304,6 +1305,7 @@ export function DashboardPage() {
         </div>
 
         <PriceCoverage region={region} open={showAccount} />
+        <PremiumSection open={showAccount} />
 
         <div className="account-actions">
             {!isGuest() && (
