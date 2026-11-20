@@ -191,6 +191,15 @@ describe("status, checkout and portal", () => {
     });
   });
 
+  it("checkout uses Managed Payments when it is switched on", async () => {
+    const off = setup();
+    await off.call("checkout", "token-ann");
+    expect(off.stripe.mock.calls[0][2].managed_payments).toBeUndefined();
+    const on = setup({ env: { managedPayments: true } });
+    await on.call("checkout", "token-ann");
+    expect(on.stripe.mock.calls[0][2].managed_payments).toEqual({ enabled: true });
+  });
+
   it("checkout sends players back to our own site only", async () => {
     const { call, stripe } = setup();
     await call("checkout", "token-bo", { body: { path: "//evil.example/x" } });

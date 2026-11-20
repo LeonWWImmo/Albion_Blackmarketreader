@@ -5,6 +5,7 @@
 // - STRIPE_PRICE_ID: the monthly premium price; without it premium is not open yet
 // - STRIPE_WEBHOOK_SECRET: signing secret of the webhook endpoint (whsec_...)
 // - STRIPE_TEST_MODE=1: also accept test-mode subscriptions (while testing, never on launch)
+// - STRIPE_MANAGED_PAYMENTS=1: Stripe as merchant of record (needs it on in the Stripe Dashboard)
 // - SITE_URL: where Stripe sends players back (default https://blackmarketreader.com)
 import { sendResult } from "./_lib/aodp.js";
 import { handleBilling } from "./_lib/billing.js";
@@ -58,6 +59,7 @@ export default async function handler(req, res) {
         priceId: process.env.STRIPE_PRICE_ID,
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
         allowTestMode: process.env.STRIPE_TEST_MODE === "1",
+        managedPayments: process.env.STRIPE_MANAGED_PAYMENTS === "1",
         siteUrl: (process.env.SITE_URL || "https://blackmarketreader.com").replace(/\/+$/, "")
       }
     }

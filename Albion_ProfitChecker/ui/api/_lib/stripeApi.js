@@ -13,13 +13,16 @@ export function formEncode(params, prefix = "", out = new URLSearchParams()) {
   return out;
 }
 
+// Managed Payments (Stripe as merchant of record) needs this API version or newer
+export const STRIPE_VERSION = "2025-03-31.basil";
+
 export function createStripe(secretKey) {
   return async function stripe(method, path, params) {
     const body = method === "GET" ? null : formEncode(params).toString();
     const query = method === "GET" && params ? `?${formEncode(params)}` : "";
     const res = await fetch(`https://api.stripe.com/v1/${path}${query}`, {
       method,
-      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { Authorization: `Bearer ${secretKey}`, "Content-Type": "application/x-www-form-urlencoded", "Stripe-Version": STRIPE_VERSION },
       body,
       signal: AbortSignal.timeout(15_000)
     });

@@ -146,6 +146,8 @@ async function checkout(req, { store, userFromToken, now, env }) {
     subscription_data: { metadata: { user_id: user.id } },
     metadata: { user_id: user.id },
     allow_promotion_codes: true,
+    // Stripe sells as merchant of record: it charges and pays the VAT/sales tax of every country
+    ...(env.managedPayments ? { managed_payments: { enabled: true } } : {}),
     success_url: `${back}${back.includes("?") ? "&" : "?"}premium=welcome`,
     cancel_url: back
   });
