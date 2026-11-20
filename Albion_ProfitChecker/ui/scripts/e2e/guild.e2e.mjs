@@ -73,9 +73,15 @@ async function tabs(page, slug, label) {
     const t0 = Date.now();
     await page.goto(`${BASE}/guild/eu/${slug}/${tab}`, { waitUntil: "domcontentloaded" });
     try {
-      await page.locator(sel).first().waitFor({ timeout: 45000 });
+      await page.locator(`${sel}, .gd-error`).first().waitFor({ timeout: 45000 });
     } catch {
       problems.push(`${label} tab ${tab} shows nothing: ${flat(await page.locator("main").innerText().catch(() => "")).slice(0, 140)}`);
+    }
+    const error = page.locator(".gd-error").first();
+    if (await error.isVisible().catch(() => false)) {
+      const text = flat(await error.innerText().catch(() => ""));
+      // Albion's killboard being down (502) is what the page should say then: listed, not our failure
+      (/Albion's API for \w+ is down/.test(text) ? log : (m) => problems.push(m))(`${label} tab ${tab} error: ${text.slice(0, 140)}`);
     }
     await page.waitForTimeout(400);
     await page.overflow(tab);
