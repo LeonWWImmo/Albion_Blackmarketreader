@@ -44,9 +44,13 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 Crons (`ui/vercel.json`, production only, Hobby = once a day each): Discord daily, health check,
 guild sync + Discord reports (03:30 UTC).
 GitHub Actions `guild-zvz.yml` (every 30 min, from `main`): `/api/guild/zvz` posts the ZvZ reports
-of Guild Pro (premium), authorized with `ACTIONS_CRON_SECRET` (same value in Vercel and GitHub).
+of Guild Pro (premium), `/api/guild/pro-fights` keeps the fights of guilds Guild Pro players marked
+(table `guild_fights`, 95 days, for attendance over 30/90 days); authorized with `ACTIONS_CRON_SECRET`
+(same value in Vercel and GitHub). Guild Pro also marks up to 5 guilds per server; the oldest mark is
+the main one (Discord and ZvZ report).
 GitHub Actions `market-live.yml` (:07 and :37, from `main`): the live market snapshot, same secret;
 the volume only every 6 hours. AODP throttles requests without gzip.
+The same job then runs `/api/market/alerts-run`: price alerts (premium, `api/_lib/priceAlerts.js`).
 
 ## Commands (in `Albion_ProfitChecker/ui`)
 

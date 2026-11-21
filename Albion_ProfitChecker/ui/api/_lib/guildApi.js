@@ -22,7 +22,9 @@
 //   POST hook-zvz {region, on}           Guild Pro (premium): the ZvZ report after every big fight on or off
 //   GET  mine                            the guilds the signed-in player has marked (one per server)
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
-//   POST unmark {region}                 remove the mark on that server
+//   POST unmark {region, id?}            remove the mark of that guild (without id: the main one on that server)
+//   GET  pro-fights                      GitHub Actions, every 30 min: keep the fights of Guild Pro guilds
+//   GET  fights-history?region&id&days   Guild Pro: the kept fights of 30 or 90 days, for attendance
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
 //   GET  zvz                             GitHub Actions, every 30 min: post the new big fights to the ZvZ webhooks
 //   GET  regear-paid?region=eu&battle=1  the deaths of a fight the signed-in player ticked as paid
@@ -92,6 +94,16 @@ const ZVZ_LOOKBACK_MS = 6 * 3600_000;
 const ZVZ_PER_HOOK = 3;
 /** No new report is started after this long: one more (fight + Discord, ~25 s at worst) ends inside 60 s. */
 const ZVZ_BUDGET_MS = 30_000;
+/** Guild Pro: guilds a player can mark per server (without it: one). */
+const PRO_GUILDS_PER_SERVER = 5;
+/** Guild Pro attendance: the periods it shows, and how long kept fights stay. */
+const PRO_HISTORY_DAYS = [30, 90];
+const PRO_KEEP_DAYS = 95;
+/** The fights of the last hours are read again: a running fight still grows. */
+const PRO_OVERLAP_MS = 2 * 3600_000;
+const PRO_FIGHT_PAGES = 8;
+/** No new guild is started after this long (a guild takes a few seconds at worst). */
+const PRO_FIGHTS_BUDGET_MS = 35_000;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
@@ -495,6 +507,15 @@ async function getBattleReport({ gameinfo, values, now }, { region, id }) {
   );
 }
 
+/** Listed fights since `since` with someone of the guild in them, once each, newest first: what attendance needs. */
+function attendanceFights(battles, since) {
+  const seen = new Set();
+  return battles
+    .filter((b) => b.startTime >= since && b.ours.length && !seen.has(b.id) && seen.add(b.id))
+    .sort((a, b) => b.startTime.localeCompare(a.startTime))
+    .map((b) => ({ id: b.id, startTime: b.startTime, players: b.players, kills: b.kills, fame: b.fame, enemy: b.enemy ?? null, ours: b.ours }));
+}
+
 /**
  * The guild's listed fights of the last ATTENDANCE_DAYS, newest first, each with who of the guild
  * was there: for attendance. `complete`: the days are covered and no page failed.
@@ -530,11 +551,7 @@ async function getFights({ gameinfo, now }, { region, id }) {
       if (page.length < FIGHTS_PAGE || page.some((b) => b.startTime < since)) complete = true;
     }
   }
-  const seen = new Set();
-  const fights = all
-    .filter((b) => b.startTime >= since && b.ours.length && !seen.has(b.id) && seen.add(b.id))
-    .sort((a, b) => b.startTime.localeCompare(a.startTime))
-    .map((b) => ({ id: b.id, startTime: b.startTime, players: b.players, kills: b.kills, fame: b.fame, enemy: b.enemy ?? null, ours: b.ours }));
+  const fights = attendanceFights(all, since);
   const whole = complete && !failed;
   return ok({ fights, days: ATTENDANCE_DAYS, complete: whole }, whole ? FIGHTS_CACHE_S : 0);
 }
@@ -557,7 +574,17 @@ async function mark(deps, user, body) {
   if (!isRegion(region) || !isGuildId(id)) return fail(400, "Pick a guild first.");
   const current = await store.getMark(user.id, region);
   if (current?.id === id) return ok({ guild: guildRef(current) });
-  if (current) return fail(409, `You marked ${current.name} on ${SERVER[region]} already. Unmark it first.`);
+  // one guild per server; Guild Pro (premium) marks up to PRO_GUILDS_PER_SERVER
+  let pro = false;
+  if (current) {
+    const marked = (await store.getMarks(user.id)).find((g) => g.id === id);
+    if (marked) return ok({ guild: guildRef(marked) });
+    pro = Boolean(deps.premium && (await deps.premium(user.id)));
+    if (!pro) return fail(409, `You marked ${current.name} on ${SERVER[region]} already. Unmark it first.`);
+    if ((await store.countMarksOn(user.id, region)) >= PRO_GUILDS_PER_SERVER) {
+      return fail(409, `Guild Pro marks up to ${PRO_GUILDS_PER_SERVER} guilds per server. Unmark one first.`);
+    }
+  }
   const now = deps.now();
   const today = dayOf(now);
   // whether anyone had it marked is read before this mark: two first marks at once both start tracking today
@@ -565,7 +592,13 @@ async function mark(deps, user, body) {
   await saveGuildRow(store, region, info, members.length, existing);
   if (!(await store.addMark(user.id, region, id))) {
     const other = await store.getMark(user.id, region);
-    if (other?.id === id) return ok({ guild: guildRef(other) }); // a second click that was faster
+    if (other?.id === id || pro) return ok({ guild: guildRef(other?.id === id ? other : await store.getGuild(id)) }); // a second click that was faster
+    return fail(409, other ? `You marked ${other.name} on ${SERVER[region]} already. Unmark it first.` : "Try again in a moment.");
+  }
+  // two first marks at once on one server, without Guild Pro: the later one goes again
+  if (!pro && (await store.countMarksOn(user.id, region)) > 1) {
+    await store.removeMark(user.id, region, id);
+    const other = await store.getMark(user.id, region);
     return fail(409, other ? `You marked ${other.name} on ${SERVER[region]} already. Unmark it first.` : "Try again in a moment.");
   }
   // nobody had it marked (before, or any more besides this mark): tracking starts anew, gains must
@@ -582,6 +615,66 @@ async function mark(deps, user, body) {
     }
   }
   return ok({ guild: guildRef(row) });
+}
+
+/**
+ * Guild Pro: keeps the fights of every guild a premium player marked, for attendance over 30 and 90
+ * days (Albion's killboard only lists the last days). GitHub Actions, every 30 minutes; each run
+ * reads the fights since the newest kept one, guilds least recently read first.
+ */
+async function proFightsDue(deps) {
+  const { store, gameinfo } = deps;
+  const started = Date.now();
+  const now = deps.now();
+  const premium = new Map();
+  const ids = new Set();
+  for (const m of await store.allMarks()) {
+    if (!premium.has(m.user_id)) premium.set(m.user_id, deps.premium ? await deps.premium(m.user_id).catch(() => false) : false);
+    if (premium.get(m.user_id)) ids.add(m.guild_id);
+  }
+  const guilds = (await Promise.all([...ids].map((id) => store.getGuild(id))))
+    .filter(Boolean)
+    .sort((a, b) => (a.fights_synced_at ?? "").localeCompare(b.fights_synced_at ?? ""));
+  let read = 0;
+  let stored = 0;
+  for (const guild of guilds) {
+    if (Date.now() - started > PRO_FIGHTS_BUDGET_MS) break;
+    try {
+      const { newest } = await store.storedFightsRange(guild.id);
+      // the first time: as far back as the killboard lists them
+      const since = new Date(newest ? Date.parse(newest) - PRO_OVERLAP_MS : now.getTime() - ATTENDANCE_DAYS * 86_400_000).toISOString();
+      const battles = [];
+      for (let page = 0; page < PRO_FIGHT_PAGES; page += 1) {
+        const list = await gameinfo.getBattles(guild.region, guild.id, page * FIGHTS_PAGE);
+        battles.push(...list);
+        if (list.length < FIGHTS_PAGE || list.some((b) => b.startTime < since)) break;
+      }
+      const fights = attendanceFights(battles, since);
+      if (fights.length) await store.saveFights(guild.id, fights);
+      await store.dropFightsBefore(guild.id, new Date(now.getTime() - PRO_KEEP_DAYS * 86_400_000).toISOString());
+      await store.setFightsSynced(guild.id, now.toISOString());
+      read += 1;
+      stored += fights.length;
+    } catch (error) {
+      // the killboard of one server down: the next run tries again
+      console.warn("guild pro fights", guild.id, error instanceof Error ? error.message : error);
+    }
+  }
+  return ok({ guilds: guilds.length, read, stored });
+}
+
+/** Guild Pro: the kept fights of the last 30 or 90 days, in the shape of `fights`, for the attendance. */
+async function getFightHistory(deps, user, query) {
+  const region = String(query.region ?? "");
+  const id = String(query.id ?? "");
+  const days = Number(query.days);
+  if (!isRegion(region) || !isGuildId(id)) return fail(400, "Pick a guild first.");
+  if (!PRO_HISTORY_DAYS.includes(days)) return fail(400, "Unknown time range.");
+  if (!deps.premium || !(await deps.premium(user.id))) return fail(403, "Attendance over 30 and 90 days is part of Guild Pro.");
+  const since = new Date(deps.now().getTime() - days * 86_400_000).toISOString();
+  const [fights, range] = await Promise.all([deps.store.getStoredFights(id, since), deps.store.storedFightsRange(id)]);
+  // `since`: the oldest kept fight; the history grows from the day a Guild Pro player marked the guild
+  return ok({ fights, days, complete: Boolean(range.oldest && range.oldest <= since), since: range.oldest, kept: Boolean(range.newest) });
 }
 
 async function syncDue(deps) {
@@ -773,13 +866,14 @@ async function getStatus({ gameinfo, store, now }) {
   return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "zvz", "status", "regear-paid", "regear-fights", "bank", "splits"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "zvz", "pro-fights", "fights-history", "status", "regear-paid", "regear-fights", "bank", "splits"]);
 const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "hook-zvz", "regear-pay", "regear-mark", "bank-save", "split-save", "split-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 /** The player's own data: only the database, never the killboard. */
 const PRIVATE_ACTIONS = new Set(["regear-paid", "regear-pay", "regear-fights", "regear-mark", "bank", "bank-save", "splits", "split-save", "split-remove"]);
 const SIGN_IN = {
   hook: "Sign in to set up the Discord report.",
+  "fights-history": "Sign in to see attendance over 30 and 90 days.",
   regear: "Sign in to tick deaths as paid.",
   "regear-fights": "Sign in to mark fights to regear.",
   "regear-mark": "Sign in to mark fights to regear.",
@@ -795,7 +889,7 @@ export async function handleGuild(action, request, deps) {
   const region = String(query.region ?? "").toLowerCase();
   // every action that can reach Albion's killboard is limited per visitor (ticking paid in a big
   // regear is many quick clicks, and reaches the database only)
-  if (action !== "sync" && action !== "zvz" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
+  if (action !== "sync" && action !== "zvz" && action !== "pro-fights" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
   try {
     if (action === "sync") {
       if (!deps.cronSecret || authorization !== `Bearer ${deps.cronSecret}`) return fail(401, "Unauthorized");
@@ -806,6 +900,11 @@ export async function handleGuild(action, request, deps) {
       if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await zvzDue(deps);
+    }
+    if (action === "pro-fights") {
+      if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");
+      if (!deps.store) return fail(503, "Guild tracking is not set up.");
+      return await proFightsDue(deps);
     }
     if (action === "status") return await getStatus(deps);
     if (PUBLIC_ACTIONS.has(action)) {
@@ -832,8 +931,10 @@ export async function handleGuild(action, request, deps) {
     const user = token ? await deps.userFromToken(token) : null;
     if (action === "mine") {
       const rows = user && deps.store ? await deps.store.getMarks(user.id) : [];
-      // Europe first, so the list keeps its order
-      return ok({ guilds: rows.map(guildRef).sort((a, b) => a.region.localeCompare(b.region)) });
+      // oldest mark first: the first of a server is the main one (its Discord report); Europe first
+      const seen = new Set();
+      const guilds = rows.map((g) => ({ ...guildRef(g), main: !seen.has(g.region) && Boolean(seen.add(g.region)) }));
+      return ok({ guilds: guilds.sort((a, b) => a.region.localeCompare(b.region)) });
     }
     if (!user) return fail(401, SIGN_IN[action] ?? SIGN_IN[action.split("-")[0]] ?? "Sign in to mark a guild.");
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
@@ -842,11 +943,17 @@ export async function handleGuild(action, request, deps) {
     // both post to the channel (the first message, the ZvZ greeting): not a way to spam it
     if ((action === "hook-save" || action === "hook-zvz") && deps.hookLimiter && !deps.hookLimiter.take(user.id)) return fail(429, "Too many webhooks tried. Wait a few minutes and try again.");
     if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
+    if (action === "fights-history") return await getFightHistory(deps, user, query);
     if (action === "mark") return await mark(deps, user, body);
     // unmark and the webhook are per server: one marked guild on each
     const server = String((action === "hook" ? query.region : body?.region) ?? "");
     if (!isRegion(server)) return fail(400, "Unknown server.");
-    if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id, server)) });
+    if (action === "unmark") {
+      // with Guild Pro a server can have several: the one to remove (without: the main one)
+      const guildId = body?.id == null ? null : String(body.id);
+      if (guildId !== null && !isGuildId(guildId)) return fail(400, "Pick a guild first.");
+      return ok({ unmarked: Boolean(await deps.store.removeMark(user.id, server, guildId)) });
+    }
     if (action === "hook") {
       const hook = await deps.store.getWebhook(user.id, server);
       return ok({ hook: hook ? hookView(hook) : null });

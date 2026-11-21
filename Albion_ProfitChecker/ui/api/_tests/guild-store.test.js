@@ -52,7 +52,7 @@ describe("guild store", () => {
   });
 
   it("tells which guild a removed mark was on", async () => {
-    const remove = (rows) => createGuildStore(fakeDb({ results: { guild_marks: { data: rows, error: null } } }).db).removeMark("u", "eu");
+    const remove = (rows) => createGuildStore(fakeDb({ results: { guild_marks: { data: rows, error: null } } }).db).removeMark("u", "eu", "g1");
     expect(await remove([{ guild_id: "g1" }])).toBe("g1");
     expect(await remove([])).toBeNull();
   });
@@ -73,8 +73,8 @@ describe("guild store", () => {
     });
     const due = await createGuildStore(db).dueGuilds("2026-11-14T00:00:00Z", 10);
     expect(due.map((g) => g.id)).toEqual(["b", "a"]);
-    // read page by page: a player has a mark per server, so the order needs the server too
-    expect(orders.filter(([t]) => t === "guild_marks").map(([, c]) => c)).toEqual(["user_id", "region"]);
+    // read page by page: a player has a mark per server and guild, so the order needs both
+    expect(orders.filter(([t]) => t === "guild_marks").map(([, c]) => c)).toEqual(["user_id", "region", "guild_id"]);
   });
 });
 

@@ -10,6 +10,7 @@ import { GUILD_TOOLS } from "./core/tools";
 import { GuildShell } from "./GuildShell";
 import { ErrorNote, shownError, type ShownError } from "./ui/ErrorNote";
 import { useMyGuild } from "./useMyGuild";
+import { premiumVisible } from "@shared/premium/premium";
 
 const SEARCH_DELAY_MS = 150;
 /** A pointer resting this long on a result loads that guild ahead; passing over does not. */
@@ -106,7 +107,7 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
 
       <div className="gd-section-title">
         <h2>Your guilds</h2>
-        <span>one marked guild per server</span>
+        <span>{premiumVisible() ? "one marked guild per server, up to 5 with Guild Pro" : "one marked guild per server"}</span>
       </div>
       {mine === undefined ? (
         <div className="gd-skeleton is-row" />
@@ -116,12 +117,15 @@ function StartBody({ region, setRegion }: { region: Region; setRegion: (next: Re
             <Link key={g.id} className="gd-card gd-mine" to={guildPath(g)}>
               <div>
                 <b className="gd-guild-name">{g.name}</b>
-                <p className="gd-muted">Marked · {g.region === "eu" ? "Europe" : "America"}</p>
+                <p className="gd-muted">
+                  Marked · {g.region === "eu" ? "Europe" : "America"}
+                  {g.main === false ? " · Guild Pro" : ""}
+                </p>
               </div>
               <span className="gd-btn is-primary">Open</span>
             </Link>
           ))}
-          {mine.length < 2 ? (
+          {new Set(mine.map((g) => g.region)).size < 2 ? (
             <p className="gd-muted gd-mine-more">You can mark one more guild on {mine[0].region === "eu" ? "America" : "Europe"}: switch the server and press “Mark” on its page.</p>
           ) : null}
         </>

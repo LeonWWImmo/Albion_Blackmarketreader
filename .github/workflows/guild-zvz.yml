@@ -28,3 +28,11 @@ jobs:
         run: |
           curl -fsS --max-time 90 -H "Authorization: Bearer $SECRET" https://blackmarketreader.com/api/guild/zvz
           echo
+      # Guild Pro: keep the fights of the guilds premium players marked (attendance over 30 / 90 days)
+      - name: Keep the Guild Pro fights
+        if: always()
+        env:
+          SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 90 -H "Authorization: Bearer $SECRET" https://blackmarketreader.com/api/guild/pro-fights
+          echo

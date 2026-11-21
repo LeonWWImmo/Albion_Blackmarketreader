@@ -174,7 +174,7 @@ describe("Discord report after a late mark", () => {
     for (let i = 0; i < 50; i++) {
       const id = `guildidguildid${String(i).padStart(8, "0")}`;
       store.guilds.set(id, { id, region: "eu", slug: `g${i}`, name: `G${i}`, tracked_since: "2026-11-01", last_synced_at: i < 45 ? "2026-11-15T01:00:00.000Z" : "2026-11-10T01:00:00.000Z" });
-      store.marks.set(`user-${i}:eu`, id);
+      store.marks.set(`user-${i}:eu:${id}`, id);
     }
     const reported = [];
     deps.discord = { check: async () => "hook", post: async () => "ok" };

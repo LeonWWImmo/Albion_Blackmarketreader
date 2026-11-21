@@ -7,9 +7,18 @@ const NONE: GuildRef[] = [];
 
 /**
  * `loaded`: the session was read and, when signed in, the marked guilds were asked for. `guilds`: one
- * per server at most; `on(region)` is the one marked on that server.
+ * per server, more with Guild Pro; `on(region)` is the main one on that server (its Discord report),
+ * `has(id)` whether that guild is marked.
  */
-export type MyGuild = { token: string | null; ready: boolean; loaded: boolean; guilds: GuildRef[]; on: (region: Region) => GuildRef | null; reload: () => void };
+export type MyGuild = {
+  token: string | null;
+  ready: boolean;
+  loaded: boolean;
+  guilds: GuildRef[];
+  on: (region: Region) => GuildRef | null;
+  has: (id: string) => boolean;
+  reload: () => void;
+};
 
 /** The signed-in player and the guilds they marked, asked apart from the public (cached) guild data. */
 export function useMyGuild(): MyGuild {
@@ -36,6 +45,7 @@ export function useMyGuild(): MyGuild {
   // an answer for an earlier token (signed out meanwhile) does not count
   const current = state && state.token === token ? state : null;
   const guilds = current?.guilds ?? NONE;
-  const on = useCallback((region: Region) => guilds.find((g) => g.region === region) ?? null, [guilds]);
-  return { token, ready, loaded: Boolean(current), guilds, on, reload };
+  const on = useCallback((region: Region) => guilds.find((g) => g.region === region && g.main !== false) ?? null, [guilds]);
+  const has = useCallback((id: string) => guilds.some((g) => g.id === id), [guilds]);
+  return { token, ready, loaded: Boolean(current), guilds, on, has, reload };
 }

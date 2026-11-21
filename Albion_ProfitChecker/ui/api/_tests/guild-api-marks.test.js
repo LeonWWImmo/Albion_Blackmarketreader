@@ -84,7 +84,7 @@ describe("marks", () => {
     let calls = 0;
     store.getMark = async (userId, region) => (calls++ === 0 ? null : realGetMark(userId, region));
     store.addMark = vi.fn(async (userId, region, guildId) => {
-      store.marks.set(`${userId}:${region}`, guildId);
+      store.marks.set(`${userId}:${region}:${guildId}`, guildId);
       return false;
     });
     expect(await markAs("tok-ann")).toMatchObject({ status: 200, body: { guild: { id: GID } } });
@@ -111,7 +111,7 @@ describe("marks", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     expect((await markAs("tok-ann")).status).toBe(200);
     spy.mockRestore();
-    expect(store.marks.get("user-ann:eu")).toBe(GID);
+    expect(store.marks.get(`user-ann:eu:${GID}`)).toBe(GID);
   });
 
   it("does not count the gap before a new mark as play", async () => {

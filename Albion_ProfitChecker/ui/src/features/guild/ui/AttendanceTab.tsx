@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { shortPrice } from "../../price-checker/ui/format";
-import { GuildApiError, fightPath, type AttendanceFight, type GuildPageData } from "../api";
+import { accessToken, premiumVisible } from "@shared/premium/premium";
+import { GuildApiError, fetchFightHistory, fightPath, type AttendanceFight, type FightHistory, type GuildPageData } from "../api";
 import { cachedFights, loadFights } from "../core/guildData";
 import { timeAgo } from "../core/view";
 import { CopyButton } from "./CopyButton";
 import { Loading } from "./Loading";
 
 const RANGES = [
-  { days: 1, label: "24 hours" },
-  { days: 3, label: "3 days" },
-  { days: 7, label: "7 days" }
+  { days: 1, label: "24 hours", pro: false },
+  { days: 3, label: "3 days", pro: false },
+  { days: 7, label: "7 days", pro: false },
+  // Guild Pro (premium): from the fights the site keeps, not Albion's short list
+  { days: 30, label: "30 days", pro: true },
+  { days: 90, label: "90 days", pro: true }
 ];
 const MIN_PLAYERS = [0, 20, 50, 100];
 const DAY_MS = 86_400_000;
@@ -31,6 +35,10 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
   const [needle, setNeedle] = useState("");
   const [all, setAll] = useState(false);
   const [showFights, setShowFights] = useState(false);
+  const pro = days > 7;
+  const [history, setHistory] = useState<FightHistory | null>(null);
+  const [proError, setProError] = useState<{ status: number; message: string } | null>(null);
+  const ranges = premiumVisible() ? RANGES : RANGES.filter((r) => !r.pro);
 
   useEffect(() => {
     let alive = true;
@@ -43,10 +51,29 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
     };
   }, [guild.region, guild.id, version]);
 
+  // Guild Pro: the kept fights of 30 / 90 days
+  useEffect(() => {
+    if (!pro) return;
+    let alive = true;
+    setProError(null);
+    setHistory(null);
+    (async () => {
+      const token = await accessToken();
+      if (!token) throw new GuildApiError("Sign in to see attendance over 30 and 90 days.", 401);
+      return fetchFightHistory(token, guild.region, guild.id, days as 30 | 90);
+    })()
+      .then((next) => alive && setHistory(next))
+      .catch((err: unknown) => alive && setProError(err instanceof GuildApiError ? { status: err.status, message: err.message } : { status: 0, message: "The fights could not load." }));
+    return () => {
+      alive = false;
+    };
+  }, [pro, days, guild.region, guild.id]);
+
   const fights = useMemo(() => {
     const now = Date.now();
-    return (loaded?.fights ?? []).filter((f) => f.players >= minPlayers && now - Date.parse(f.startTime) <= days * DAY_MS);
-  }, [loaded, minPlayers, days]);
+    const source = pro ? (history?.days === days ? history.fights : []) : (loaded?.fights ?? []);
+    return source.filter((f) => f.players >= minPlayers && now - Date.parse(f.startTime) <= days * DAY_MS);
+  }, [loaded, history, pro, minPlayers, days]);
   const rows = useMemo(() => attendance(data, fights), [data, fights]);
   const q = needle.trim().toLowerCase();
   const filtered = q ? rows.filter((r) => r.name.toLowerCase().includes(q)) : rows;
@@ -71,6 +98,48 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
   const absent = rows.filter((r) => !r.fights && !isNew(r));
   const joined = rows.filter((r) => r.fights > 0).length;
   const oldest = loaded.fights[loaded.fights.length - 1]?.startTime ?? null;
+  const chips = (
+    <div className="gd-chips" role="group" aria-label="Time">
+      {ranges.map((r) => (
+        <button key={r.days} type="button" className={`gd-chip${days === r.days ? " is-on" : ""}${r.pro ? " is-pro" : ""}`} aria-pressed={days === r.days} onClick={() => setDays(r.days)}>
+          {r.label}
+          {r.pro ? <em>Pro</em> : null}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Guild Pro ranges until their fights are there: the way in, or why there are none yet
+  if (pro && (!history || history.days !== days || !history.kept)) {
+    return (
+      <section className="gd-card gd-attendance gd-pro-gate">
+        <div className="gd-list-head gd-list-tools">{chips}</div>
+        {proError ? (
+          proError.status === 403 ? (
+            <div className="gd-pro-note">
+              <b>Attendance over 30 and 90 days is part of Guild Pro.</b>
+              <p className="gd-muted">Albion's killboard only lists the last days. With Guild Pro the site keeps every fight of your guilds, so you see who showed up all season.</p>
+              <Link className="gd-btn is-primary" to="/premium">
+                Get Premium
+              </Link>
+            </div>
+          ) : (
+            <p className="gd-error" role="alert">
+              {proError.message}
+            </p>
+          )
+        ) : !history ? (
+          <Loading what={`Loading the kept fights of ${days} days`} />
+        ) : (
+          <div className="gd-pro-note">
+            <b>No fights kept for this guild yet.</b>
+            <p className="gd-muted">Mark it with Guild Pro: from then on the site keeps its fights every 30 minutes, and the 30 and 90 days fill up day by day.</p>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <>
       <section className="gd-stats">
@@ -108,13 +177,7 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
           <input className="gd-filter" type="search" value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="Find a member" aria-label="Find a member" />
         </div>
         <div className="gd-list-head gd-list-tools">
-          <div className="gd-chips" role="group" aria-label="Time">
-            {RANGES.map((r) => (
-              <button key={r.days} type="button" className={`gd-chip${days === r.days ? " is-on" : ""}`} aria-pressed={days === r.days} onClick={() => setDays(r.days)}>
-                {r.label}
-              </button>
-            ))}
-          </div>
+          {chips}
           <label className="gd-check">
             Count fights with
             <select className="gd-select" value={minPlayers} onChange={(e) => setMinPlayers(Number(e.target.value))} aria-label="Count fights with">
@@ -167,11 +230,15 @@ export function AttendanceTab({ data }: { data: GuildPageData }) {
           <span>
             Players: everyone in the fight, both sides. Small fights of a few players are mostly ganks; set a size to count only the guild's real fights.
             From Albion's list of the guild's fights (single kills outside a fight are not in it).
-            {loaded.complete
-              ? ` The last ${loaded.days} days.`
-              : oldest
-                ? ` Only back to ${new Date(oldest).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}: older fights could not load right now.`
-                : " Older fights could not load right now."}
+            {pro && history
+              ? history.complete
+                ? ` The last ${days} days, kept by Guild Pro.`
+                : ` Kept by Guild Pro since ${new Date(history.since ?? Date.now()).toLocaleDateString("en-GB", { dateStyle: "medium" })}: the ${days} days fill up from there.`
+              : loaded.complete
+                ? ` The last ${loaded.days} days.`
+                : oldest
+                  ? ` Only back to ${new Date(oldest).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}: older fights could not load right now.`
+                  : " Older fights could not load right now."}
           </span>
           {filtered.length > shown.length ? (
             <button type="button" className="gd-btn" onClick={() => setAll(true)}>

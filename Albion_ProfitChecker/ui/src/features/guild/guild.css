@@ -2782,3 +2782,41 @@ h2.gd-guild-name {
     padding: 16px;
   }
 }
+
+/* Guild Pro (premium): the 30 / 90 day attendance ranges */
+.gd-chip.is-pro em {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(245, 196, 81, 0.16);
+  color: var(--gd-gold);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+.gd-chip.is-pro.is-on {
+  border-color: var(--gd-gold);
+  background: rgba(245, 196, 81, 0.12);
+}
+
+.gd-pro-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 196, 81, 0.28);
+  background: radial-gradient(circle at 0% 0%, rgba(245, 196, 81, 0.1), transparent 55%), rgba(255, 255, 255, 0.02);
+}
+
+.gd-pro-note p {
+  margin: 0;
+  max-width: 620px;
+  line-height: 1.5;
+}

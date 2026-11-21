@@ -4,6 +4,7 @@ import { shortPrice } from "../../price-checker/ui/format";
 import { GuildApiError, guildPath, markGuild, unmarkGuild, type GuildPageData } from "../api";
 import { GUILD_TABS, GUILD_TOOLS, type GuildTab } from "../core/tools";
 import { timeAgo } from "../core/view";
+import { premiumVisible } from "@shared/premium/premium";
 import type { MyGuild } from "../useMyGuild";
 import { GuildCrest } from "./GuildCrest";
 
@@ -69,9 +70,9 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const { guild, tracking } = data;
-  // one marked guild per server: marking here asks to unmark the one marked on this server only
+  // one marked guild per server (Guild Pro: more; the server says no without it)
   const markedOnServer = mine.on(guild.region);
-  const markedHere = markedOnServer?.id === guild.id;
+  const markedHere = mine.has(guild.id);
   const others = Math.max(0, tracking.markedBy - (markedHere ? 1 : 0));
 
   const run = async (action: () => Promise<unknown>) => {
@@ -100,7 +101,7 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
     );
   } else if (markedHere) {
     body = (
-      <button type="button" className="gd-btn is-marked" disabled={busy} onClick={() => void run(() => unmarkGuild(token, guild.region))} title="Remove your mark">
+      <button type="button" className="gd-btn is-marked" disabled={busy} onClick={() => void run(() => unmarkGuild(token, guild.region, guild.id))} title="Remove your mark">
         ★ Marked
       </button>
     );
@@ -113,7 +114,9 @@ function MarkButton({ data, mine, onChanged }: Omit<Props, "tab">) {
         onClick={() => void run(() => markGuild(token, guild.region, guild.id))}
         title={
           markedOnServer
-            ? `You marked ${markedOnServer.name} on this server: marking this guild asks you to unmark that one first`
+            ? premiumVisible()
+              ? `You marked ${markedOnServer.name} on this server: Guild Pro marks up to 5 guilds per server, without it unmark that one first`
+              : `You marked ${markedOnServer.name} on this server: marking this guild asks you to unmark that one first`
             : "Marked guilds get a daily snapshot: fame gained per day and week. One guild per server (Europe and America)."
         }
       >

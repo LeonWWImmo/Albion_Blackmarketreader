@@ -1,8 +1,10 @@
-// The guild store (api/_lib/guildStore.js) in memory, with the database's rules: one marked guild per
-// player and server, any number of players per guild. For tests and `npm run dev`, which has no database key.
+// The guild store (api/_lib/guildStore.js) in memory, with the database's rules: a player marks a guild
+// once (Guild Pro: several per server, the oldest is the main one), any number of players per guild.
+// For tests and `npm run dev`, which has no database key.
 export function createMemoryGuildStore() {
   const guilds = new Map();
-  const marks = new Map(); // "user:region" -> guild id
+  const marks = new Map(); // "user:region:guild" -> guild id, oldest mark first
+  const fights = new Map(); // "guild:battle" -> { guild_id, start_time, fight }
   const players = new Map();
   const snapshots = new Map();
   const webhooks = new Map(); // "user:region" -> { user_id, region, url, name, last_sent_on, zvz, zvz_after }
@@ -11,6 +13,8 @@ export function createMemoryGuildStore() {
   const bankLogs = new Map(); // "user:guild" -> rows
   const splits = new Map(); // id -> row
   const all = () => [...guilds.values()];
+  /** The player's main guild on a server: the oldest mark. */
+  const mainOf = (userId, region) => [...marks].find(([key]) => key.startsWith(`${userId}:${region}:`))?.[1] ?? null;
   return {
     guilds,
     marks,
@@ -25,18 +29,24 @@ export function createMemoryGuildStore() {
     setTrackedSince: async (id, day) => {
       guilds.set(id, { ...guilds.get(id), tracked_since: day });
     },
-    getMark: async (userId, region) => guilds.get(marks.get(`${userId}:${region}`)) ?? null,
+    getMark: async (userId, region) => guilds.get(mainOf(userId, region)) ?? null,
     getMarks: async (userId) => [...marks].filter(([key]) => key.startsWith(`${userId}:`)).map(([, id]) => guilds.get(id)).filter(Boolean),
     countMarks: async (guildId) => [...marks.values()].filter((id) => id === guildId).length,
+    countMarksOn: async (userId, region) => [...marks.keys()].filter((key) => key.startsWith(`${userId}:${region}:`)).length,
+    allMarks: async () => [...marks.keys()].map((key) => {
+      const [user_id, region, guild_id] = key.split(":");
+      return { user_id, region, guild_id };
+    }),
     addMark: async (userId, region, guildId) => {
-      if (marks.has(`${userId}:${region}`)) return false;
-      marks.set(`${userId}:${region}`, guildId);
+      if (marks.has(`${userId}:${region}:${guildId}`)) return false;
+      marks.set(`${userId}:${region}:${guildId}`, guildId);
       return true;
     },
-    removeMark: async (userId, region) => {
-      const guildId = marks.get(`${userId}:${region}`) ?? null;
-      marks.delete(`${userId}:${region}`);
-      return guildId;
+    removeMark: async (userId, region, guildId = null) => {
+      const target = guildId ?? mainOf(userId, region);
+      if (!target || !marks.has(`${userId}:${region}:${target}`)) return null;
+      marks.delete(`${userId}:${region}:${target}`);
+      return target;
     },
     dueGuilds: async (before, limit) =>
       [...new Set(marks.values())]
@@ -60,7 +70,26 @@ export function createMemoryGuildStore() {
       webhooks.set(`${userId}:${region}`, { zvz: false, zvz_after: null, ...old, user_id: userId, region, url, name, last_sent_on: null });
     },
     removeWebhook: async (userId, region) => webhooks.delete(`${userId}:${region}`),
-    webhooksOfGuild: async (guildId, region) => [...webhooks.values()].filter((w) => w.region === region && marks.get(`${w.user_id}:${region}`) === guildId),
+    webhooksOfGuild: async (guildId, region) => [...webhooks.values()].filter((w) => w.region === region && mainOf(w.user_id, region) === guildId),
+    fights,
+    saveFights: async (guildId, list) => {
+      for (const f of list) fights.set(`${guildId}:${f.id}`, { guild_id: guildId, start_time: f.startTime, fight: f });
+    },
+    getStoredFights: async (guildId, since) =>
+      [...fights.values()]
+        .filter((r) => r.guild_id === guildId && r.start_time >= since)
+        .sort((a, b) => b.start_time.localeCompare(a.start_time) || b.fight.id - a.fight.id)
+        .map((r) => r.fight),
+    storedFightsRange: async (guildId) => {
+      const times = [...fights.values()].filter((r) => r.guild_id === guildId).map((r) => r.start_time).sort();
+      return { newest: times[times.length - 1] ?? null, oldest: times[0] ?? null };
+    },
+    dropFightsBefore: async (guildId, before) => {
+      for (const [key, r] of fights) if (r.guild_id === guildId && r.start_time < before) fights.delete(key);
+    },
+    setFightsSynced: async (id, at) => {
+      if (guilds.has(id)) guilds.set(id, { ...guilds.get(id), fights_synced_at: at });
+    },
     setWebhookSent: async (userId, region, day) => {
       const key = `${userId}:${region}`;
       if (webhooks.has(key)) webhooks.set(key, { ...webhooks.get(key), last_sent_on: day });

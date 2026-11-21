@@ -10,7 +10,8 @@ export type GuildHit = { id: string; name: string; slug: string; allianceName: s
 export type TopRange = "week" | "month";
 /** A guild's kill fame, kills and deaths summed over the period's ~100 biggest fights. */
 export type TopGuild = { id: string; name: string; slug: string; allianceTag: string | null; killFame: number; kills: number; deaths: number; fights: number };
-export type GuildRef = { id: string; region: Region; slug: string; name: string };
+/** main: in the player's own list, the oldest mark on its server (its Discord report); Guild Pro marks more. */
+export type GuildRef = { id: string; region: Region; slug: string; name: string; main?: boolean };
 export type MemberStatus = "active" | "quiet" | "inactive" | "unknown";
 /** Every kind of fame Albion counts, and their sum. */
 export type Fame = { total: number; pve: number; pvp: number; gathering: number; crafting: number; fishing: number; farming: number; crystal: number };
@@ -212,7 +213,13 @@ export const fetchMyGuilds = (token: string) => call<{ guilds: GuildRef[] }>("mi
 
 export const markGuild = (token: string, region: Region, id: string) => call<{ guild: GuildRef }>("mark", { token, method: "POST", body: { region, id } }).then((r) => r.guild);
 
-export const unmarkGuild = (token: string, region: Region) => call<{ unmarked: boolean }>("unmark", { token, method: "POST", body: { region } });
+export const unmarkGuild = (token: string, region: Region, id: string) => call<{ unmarked: boolean }>("unmark", { token, method: "POST", body: { region, id } });
+
+/** Guild Pro: the kept fights of the last 30 or 90 days. since: the oldest kept one; kept: false while none is kept yet. */
+export type FightHistory = { fights: AttendanceFight[]; days: number; complete: boolean; since: string | null; kept: boolean };
+
+export const fetchFightHistory = (token: string, region: Region, id: string, days: 30 | 90) =>
+  call<FightHistory>(`fights-history?region=${region}&id=${encodeURIComponent(id)}&days=${days}`, { token });
 
 // The signed-in player's own data: private to their account.
 

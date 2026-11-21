@@ -37,37 +37,56 @@ export function createGuildStore(db) {
     async setTrackedSince(id, day) {
       must(await db.from("guilds").update({ tracked_since: day }).eq("id", id));
     },
-    /** The guild this player has marked on this server, or null. */
+    /**
+     * The player's main guild on this server (the oldest mark; the Discord and ZvZ reports are about
+     * it), or null. Guild Pro players can have more marked there (getMarks).
+     */
     async getMark(userId, region) {
-      const mark = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).eq("region", region).maybeSingle());
-      return mark ? getGuild(mark.guild_id) : null;
+      const marks = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).eq("region", region).order("created_at", { ascending: true }).limit(1));
+      return marks.length ? getGuild(marks[0].guild_id) : null;
     },
-    /** Every guild this player has marked (one per server). */
+    /** Every guild this player has marked, oldest mark first. */
     async getMarks(userId) {
-      const ids = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId)).map((m) => m.guild_id);
-      return ids.length ? must(await db.from("guilds").select("*").in("id", ids)) : [];
+      const ids = must(await db.from("guild_marks").select("guild_id").eq("user_id", userId).order("created_at", { ascending: true })).map((m) => m.guild_id);
+      if (!ids.length) return [];
+      const rows = must(await db.from("guilds").select("*").in("id", ids));
+      return ids.map((id) => rows.find((g) => g.id === id)).filter(Boolean);
+    },
+    /** How many guilds this player has marked on this server. */
+    async countMarksOn(userId, region) {
+      const { count, error } = await db.from("guild_marks").select("guild_id", { count: "exact", head: true }).eq("user_id", userId).eq("region", region);
+      if (error) throw new Error(`database: ${error.message}`);
+      return count ?? 0;
+    },
+    /** Every mark: [{ user_id, region, guild_id }] (Guild Pro: whose guilds get their fights kept). */
+    async allMarks() {
+      return allPages(() => db.from("guild_marks").select("user_id, region, guild_id").order("user_id", { ascending: true }).order("region", { ascending: true }).order("guild_id", { ascending: true }));
     },
     async countMarks(guildId) {
       const { count, error } = await db.from("guild_marks").select("user_id", { count: "exact", head: true }).eq("guild_id", guildId);
       if (error) throw new Error(`database: ${error.message}`);
       return count ?? 0;
     },
-    /** False when the player has a guild marked on this server already (one per server: the primary key). */
+    /** False when the player has this guild marked already (the primary key). */
     async addMark(userId, region, guildId) {
       const result = await db.from("guild_marks").insert({ user_id: userId, region, guild_id: guildId });
       if (result.error?.code === UNIQUE_VIOLATION) return false;
       must(result);
       return true;
     },
-    /** Removes the player's mark on this server; the guild it was on, or null. */
-    async removeMark(userId, region) {
-      const rows = must(await db.from("guild_marks").delete().eq("user_id", userId).eq("region", region).select("guild_id"));
+    /** Removes the player's mark of this guild (without one: their main guild on this server); the guild id, or null. */
+    async removeMark(userId, region, guildId = null) {
+      const target = guildId ?? (await this.getMark(userId, region))?.id;
+      if (!target) return null;
+      const rows = must(await db.from("guild_marks").delete().eq("user_id", userId).eq("region", region).eq("guild_id", target).select("guild_id"));
       return rows[0]?.guild_id ?? null;
     },
     /** Marked guilds whose last sync is older than `before`, oldest first. */
     async dueGuilds(before, limit) {
-      // paged: the order must have no ties (a player has a row per server)
-      const marks = await allPages(() => db.from("guild_marks").select("guild_id").order("user_id", { ascending: true }).order("region", { ascending: true }));
+      // paged: the order must have no ties (a player has a row per server and guild)
+      const marks = await allPages(() =>
+        db.from("guild_marks").select("guild_id").order("user_id", { ascending: true }).order("region", { ascending: true }).order("guild_id", { ascending: true })
+      );
       const ids = [...new Set(marks.map((m) => m.guild_id))];
       if (!ids.length) return [];
       const guilds = [];
@@ -108,14 +127,46 @@ export function createGuildStore(db) {
     async removeWebhook(userId, region) {
       return must(await db.from("guild_webhooks").delete().eq("user_id", userId).eq("region", region).select("user_id")).length > 0;
     },
-    /** The webhooks of the players who have this guild marked (each player's webhook for its server). */
+    /** The webhooks of the players whose main guild on this server is this one (each player's webhook for its server). */
     async webhooksOfGuild(guildId, region) {
       const ids = must(await db.from("guild_marks").select("user_id").eq("guild_id", guildId)).map((m) => m.user_id);
       const hooks = [];
       for (let i = 0; i < ids.length; i += ID_CHUNK) {
-        hooks.push(...must(await db.from("guild_webhooks").select("*").eq("region", region).in("user_id", ids.slice(i, i + ID_CHUNK))));
+        const chunk = ids.slice(i, i + ID_CHUNK);
+        // a Guild Pro player with more guilds on the server gets the report of the main one only
+        const marks = must(await db.from("guild_marks").select("user_id, guild_id, created_at").eq("region", region).in("user_id", chunk).order("created_at", { ascending: true }));
+        const main = new Map();
+        for (const m of marks) if (!main.has(m.user_id)) main.set(m.user_id, m.guild_id);
+        const mains = chunk.filter((id) => main.get(id) === guildId);
+        if (mains.length) hooks.push(...must(await db.from("guild_webhooks").select("*").eq("region", region).in("user_id", mains)));
       }
       return hooks;
+    },
+    /** Guild Pro: stores fights for the attendance history (a fight seen again replaces its row). */
+    async saveFights(guildId, fights) {
+      const rows = fights.map((f) => ({ guild_id: guildId, battle_id: f.id, start_time: f.startTime, fight: f }));
+      for (let i = 0; i < rows.length; i += WRITE_CHUNK) must(await db.from("guild_fights").upsert(rows.slice(i, i + WRITE_CHUNK), { onConflict: "guild_id,battle_id" }));
+    },
+    /** The kept fights since `since` (ISO), newest first. */
+    async getStoredFights(guildId, since) {
+      const rows = await allPages(() =>
+        db.from("guild_fights").select("fight, battle_id").eq("guild_id", guildId).gte("start_time", since).order("start_time", { ascending: false }).order("battle_id", { ascending: false })
+      );
+      return rows.map((r) => r.fight);
+    },
+    /** The newest and oldest kept fight's start, or nulls. */
+    async storedFightsRange(guildId) {
+      const [newest, oldest] = await Promise.all([
+        db.from("guild_fights").select("start_time").eq("guild_id", guildId).order("start_time", { ascending: false }).limit(1),
+        db.from("guild_fights").select("start_time").eq("guild_id", guildId).order("start_time", { ascending: true }).limit(1)
+      ]);
+      return { newest: must(newest)[0]?.start_time ?? null, oldest: must(oldest)[0]?.start_time ?? null };
+    },
+    async dropFightsBefore(guildId, before) {
+      must(await db.from("guild_fights").delete().eq("guild_id", guildId).lt("start_time", before));
+    },
+    async setFightsSynced(guildId, at) {
+      must(await db.from("guilds").update({ fights_synced_at: at }).eq("id", guildId));
     },
     async setWebhookSent(userId, region, day) {
       must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId).eq("region", region));
