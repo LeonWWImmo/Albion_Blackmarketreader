@@ -10,6 +10,8 @@ import { itemPath } from "./ui/paths";
 import { SearchBox } from "./ui/SearchBox";
 import { PriceCheckerShell } from "./ui/Shell";
 import { RECENT_KEY, WATCH_KEY, isSavedItem, sameSaved, type SavedItem } from "./ui/saved";
+import { premiumVisible } from "@shared/premium/premium";
+import { AlertsOverview } from "./alerts/AlertsOverview";
 
 const EXAMPLES = ["adepts-bag", "elders-crossbow", "adepts-transport-ox", "pine-planks", "experts-rune"];
 const BROWSE_FIRST = 48;
@@ -102,6 +104,7 @@ export function PriceCheckerPage() {
             </div>
           </section>
 
+          {premiumVisible() ? <AlertsOverview /> : null}
           <SavedRow title="Watchlist" items={watch} index={index} />
           <SavedRow title="Recently viewed" items={recent} index={index} />
 

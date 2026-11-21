@@ -41,3 +41,11 @@ jobs:
           MARKET_SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
           MARKET_VOLUME: ${{ inputs.volume && '1' || '' }}
         run: node scripts/market-live.mjs
+      # price alerts (premium): checked against fresh AODP prices, also when the snapshot failed
+      - name: Check the price alerts
+        if: always()
+        env:
+          SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 90 -H "Authorization: Bearer $SECRET" https://blackmarketreader.com/api/market/alerts-run
+          echo

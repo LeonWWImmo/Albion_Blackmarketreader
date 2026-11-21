@@ -101,6 +101,7 @@ function devApi(): Plugin {
       // seen, and the first visit per region takes a real snapshot from AODP (about 30 s, then kept
       // in memory for 30 minutes). Production gets its snapshots from the GitHub job instead.
       const marketStore = import("./api/_lib/marketLive.js").then((m) => m.createMemoryMarketStore());
+      const alertStore = import("./api/_lib/priceAlerts.js").then((m) => m.memoryAlertStore());
       const marketFetching = new Map<string, Promise<void>>();
       server.middlewares.use("/api/market", async (req, res) => {
         const url = new URL(req.url || "/", "http://localhost");
@@ -110,9 +111,10 @@ function devApi(): Plugin {
           import("@supabase/supabase-js"),
           readFile(path.join(rootDir, "public/env.js"), "utf8")
         ]);
+        const action = url.pathname.replace(/^\/+/, "");
         const store = await marketStore;
         const region = url.searchParams.get("region") ?? "";
-        if (market.LIVE_REGIONS.includes(region)) {
+        if (action === "live" && market.LIVE_REGIONS.includes(region)) {
           const row = await store.read(region);
           const stale = !row?.pricesAt || Date.now() - Date.parse(row.pricesAt) > 30 * 60000;
           if (stale && !marketFetching.has(region)) {
@@ -127,11 +129,22 @@ function devApi(): Plugin {
         }
         const env = (name: string) => envJs.match(new RegExp(`${name}:\\s*"([^"]+)"`))?.[1] ?? "";
         const auth = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } }).auth;
-        const result = await market.handleMarket(
-          url.pathname.replace(/^\/+/, ""),
-          { method: req.method, query: Object.fromEntries(url.searchParams), token: (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "") || null, body: null },
+        // price alerts: also in memory; the real Discord webhook check and greeting run
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) chunks.push(chunk as Buffer);
+        let body: unknown = null;
+        try {
+          body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : null;
+        } catch {
+          body = null;
+        }
+        const alerts = action.startsWith("alert");
+        const handle = alerts ? (await import("./api/_lib/priceAlerts.js")).handleAlerts : market.handleMarket;
+        const result = await handle(
+          action,
+          { method: req.method, query: Object.fromEntries(url.searchParams), token: (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "") || null, body },
           {
-            store,
+            store: alerts ? await alertStore : store,
             actionsSecret: undefined,
             userFromToken: async (token: string) => {
               const { data } = await auth.getUser(token);

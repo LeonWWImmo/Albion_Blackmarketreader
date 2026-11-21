@@ -1,16 +1,26 @@
-// /api/market/<action> (vercel.json rewrites it to /api/market?action=<action>): the live market
-// of premium, see api/_lib/marketLive.js. Env (Vercel): SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY,
-// ACTIONS_CRON_SECRET (the GitHub job that sends the snapshots), PREMIUM_* (see api/billing.js).
+// /api/market/<action> (vercel.json rewrites it to /api/market?action=<action>): the premium market
+// tools, one function for all of them (the Hobby plan allows 12):
+// - live, ingest: the live market snapshot (api/_lib/marketLive.js)
+// - alerts, alert-save, alert-delete, alert-hook, alerts-run: price alerts (api/_lib/priceAlerts.js)
+// Env (Vercel): SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY, ACTIONS_CRON_SECRET (the GitHub job),
+// PREMIUM_* (see api/billing.js).
 import { sendResult } from "./_lib/aodp.js";
 import { hasPremium, premiumEnv } from "./_lib/billing.js";
 import { createBillingStore } from "./_lib/billingStore.js";
 import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { createMarketStore, handleMarket } from "./_lib/marketLive.js";
+import { alertStoreOn, handleAlerts } from "./_lib/priceAlerts.js";
+import { createRateLimiter } from "./_lib/rateLimit.js";
+
+/** Webhook links tried per player: the Discord check must not become a way to probe links. */
+const hookLimiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
 
 export default async function handler(req, res) {
   const live = liveGuildStore();
-  const result = await handleMarket(
-    String(req.query?.action ?? ""),
+  const action = String(req.query?.action ?? "");
+  const alerts = action.startsWith("alert");
+  const result = await (alerts ? handleAlerts : handleMarket)(
+    action,
     {
       method: req.method,
       query: req.query ?? {},
@@ -18,12 +28,13 @@ export default async function handler(req, res) {
       body: req.method === "POST" ? req.body : null
     },
     {
-      store: live ? createMarketStore(live.db) : null,
+      store: live ? (alerts ? alertStoreOn(live.db) : createMarketStore(live.db)) : null,
       actionsSecret: process.env.ACTIONS_CRON_SECRET,
       userFromToken: (token) => (live ? userFromToken(live.db, token) : null),
       premium: live
         ? async (userId) => hasPremium(await createBillingStore(live.db).getByUser(userId), userId, premiumEnv(process.env), new Date())
         : null,
+      hookLimiter,
       now: () => new Date()
     }
   ).catch(() => ({ status: 500, body: { error: "Something went wrong, try again." }, maxAge: 0 }));

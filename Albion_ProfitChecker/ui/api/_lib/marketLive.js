@@ -129,9 +129,9 @@ async function aodpJson(url, { fetchImpl = fetch, retries = 3, wait = pause } = 
 
 /**
  * Asks AODP for every id in chunks, one after the other with a short pause (be nice to the
- * community server). part "prices" or "volume". Returns the parsed map.
+ * community server). part "prices" (all qualities) or "volume" (daily history). Returns the raw rows.
  */
-export async function fetchLive(region, ids, part, { fetchImpl = fetch, now = new Date(), wait = pause, gapMs = 150 } = {}) {
+export async function fetchRows(region, ids, part, { fetchImpl = fetch, wait = pause, gapMs = 150 } = {}) {
   const host = HOSTS[region];
   if (!host) throw new Error(`unknown region ${region}`);
   const locations = encodeURIComponent(LIVE_LOCATIONS.join(","));
@@ -146,6 +146,12 @@ export async function fetchLive(region, ids, part, { fetchImpl = fetch, now = ne
     if (Array.isArray(body)) rows.push(...body);
     if (gapMs) await wait(gapMs);
   }
+  return rows;
+}
+
+/** fetchRows, parsed into a snapshot part. */
+export async function fetchLive(region, ids, part, { now = new Date(), ...opts } = {}) {
+  const rows = await fetchRows(region, ids, part, opts);
   return part === "prices" ? parseLivePrices(rows, now) : parseLiveVolume(rows, now);
 }
 
