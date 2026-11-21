@@ -17,14 +17,17 @@ type Load =
 const PAGE = 40;
 /** The job runs every 30 minutes; a little later the next snapshot is there. */
 const NEXT_AFTER_MIN = 32;
-const FILTERS_KEY = "bmr-live-filters-v1";
+const FILTERS_KEY = "bmr-live-filters-v2";
 
+// city prices are seen less often than the Black Market's and city buy orders are thin, so city
+// flips start with sell orders and prices up to 6 hours old
 const DEFAULTS: FlipOptions = {
+  kind: "city",
   from: "ALL",
   to: "ALL",
-  mode: "instant",
+  mode: "order",
   albionPremium: true,
-  maxAgeH: 3,
+  maxAgeH: 6,
   minProfitPct: 10,
   maxCost: null,
   minSold: 1,
@@ -172,6 +175,16 @@ export function LiveMarket({ region, nameOf }: { region: "eu" | "us"; nameOf: (i
 
       {load.kind === "ok" ? (
         <>
+          <div className="lm-tabs" role="tablist" aria-label="Kind of flip">
+            <button type="button" role="tab" aria-selected={opts.kind === "city"} className={opts.kind === "city" ? "is-on" : ""} onClick={() => set("kind", "city")}>
+              <b>City to city</b>
+              <small>Buy in one city, sell in another</small>
+            </button>
+            <button type="button" role="tab" aria-selected={opts.kind === "bm"} className={opts.kind === "bm" ? "is-on" : ""} onClick={() => set("kind", "bm")}>
+              <b>Black Market</b>
+              <small>Buy in a city, sell to the Black Market</small>
+            </button>
+          </div>
           <div className="lm-controls">
             <div className="lm-row">
               <label className="lm-field">
@@ -190,25 +203,36 @@ export function LiveMarket({ region, nameOf }: { region: "eu" | "us"; nameOf: (i
               <span className="lm-arrow" aria-hidden="true">
                 →
               </span>
-              <label className="lm-field">
-                <span>Sell in</span>
-                <select value={opts.to} onChange={(e) => set("to", e.target.value)}>
-                  <option value="ALL">Any market</option>
-                  {markets.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="lm-seg" role="group" aria-label="How you sell">
-                <button type="button" className={opts.mode === "instant" ? "is-on" : ""} onClick={() => set("mode", "instant")}>
-                  Sell instantly
-                </button>
-                <button type="button" className={opts.mode === "order" ? "is-on" : ""} onClick={() => set("mode", "order")}>
-                  Sell order
-                </button>
-              </div>
+              {opts.kind === "city" ? (
+                <>
+                  <label className="lm-field">
+                    <span>Sell in</span>
+                    <select value={opts.to} onChange={(e) => set("to", e.target.value)}>
+                      <option value="ALL">Any city</option>
+                      {markets
+                        .filter((m) => m !== BLACK_MARKET)
+                        .map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <div className="lm-seg" role="group" aria-label="How you sell">
+                    <button type="button" className={opts.mode === "order" ? "is-on" : ""} onClick={() => set("mode", "order")}>
+                      Sell order
+                    </button>
+                    <button type="button" className={opts.mode === "instant" ? "is-on" : ""} onClick={() => set("mode", "instant")}>
+                      Sell instantly
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <span className="lm-fixed">
+                  <span>Sell in</span>
+                  <b>Black Market</b>
+                </span>
+              )}
               <button
                 type="button"
                 role="switch"

@@ -21,11 +21,13 @@ export const SALES_TAX = { premium: 0.04, normal: 0.08 };
 export const SETUP_FEE = 0.025;
 
 export type FlipOptions = {
-  /** a market name or "ALL" */
+  /** bm: city -> Black Market; city: city -> another city */
+  kind: "bm" | "city";
+  /** a city or "ALL" */
   from: string;
-  /** a market name or "ALL" */
+  /** a city or "ALL" (city flips only) */
   to: string;
-  /** instant: sell into the best buy order; order: list a sell order at the cheapest listing */
+  /** instant: sell into the best buy order; order: list a sell order at the cheapest listing (the Black Market is always instant) */
   mode: "instant" | "order";
   albionPremium: boolean;
   /** both prices at most this old */
@@ -113,7 +115,10 @@ export function computeFlips(snap: LiveSnapshot, opts: FlipOptions, nowMinute: n
   const term = opts.search.trim().toLowerCase();
   const all = snap.locations.map((_, i) => i);
   const sources = opts.from === "ALL" ? all : all.filter((i) => snap.locations[i] === opts.from);
-  const targets = opts.to === "ALL" ? all : all.filter((i) => snap.locations[i] === opts.to);
+  const targets =
+    opts.kind === "bm"
+      ? all.filter((i) => snap.locations[i] === BLACK_MARKET)
+      : all.filter((i) => snap.locations[i] !== BLACK_MARKET && (opts.to === "ALL" || snap.locations[i] === opts.to));
   // before the first volume run there are no sales numbers: then the filter would hide everything
   const minSold = Object.keys(snap.volume).length ? opts.minSold : 0;
   const out: Flip[] = [];

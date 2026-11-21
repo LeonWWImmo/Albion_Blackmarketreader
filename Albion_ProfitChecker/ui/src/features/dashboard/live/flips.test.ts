@@ -22,6 +22,7 @@ const snap = (prices: LiveSnapshot["prices"], volume: LiveSnapshot["volume"] = {
 });
 
 const OPTS: FlipOptions = {
+  kind: "city",
   from: "ALL",
   to: "ALL",
   mode: "instant",
@@ -68,30 +69,40 @@ describe("computeFlips", () => {
     { T5_BAG: LOCATIONS.map((n) => (n === "Black Market" ? [30, 11800] : 0)) }
   );
 
-  it("keeps the best route per item, sorted by profit %", () => {
-    const flips = computeFlips(s, OPTS, NOW, name);
+  it("Black Market: the best city per item into the Black Market, sorted by profit %", () => {
+    const flips = computeFlips(s, { ...OPTS, kind: "bm" }, NOW, name);
     expect(flips.map((f) => [f.id, f.from, f.to])).toEqual([
-      ["T4_OTHER", "Martlock", "Caerleon"],
       ["T4_BAG", "Martlock", "Black Market"],
       ["T5_BAG", "Thetford", "Black Market"]
     ]);
-    expect(flips[0].suspect).toBe(true);
-    expect(flips[2].sold).toBe(30);
+    expect(flips[1].sold).toBe(30);
+  });
+
+  it("city to city: never the Black Market, the sell mode decides the price", () => {
+    const instant = computeFlips(s, OPTS, NOW, name);
+    expect(instant.map((f) => [f.id, f.from, f.to])).toEqual([
+      ["T4_OTHER", "Martlock", "Caerleon"],
+      ["T4_BAG", "Martlock", "Lymhurst"]
+    ]);
+    expect(instant[0].suspect).toBe(true);
+    const order = computeFlips(s, { ...OPTS, mode: "order" }, NOW, name);
+    expect(order.map((f) => [f.id, f.to, f.sell])).toEqual([["T4_BAG", "Lymhurst", 1500]]);
   });
 
   it("sorts by silver and filters by markets, tier, cost, volume and name", () => {
-    expect(computeFlips(s, { ...OPTS, sort: "silver" }, NOW, name)[0].id).toBe("T5_BAG");
+    const bm = { ...OPTS, kind: "bm" as const };
+    expect(computeFlips(s, { ...bm, sort: "silver" }, NOW, name)[0].id).toBe("T5_BAG");
     expect(computeFlips(s, { ...OPTS, to: "Caerleon" }, NOW, name).map((f) => f.id)).toEqual(["T4_OTHER"]);
-    expect(computeFlips(s, { ...OPTS, from: "Thetford" }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
-    expect(computeFlips(s, { ...OPTS, tier: "T5" }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
-    expect(computeFlips(s, { ...OPTS, maxCost: 5000 }, NOW, name).map((f) => f.id)).not.toContain("T5_BAG");
-    expect(computeFlips(s, { ...OPTS, minSold: 10 }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
-    expect(computeFlips(s, { ...OPTS, search: "bag" }, NOW, name).map((f) => f.id).sort()).toEqual(["T4_BAG", "T5_BAG"]);
-    expect(computeFlips(s, { ...OPTS, minProfitPct: 50 }, NOW, name).map((f) => f.id)).not.toContain("T5_BAG");
+    expect(computeFlips(s, { ...bm, from: "Thetford" }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
+    expect(computeFlips(s, { ...bm, tier: "T5" }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
+    expect(computeFlips(s, { ...bm, maxCost: 5000 }, NOW, name).map((f) => f.id)).not.toContain("T5_BAG");
+    expect(computeFlips(s, { ...bm, minSold: 10 }, NOW, name).map((f) => f.id)).toEqual(["T5_BAG"]);
+    expect(computeFlips(s, { ...bm, search: "bag" }, NOW, name).map((f) => f.id).sort()).toEqual(["T4_BAG", "T5_BAG"]);
+    expect(computeFlips(s, { ...bm, minProfitPct: 50 }, NOW, name).map((f) => f.id)).not.toContain("T5_BAG");
   });
 
   it("ignores the sold/day filter while the snapshot has no sales numbers yet", () => {
-    expect(computeFlips({ ...s, volume: {} }, { ...OPTS, minSold: 5 }, NOW, name)).toHaveLength(3);
+    expect(computeFlips({ ...s, volume: {} }, { ...OPTS, kind: "bm", minSold: 5 }, NOW, name)).toHaveLength(2);
   });
 });
 
