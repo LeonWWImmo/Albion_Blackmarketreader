@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import { allLiveIds, fetchLive, LIVE_REGIONS } from "../api/_lib/marketLive.js";
 
 const VOLUME_EVERY_H = 6;
+export const EXTRA_FILES = ["raw-materials-cities-eu.json", "food-prices-eu.json", "potion-prices-eu.json", "consumable-ingredient-prices-eu.json"];
 
 const site = (process.env.MARKET_SITE || "https://blackmarketreader.com").replace(/\/+$/, "");
 const secret = process.env.MARKET_SECRET || "";
@@ -25,7 +26,13 @@ if (!secret && !dry) {
 
 const baseCodes = JSON.parse(await readFile(new URL("../../Data/ItemList.json", import.meta.url), "utf8"));
 const recipes = JSON.parse(await readFile(new URL("../public/items-categorized-crafting.json", import.meta.url), "utf8"));
-const ids = allLiveIds(baseCodes, recipes);
+// the other calculators' items: the ids of their daily files (the same for both regions)
+const extra = [];
+for (const file of EXTRA_FILES) {
+  const data = JSON.parse(await readFile(new URL(`../public/data/${file}`, import.meta.url), "utf8").catch(() => "{}"));
+  for (const item of data.items ?? []) if (item?.itemId) extra.push(String(item.itemId));
+}
+const ids = allLiveIds(baseCodes, recipes, extra);
 console.log(`${ids.length} items, regions ${regions.join(", ")}, volume ${withVolume ? "yes" : "no"}`);
 
 let failed = false;

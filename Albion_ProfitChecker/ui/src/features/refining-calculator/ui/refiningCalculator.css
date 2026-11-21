@@ -1492,3 +1492,8 @@
 .rc-sheet-list dd.is-loss {
   color: #f87171;
 }
+
+/* premium live prices: the gold Daily / Live / Live + fill box takes a whole row of the settings */
+.rc-live-block {
+  grid-column: 1 / -1;
+}

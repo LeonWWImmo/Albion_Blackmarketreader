@@ -25,7 +25,7 @@ export const LIVE_CHUNK = 100;
 const PRICE_FRESH_MS = 72 * 3600 * 1000;
 /** The sales volume is the average of this many days. */
 const VOLUME_DAYS = 7;
-const ITEM_ID = /^T[4-8]_[A-Z0-9_]{2,80}(@[1-4])?$/;
+const ITEM_ID = /^T[1-8]_[A-Z0-9_]{2,80}(@[1-4])?$/;
 const BM = 0;
 
 /** Every dashboard item: the base codes of Data/ItemList.json in tiers 4-8, enchantments 0-4. */
@@ -45,9 +45,10 @@ const REFINED = ["METALBAR", "PLANKS", "CLOTH", "LEATHER"];
 /**
  * Every id a snapshot covers: the dashboard items (Data/ItemList.json) plus what the crafting tools
  * price (public/items-categorized-crafting.json): all recipe items, their artefacts, the refined
- * materials and the journals.
+ * materials and the journals; `extra`: the ids of the other calculators' daily files (raw
+ * resources, food, potions and their ingredients).
  */
-export function allLiveIds(baseCodes, recipes) {
+export function allLiveIds(baseCodes, recipes, extra = []) {
   const items = (recipes?.categories ?? []).flatMap((c) => c.items ?? []);
   const ids = new Set(liveItemIds([...new Set([...baseCodes, ...items.map((i) => i.id).filter(Boolean)])]));
   for (let tier = 4; tier <= 8; tier += 1) {
@@ -56,6 +57,9 @@ export function allLiveIds(baseCodes, recipes) {
     ids.add(`T${tier}_STONEBLOCK`);
     for (const kind of JOURNALS) for (const state of ["EMPTY", "FULL"]) ids.add(`T${tier}_JOURNAL_${kind}_${state}`);
   }
+  // the refining calculator also refines T2 and T3
+  for (const tier of [2, 3]) for (const base of [...REFINED, "STONEBLOCK"]) ids.add(`T${tier}_${base}`);
+  for (const id of extra) if (ITEM_ID.test(id)) ids.add(id);
   return [...ids];
 }
 

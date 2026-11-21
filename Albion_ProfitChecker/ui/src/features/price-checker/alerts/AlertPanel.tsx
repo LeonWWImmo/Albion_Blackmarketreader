@@ -1,5 +1,5 @@
-// The price alert panel on an item's Price Checker page (premium, hidden until the launch): set
-// "drops below" / "buy order above" for this item, see and delete its alerts, connect Discord.
+// The price alert panel on an item's Price Checker page (premium, hidden until the launch), always
+// open: set "drops below" / "buy order above" for this item, see and delete its alerts, connect Discord.
 import { useState, type FormEvent } from "react";
 import { MARKETS } from "../core/quotes";
 import { alertRule, useAlerts, type NewAlert, type PriceAlert } from "./useAlerts";
@@ -11,7 +11,6 @@ type Props = {
   /** prices to start the price field with */
   cheapest: number | null;
   bestSell: number | null;
-  onClose: () => void;
 };
 
 const roundNice = (n: number) => {
@@ -19,7 +18,7 @@ const roundNice = (n: number) => {
   return Math.max(step, Math.round(n / step) * step);
 };
 
-export function AlertPanel({ base, cheapest, bestSell, onClose }: Props) {
+export function AlertPanel({ base, cheapest, bestSell }: Props) {
   const { state, busy, save, remove, connect } = useAlerts(true);
   const [side, setSide] = useState<"below" | "above">("below");
   const [market, setMarket] = useState("ANY");
@@ -70,9 +69,6 @@ export function AlertPanel({ base, cheapest, bestSell, onClose }: Props) {
           </span>
           <h2 id="pa-title">Ping me in Discord when…</h2>
         </div>
-        <button type="button" className="pa-close" onClick={onClose} aria-label="Close">
-          ×
-        </button>
       </div>
 
       {state.kind === "loading" ? <p className="pa-note">Loading your alerts…</p> : null}

@@ -5,7 +5,7 @@ import "./alerts.css";
 
 export function AlertsOverview() {
   const { state, busy, remove } = useAlerts(true);
-  if (state.kind !== "ok" || (!state.alerts.length && !state.hook)) return null;
+  if (state.kind !== "ok") return null;
   return (
     <section className="pc-card pa-panel" id="alerts" aria-labelledby="pa-all-title">
       <div className="pa-head">
@@ -27,7 +27,7 @@ export function AlertsOverview() {
           ))}
         </ul>
       ) : (
-        <p className="pa-note">No alerts yet. Open an item and press "Alert".</p>
+        <p className="pa-note">No alerts yet. Open any item: the alert box is right under its prices.</p>
       )}
     </section>
   );

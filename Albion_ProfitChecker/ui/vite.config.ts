@@ -141,9 +141,15 @@ function devApi(): Plugin {
           }
           const stale = !row?.pricesAt || Date.now() - Date.parse(row.pricesAt) > 30 * 60000;
           if (stale && !marketFetching.has(region)) {
+            const extra: string[] = [];
+            for (const file of ["raw-materials-cities-eu.json", "food-prices-eu.json", "potion-prices-eu.json", "consumable-ingredient-prices-eu.json"]) {
+              const data = JSON.parse(await readFile(path.join(rootDir, "public/data", file), "utf8").catch(() => "{}"));
+              for (const item of data.items ?? []) if (item?.itemId) extra.push(String(item.itemId));
+            }
             const ids = market.allLiveIds(
               JSON.parse(await readFile(path.join(rootDir, "../Data/ItemList.json"), "utf8")),
-              JSON.parse(await readFile(path.join(rootDir, "public/items-categorized-crafting.json"), "utf8"))
+              JSON.parse(await readFile(path.join(rootDir, "public/items-categorized-crafting.json"), "utf8")),
+              extra
             );
             const save = async () => {
               await mkdir(path.dirname(cacheFile(region)), { recursive: true });

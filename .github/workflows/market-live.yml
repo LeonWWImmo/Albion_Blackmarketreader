@@ -35,6 +35,10 @@ jobs:
             /Albion_ProfitChecker/ui/api/_lib/
             /Albion_ProfitChecker/ui/scripts/
             /Albion_ProfitChecker/ui/public/items-categorized-crafting.json
+            /Albion_ProfitChecker/ui/public/data/raw-materials-cities-eu.json
+            /Albion_ProfitChecker/ui/public/data/food-prices-eu.json
+            /Albion_ProfitChecker/ui/public/data/potion-prices-eu.json
+            /Albion_ProfitChecker/ui/public/data/consumable-ingredient-prices-eu.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22

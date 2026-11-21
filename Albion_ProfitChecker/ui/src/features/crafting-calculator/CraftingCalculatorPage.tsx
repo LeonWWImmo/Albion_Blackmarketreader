@@ -1885,7 +1885,6 @@ export function CraftingCalculatorPage() {
             </div>
             {premiumVisible() ? (
               <div className="cc-live">
-                <div className="cc-caption">Prices</div>
                 <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
               </div>
             ) : null}

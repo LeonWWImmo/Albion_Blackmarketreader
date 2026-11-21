@@ -45,7 +45,6 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
   const [range, setRange] = useState<Range>("30d");
   const [hidden, setHidden] = useState<Set<string>>(new Set(["Brecilien"]));
   const [toast, setToast] = useState("");
-  const [alertOpen, setAlertOpen] = useState(false);
   const [watch, addWatch, removeWatch] = useStoredList<SavedItem>(WATCH_KEY, 24, sameSaved, isSavedItem);
   const [, addRecent] = useStoredList<SavedItem>(RECENT_KEY, 12, sameSaved, isSavedItem);
   const saved: SavedItem = useMemo(() => ({ slug: item.slug, e: enchant, q: quality }), [item.slug, enchant, quality]);
@@ -156,15 +155,6 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
               </svg>
               <span>{watching ? "Watching" : "Watch"}</span>
             </button>
-            {premiumVisible() ? (
-              <button type="button" className={`pc-icon-btn${alertOpen ? " is-on" : ""}`} aria-expanded={alertOpen} onClick={() => setAlertOpen((o) => !o)} title="Discord ping when the price hits">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z" />
-                  <path d="M10 20a2 2 0 0 0 4 0" />
-                </svg>
-                <span>Alert</span>
-              </button>
-            ) : null}
             <button type="button" className="pc-icon-btn is-discord" onClick={copyForDiscord}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.3 18.3 0 0 0-5.5 0L8.6 3a19.7 19.7 0 0 0-4.9 1.5C.6 9.1-.3 13.6.1 18a19.9 19.9 0 0 0 6 3l1.3-2a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4a12.9 12.9 0 0 1-2 1l1.3 2a19.8 19.8 0 0 0 6-3c.5-5.1-.8-9.6-3.6-13.6ZM8 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z" />
@@ -209,16 +199,6 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
         </div>
       </section>
 
-      {alertOpen ? (
-        <AlertPanel
-          key={`${id}-${quality}-${region}`}
-          base={{ region, itemId: id, itemName: title, path: itemPath(item, enchant, quality), quality }}
-          cheapest={cheapest?.price ?? null}
-          bestSell={bestSell?.price ?? null}
-          onClose={() => setAlertOpen(false)}
-        />
-      ) : null}
-
       {failed ? (
         <p className="pc-error">
           Prices could not load. <button type="button" onClick={quotes.retry}>Try again</button>
@@ -226,6 +206,16 @@ function ItemView({ index, item, region, setRegion }: { index: ItemIndex; item: 
       ) : null}
 
       <StatCards cheapest={cheapest} bestSell={bestSell} flip={flip} premium={premium} onPremium={setPremium} now={now} loading={loading} failed={failed} />
+
+      {/* premium: always open, a player who does not want alerts just scrolls past it */}
+      {premiumVisible() ? (
+        <AlertPanel
+          key={`${id}-${quality}-${region}`}
+          base={{ region, itemId: id, itemName: title, path: itemPath(item, enchant, quality), quality }}
+          cheapest={cheapest?.price ?? null}
+          bestSell={bestSell?.price ?? null}
+        />
+      ) : null}
 
       <section className="pc-card" aria-labelledby="pc-markets-title">
         <div className="pc-card-head">

@@ -1148,3 +1148,13 @@ tr.fp-avalonian-row td {
 .fp-sheet .fp-summary-grid strong {
   font-size: 13px;
 }
+
+/* premium live prices: the gold Daily / Live / Live + fill box takes a whole row of the filters */
+.fp-live-field {
+  grid-column: 1 / -1;
+  order: -1;
+}
+.fp-live-field .lv-switch {
+  width: fit-content;
+  max-width: 100%;
+}

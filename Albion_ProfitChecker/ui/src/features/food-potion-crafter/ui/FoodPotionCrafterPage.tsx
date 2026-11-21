@@ -22,6 +22,9 @@ import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
 import { PremiumSection } from "@shared/premium/PremiumSection";
+import { premiumVisible } from "@shared/premium/premium";
+import { overlayLive, useLiveMode } from "@shared/live/liveData";
+import { LiveModeSwitch } from "@shared/live/LiveModeSwitch";
 
 const KNOWN_CITIES: City[] = ["Caerleon", "Brecilien", "Bridgewatch", "Lymhurst", "Fort Sterling", "Martlock", "Thetford"];
 const PRICE_STORAGE_KEY = "food-potion-prices-v1";
@@ -446,15 +449,30 @@ export function FoodPotionCrafterPage() {
     };
   }, [region, buyCity, sellCity]);
 
+  // premium: live prices from the 30-minute snapshot over the daily ones (Daily / Live / Live + fill).
+  // Which city a price is for, as buildConsumablePriceSnapshot does it: ingredients at the buy city,
+  // what is crafted at the sell city (that wins for something that is both).
+  const live = useLiveMode("food-potion", region);
+  const liveCityOf = useMemo(() => {
+    const cityOf = new Map<string, string>();
+    const all = recipes.flatMap((recipe) => (enchantMatQty(recipe) > 0 ? [recipe, ...([1, 2, 3] as const).map((e) => withEnchant(recipe, e))] : [recipe]));
+    for (const recipe of all) for (const ingredient of recipe.ingredients) cityOf.set(ingredient.itemId, buyCity);
+    for (const recipe of all) cityOf.set(recipe.itemId, sellCity);
+    return cityOf;
+  }, [recipes, buyCity, sellCity]);
+  const livePrices = useMemo(() => overlayLive(livePriceByItemId, liveCityOf, live.snap, live.active), [livePriceByItemId, liveCityOf, live.snap, live.active]);
+  /** The live / daily mark of a price: none for one typed in by hand. */
+  const priceSource = (itemId: string) => (parsePrice(manualPrices[itemId] ?? "") > 0 ? undefined : livePrices.sources[itemId]);
+
   const priceByItemId = useMemo(() => {
     const map = new Map<string, number>();
-    for (const [itemId, price] of Object.entries(livePriceByItemId)) if (price > 0) map.set(itemId, price);
+    for (const [itemId, price] of Object.entries(livePrices.prices)) if (price > 0) map.set(itemId, price);
     for (const [itemId, value] of Object.entries(manualPrices)) {
       const price = parsePrice(value);
       if (price > 0) map.set(itemId, price);
     }
     return map;
-  }, [livePriceByItemId, manualPrices]);
+  }, [livePrices, manualPrices]);
 
   // Scanner shows base recipes PLUS the enchant variants (.1/.2/.3) of each enchantable
   // consumable — food (fish sauce) and potions (arcane extract).
@@ -701,6 +719,11 @@ export function FoodPotionCrafterPage() {
               {KNOWN_CITIES.map((city) => (<option key={city} value={city}>{city}</option>))}
             </select>
           </div>
+          {premiumVisible() ? (
+            <div className="fp-field fp-live-field">
+              <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
+            </div>
+          ) : null}
           <div className="fp-field">
             <label>Return Profile</label>
             <select className="fp-control" value={filters.returnRatePreset} onChange={(e) => filters.setReturnRatePreset(e.target.value as typeof filters.returnRatePreset)}>
@@ -842,7 +865,7 @@ export function FoodPotionCrafterPage() {
                       <td className="num">{formatNumber(row.result.outputAmount)}</td>
                       <td className="num fp-return-cell">{formatPct(row.result.returnRate * 100)}</td>
                       <td className="num">{priced ? formatNumber(row.result.totalCost / row.result.outputAmount) : "--"}</td>
-                      <td className="num">{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
+                      <td className="num" data-src={priceSource(row.recipe.itemId)}>{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
                       <td className={`num fp-cell-profit ${priced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{priced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
                       <td className={`num fp-cell-pct ${priced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`} data-empty={priced ? undefined : ""}>{priced ? formatPct(row.result.profitPercent) : "--"}</td>
                       <td className={`num ${priced && (row.result.silverPerFocus ?? 0) >= 0 ? "profit" : priced ? "loss" : ""}`}>{priced && row.result.silverPerFocus !== null ? formatNumber(row.result.silverPerFocus) : "--"}</td>
@@ -910,7 +933,7 @@ export function FoodPotionCrafterPage() {
                       <td className="num fp-return-cell">{formatPct(row.result.returnRate * 100)}</td>
                       <td className="num">{rowPriced ? formatNumber(row.result.grossIngredientCost / row.result.outputAmount) : "--"}</td>
                       <td className="num muted">{formatNumber(row.result.stationFee / row.result.outputAmount)}</td>
-                      <td className="num">{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
+                      <td className="num" data-src={priceSource(row.recipe.itemId)}>{(() => { const p = priceByItemId.get(row.recipe.itemId) ?? 0; return p > 0 ? formatNumber(p) : "--"; })()}</td>
                       <td className={`num fp-cell-profit ${rowPriced ? (row.result.profitPerOutput >= 0 ? "profit" : "loss") : ""}`}>{rowPriced ? `${row.result.profitPerOutput >= 0 ? "+" : ""}${formatNumber(row.result.profitPerOutput)}` : "--"}</td>
                       <td className={`num fp-cell-pct ${rowPriced ? (row.result.profit >= 0 ? "profit" : "loss") : ""}`} data-empty={rowPriced ? undefined : ""}>{rowPriced ? formatPct(row.result.profitPercent) : "--"}</td>
                       <td className={`num fp-cell-spf ${rowPriced && (row.result.silverPerFocus ?? 0) >= 0 ? "profit" : rowPriced ? "loss" : ""}`} data-empty={rowPriced && row.result.silverPerFocus !== null ? undefined : ""}>{rowPriced && row.result.silverPerFocus !== null ? formatNumber(row.result.silverPerFocus) : "--"}</td>
@@ -947,12 +970,12 @@ export function FoodPotionCrafterPage() {
                   <div className="bento-card span-8">
                     <div className="bento-card-inner-head">
                       <div className="cc-caption">Output Sell Price (per item)</div>
-                      <div className="fp-output-price">
+                      <div className="fp-output-price lv-cell" data-src={priceSource(crafterSelected.recipe.itemId)}>
                         <input
                           inputMode="numeric"
                           value={manualPrices[crafterSelected.recipe.itemId] ?? ""}
                           onChange={(e) => updatePrice(crafterSelected.recipe.itemId, e.target.value)}
-                          placeholder={livePriceByItemId[crafterSelected.recipe.itemId] ? String(livePriceByItemId[crafterSelected.recipe.itemId]) : "enter sell price"}
+                          placeholder={livePrices.prices[crafterSelected.recipe.itemId] ? String(livePrices.prices[crafterSelected.recipe.itemId]) : "enter sell price"}
                         />
                       </div>
                     </div>
@@ -966,7 +989,7 @@ export function FoodPotionCrafterPage() {
                         const unit = priceByItemId.get(ingredient.itemId) ?? 0;
                         // Whole recipe amount for one craft — what you actually buy to craft it.
                         const total = unit * ingredient.qty;
-                        const livePlaceholder = livePriceByItemId[ingredient.itemId];
+                        const livePlaceholder = livePrices.prices[ingredient.itemId];
                         const meta = ingredientMeta.get(ingredient.itemId);
                         const rare = ingredient.rare || meta?.rare;
                         return (
@@ -986,7 +1009,7 @@ export function FoodPotionCrafterPage() {
                                 onChange={(e) => updatePrice(ingredient.itemId, e.target.value)}
                                 placeholder={livePlaceholder ? String(livePlaceholder) : "unit"}
                               />
-                              <span className="fp-ingredient-total">{total > 0 ? formatNumber(total) : "-"}</span>
+                              <span className="fp-ingredient-total" data-src={priceSource(ingredient.itemId)}>{total > 0 ? formatNumber(total) : "-"}</span>
                             </div>
                           </div>
                         );

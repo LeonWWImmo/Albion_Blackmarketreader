@@ -749,7 +749,6 @@ export function BmCrafterPage() {
 
         {premiumVisible() ? (
           <div className="filter-block bm-live-block">
-            <p>Prices</p>
             <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
           </div>
         ) : null}

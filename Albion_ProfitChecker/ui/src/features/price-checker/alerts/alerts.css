@@ -32,18 +32,6 @@
   color: #1a1306;
   background: linear-gradient(135deg, #ffe3a0, var(--pc-gold) 55%, #d9a441);
 }
-.pa-close {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid var(--pc-line);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--pc-text);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-}
-
 .pa-form,
 .pa-hook { display: flex; flex-direction: column; gap: 12px; }
 .pa-hook p { margin: 0; color: var(--pc-muted); font-size: 14px; line-height: 1.5; }

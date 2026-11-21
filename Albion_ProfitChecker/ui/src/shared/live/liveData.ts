@@ -164,6 +164,30 @@ export function sourceOf(record: Record<string, number> | undefined, sources: So
   return undefined;
 }
 
+/**
+ * A flat price list (item id -> price, as the refining and food calculators keep it) in a mode:
+ * each id in `cityOf` gets the snapshot's cheapest sell order in its city (the buy city for what is
+ * bought, the sell city for what is sold) over or instead of the daily price. Ids without a city
+ * stay as they are.
+ */
+export function overlayLive(
+  daily: Record<string, number>,
+  cityOf: ReadonlyMap<string, string>,
+  snap: LiveSnapshot | null,
+  mode: LiveMode,
+  now = nowMinute()
+): { prices: Record<string, number>; sources: Record<string, PriceSource> } {
+  if (!snap || mode === "daily") return { prices: daily, sources: {} };
+  const prices = { ...daily };
+  const sources: Record<string, PriceSource> = {};
+  for (const [id, city] of cityOf) {
+    const merged = pick(mode, liveSell(snap, id, city, now), Number(daily[id]) || 0);
+    prices[id] = merged.price;
+    if (merged.source) sources[id] = merged.source;
+  }
+  return { prices, sources };
+}
+
 const MODE_KEY = (tool: string) => `bmr-live-mode-${tool}`;
 
 function storedMode(tool: string): LiveMode {

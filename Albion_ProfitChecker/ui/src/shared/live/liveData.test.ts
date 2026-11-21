@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeBuyMap, mergeCities, mergeCityMap, pick, sourceOf, type LiveSnapshot } from "./liveData";
+import { mergeBuyMap, mergeCities, mergeCityMap, overlayLive, pick, sourceOf, type LiveSnapshot } from "./liveData";
 
 const NOW = 1_000_000;
 const LOCATIONS = ["Black Market", "Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
@@ -48,5 +48,13 @@ describe("live prices", () => {
     expect(sourceOf({ Martlock: 100, Lymhurst: 95 }, { Martlock: "live", Lymhurst: "daily" }, "ALL", 95)).toBe("daily");
     expect(sourceOf({ Martlock: 100 }, { Martlock: "live" }, "Martlock", 100)).toBe("live");
     expect(sourceOf({ Martlock: 100 }, undefined, "Martlock", 100)).toBeUndefined();
+  });
+
+  it("overlayLive puts live prices on a flat list by each id's city", () => {
+    const daily = { T4_PLANKS: 120, T5_PLANKS: 400, OTHER: 7 };
+    const cityOf = new Map([["T4_PLANKS", "Martlock"], ["T5_PLANKS", "Martlock"]]);
+    expect(overlayLive(daily, cityOf, snap, "fill", NOW)).toEqual({ prices: { T4_PLANKS: 100, T5_PLANKS: 400, OTHER: 7 }, sources: { T4_PLANKS: "live", T5_PLANKS: "daily" } });
+    expect(overlayLive(daily, cityOf, snap, "live", NOW).prices).toEqual({ T4_PLANKS: 100, T5_PLANKS: 0, OTHER: 7 });
+    expect(overlayLive(daily, cityOf, snap, "daily", NOW).prices).toBe(daily);
   });
 });

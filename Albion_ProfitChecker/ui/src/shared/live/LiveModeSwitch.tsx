@@ -14,6 +14,9 @@ const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-d
 export function LiveModeSwitch({ mode, setMode, status }: { mode: LiveMode; setMode: (m: LiveMode) => void; status: LiveStatus }) {
   return (
     <div className="lv-switch">
+      <span className="lv-title">
+        <span aria-hidden="true">✦</span> Live prices <b className="lv-badge">Premium</b>
+      </span>
       <div className="lv-seg" role="group" aria-label="Prices">
         {MODES.map((m) => (
           <button key={m.key} type="button" className={mode === m.key ? "is-on" : ""} aria-pressed={mode === m.key} title={m.hint} onClick={() => setMode(m.key)}>
@@ -21,7 +24,6 @@ export function LiveModeSwitch({ mode, setMode, status }: { mode: LiveMode; setM
             {m.label}
           </button>
         ))}
-        <b className="lv-badge">Pro</b>
       </div>
       <span className="lv-status">
         {status.kind === "loading" ? "Loading live prices…" : null}

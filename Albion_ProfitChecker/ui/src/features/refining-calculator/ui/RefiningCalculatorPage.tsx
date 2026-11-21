@@ -18,6 +18,9 @@ import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
 import { PremiumSection } from "@shared/premium/PremiumSection";
+import { premiumVisible } from "@shared/premium/premium";
+import { overlayLive, useLiveMode } from "@shared/live/liveData";
+import { LiveModeSwitch } from "@shared/live/LiveModeSwitch";
 
 type UserState = { id: string; email: string | null; avatar: string; region: MarketRegion | null };
 type ManualOverrides = {
@@ -342,6 +345,19 @@ export function RefiningCalculatorPage() {
   const [editorMaterial, setEditorMaterial] = useState<MaterialKey>("metal");
   const [isTopSectionExpanded, setIsTopSectionExpanded] = useState(true);
   const [livePriceByItemId, setLivePriceByItemId] = useState<Record<string, number>>(() => ({ ...DEFAULT_PRICE_BY_ITEM_ID }));
+  // premium: live prices from the 30-minute snapshot over the daily ones (Daily / Live / Live + fill).
+  // Which city a price is for, as buildRefiningLiveSnapshot does it: a refined result at the sell
+  // city, an ingredient at the buy city.
+  const live = useLiveMode("refining", region);
+  const liveCityOf = useMemo(() => {
+    const cityOf = new Map<string, string>();
+    for (const variant of REFINE_VARIANTS) {
+      cityOf.set(variant.itemId, selectedSellCity);
+      for (const ingredient of variant.ingredients) cityOf.set(ingredient.itemId, selectedBuyCity);
+    }
+    return cityOf;
+  }, [selectedBuyCity, selectedSellCity]);
+  const livePrices = useMemo(() => overlayLive(livePriceByItemId, liveCityOf, live.snap, live.active), [livePriceByItemId, liveCityOf, live.snap, live.active]);
   const [missingRawCount, setMissingRawCount] = useState(0);
   const [manualOverrides, setManualOverrides] = useState<ManualOverrides>(() => createEmptyManualOverrides());
   const [hasLiveData, setHasLiveData] = useState(false);
@@ -509,14 +525,16 @@ export function RefiningCalculatorPage() {
 
   const displayedPriceByItemId = useMemo<Record<string, string>>(() => {
     const merged: Record<string, string> = {};
-    Object.entries(livePriceByItemId).forEach(([itemId, price]) => {
+    Object.entries(livePrices.prices).forEach(([itemId, price]) => {
       merged[itemId] = price > 0 ? String(price) : "";
     });
     Object.entries(manualOverrides.pricesByItemId).forEach(([itemId, value]) => {
       if (String(value || "").trim() !== "") merged[itemId] = value;
     });
     return merged;
-  }, [livePriceByItemId, manualOverrides]);
+  }, [livePrices, manualOverrides]);
+  /** The live / daily mark of a price field: none for a price typed in by hand. */
+  const priceSource = (itemId: string) => (String(manualOverrides.pricesByItemId[itemId] || "").trim() ? undefined : livePrices.sources[itemId]);
 
   const tierInputs = useMemo<ReadonlyArray<RefineTierInput>>(
     () =>
@@ -760,7 +778,7 @@ export function RefiningCalculatorPage() {
                       }
                       const rawId = rawItemIdFor(editorMaterial, tier, enchant);
                       return (
-                        <td key={`raw-${editorMaterial}-${tier}-${enchant}`}>
+                        <td key={`raw-${editorMaterial}-${tier}-${enchant}`} className="lv-cell" data-src={priceSource(rawId)}>
                           <input className="rc-input rc-table-input" value={displayedPriceByItemId[rawId] || ""} onChange={(event) => updateManualPrice(rawId, event.target.value)} placeholder={`raw .${enchant}`} />
                         </td>
                       );
@@ -771,7 +789,7 @@ export function RefiningCalculatorPage() {
                       }
                       const refinedId = refinedItemIdFor(editorMaterial, tier, enchant);
                       return (
-                        <td key={`sell-${editorMaterial}-${tier}-${enchant}`}>
+                        <td key={`sell-${editorMaterial}-${tier}-${enchant}`} className="lv-cell" data-src={priceSource(refinedId)}>
                           <input className="rc-input rc-table-input" value={displayedPriceByItemId[refinedId] || ""} onChange={(event) => updateManualPrice(refinedId, event.target.value)} placeholder={`sell .${enchant}`} />
                         </td>
                       );
@@ -824,6 +842,11 @@ export function RefiningCalculatorPage() {
             {KNOWN_CITIES.map((city) => (<option key={city} value={city}>{city}</option>))}
           </select>
         </div>
+        {premiumVisible() ? (
+          <div className="filter-block rc-live-block">
+            <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
+          </div>
+        ) : null}
         <div className="filter-block">
           <p>Return Profile</p>
           <select className="rc-input" value={returnRatePreset} onChange={(event) => setReturnRatePreset(event.target.value as ReturnRatePreset)}>
