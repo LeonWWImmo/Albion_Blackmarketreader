@@ -4,6 +4,8 @@
 //   userFromToken  Supabase access token -> { id } or null
 //   now            () => Date
 //   cronSecret     CRON_SECRET, which Vercel Cron sends for the daily sync
+//   actionsSecret  ACTIONS_CRON_SECRET, which the GitHub Actions jobs send (the ZvZ report, every 30 min)
+//   premium        optional async userId => boolean: has premium (api/_lib/billing.js hasPremium), for Guild Pro
 //   limiter        optional api/_lib/rateLimit.js limiter, keyed by request.client
 //   values         optional (region, itemIds) => { table, complete } (api/_lib/itemValue.js), for the killboard
 //   discord        optional { check(url), post(url, payload) } (api/_lib/guildDiscord.js), for the Discord report
@@ -17,10 +19,12 @@
 //   GET  hook?region=eu                  the name of the signed-in player's Discord webhook on that server
 //   POST hook-save {region, url}         set it (checked with Discord, then a first message is posted)
 //   POST hook-remove {region}            remove it
+//   POST hook-zvz {region, on}           Guild Pro (premium): the ZvZ report after every big fight on or off
 //   GET  mine                            the guilds the signed-in player has marked (one per server)
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
 //   POST unmark {region}                 remove the mark on that server
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
+//   GET  zvz                             GitHub Actions, every 30 min: post the new big fights to the ZvZ webhooks
 //   GET  regear-paid?region=eu&battle=1  the deaths of a fight the signed-in player ticked as paid
 //   POST regear-pay {region, battle, event, paid}
 //   GET  regear-fights?region=eu&guild=.. the fights of a guild they marked to regear
@@ -31,7 +35,7 @@
 //   POST split-save {guild, id?, name, data}, split-remove {id}
 // The last ones are private per player (api/_lib/guildPrivate.js) and never reach the killboard.
 import { GameinfoError, PAGES_BUDGET_MS, TOP_RANGES, isBattleId, isGuildId, isRegion } from "./gameinfo.js";
-import { dailyReport, helloMessage, isWebhookUrl } from "./guildDiscord.js";
+import { dailyReport, helloMessage, isWebhookUrl, zvzHello, zvzReport } from "./guildDiscord.js";
 import { handlePrivate } from "./guildPrivate.js";
 import { unitValue } from "./itemValue.js";
 import { PERIODS, addDays, buildActivity, dayOf, planSync, playersFromMembers, slugify, snapshotOf } from "./guildActivity.js";
@@ -76,6 +80,18 @@ const ATTENDANCE_PAGES = 16;
 const ATTENDANCE_AT_ONCE = 4;
 const FIGHTS_PAGE = 50;
 const FIGHTS_CACHE_S = 600;
+/** A ZvZ: a fight with this many players, this many of them of the guild. */
+const ZVZ_MIN_PLAYERS = 20;
+const ZVZ_MIN_OURS = 5;
+/** No kill for this long: the fight is over and its report final. */
+const ZVZ_QUIET_MS = 10 * 60_000;
+/** A fight whose kills did not all load is posted anyway once it ended this long ago. */
+const ZVZ_GIVE_UP_MS = 60 * 60_000;
+/** Never older fights than this: after a pause (premium ended, the job down) no flood of old ones. */
+const ZVZ_LOOKBACK_MS = 6 * 3600_000;
+const ZVZ_PER_HOOK = 3;
+/** No new report is started after this long: one more (fight + Discord, ~25 s at worst) ends inside 60 s. */
+const ZVZ_BUDGET_MS = 30_000;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
 const SLUG = /^[a-z0-9-]{1,90}$/;
@@ -631,6 +647,98 @@ async function postReports(deps, guild, started) {
   return sent;
 }
 
+/** What the browser gets of a webhook: never its link. */
+const hookView = (hook) => ({ name: hook.name ?? "Discord webhook", lastSentOn: hook.last_sent_on ?? null, zvz: Boolean(hook.zvz) });
+
+/**
+ * Guild Pro: posts the new big fights of each ZvZ webhook's guild, oldest first. A fight still going
+ * on (a kill in the last minutes) waits for the next run; `zvz_after` moves past each one posted.
+ */
+async function zvzDue(deps) {
+  const { store, discord, premium } = deps;
+  const started = Date.now();
+  const now = deps.now();
+  const result = { hooks: 0, posted: 0, notPremium: 0 };
+  if (!discord || !premium) return ok(result);
+  // per run: one fight list per guild and one report per fight, however many players get it
+  const run = { now, started, lists: new Map(), reports: new Map() };
+  for (const hook of await store.zvzWebhooks()) {
+    if (Date.now() - started > ZVZ_BUDGET_MS) break;
+    // premium ended: nothing is posted, the setting stays for when it comes back
+    if (!(await premium(hook.user_id))) {
+      result.notPremium++;
+      continue;
+    }
+    const row = await store.getMark(hook.user_id, hook.region);
+    if (!row) continue;
+    const guild = { ...guildRef(row), allianceTag: row.alliance_tag ?? null };
+    result.hooks++;
+    try {
+      result.posted += await postZvz(deps, hook, guild, run);
+    } catch (error) {
+      console.error("zvz report failed", guild.id, error);
+    }
+  }
+  return ok(result);
+}
+
+function cached(map, key, load) {
+  if (!map.has(key)) map.set(key, load());
+  return map.get(key);
+}
+
+async function postZvz(deps, hook, guild, run) {
+  const { store, discord } = deps;
+  const after = Math.max(Date.parse(hook.zvz_after ?? "") || 0, run.now.getTime() - ZVZ_LOOKBACK_MS);
+  const list = await cached(run.lists, `${guild.region}:${guild.id}`, () => deps.gameinfo.getBattles(guild.region, guild.id, 0));
+  const fights = list
+    .filter((b) => Date.parse(b.startTime) > after && b.players >= ZVZ_MIN_PLAYERS && b.ours.length >= ZVZ_MIN_OURS)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .slice(0, ZVZ_PER_HOOK);
+  let sent = 0;
+  for (const fight of fights) {
+    if (Date.now() - run.started > ZVZ_BUDGET_MS) break;
+    const answer = await cached(run.reports, `${guild.region}:${fight.id}`, () => getBattleReport(deps, { region: guild.region, id: String(fight.id) }));
+    // the killboard is not answering: this fight and the later ones wait for the next run
+    if (answer.status !== 200) break;
+    const ago = run.now.getTime() - Date.parse(answer.body.battle.endTime);
+    if (ago < ZVZ_QUIET_MS || (!answer.body.complete && ago < ZVZ_GIVE_UP_MS)) break;
+    const outcome = await discord.post(hook.url, zvzReport(guild, answer.body));
+    if (outcome === "gone") {
+      await store.removeWebhook(hook.user_id, hook.region);
+      break;
+    }
+    if (outcome !== "ok") break;
+    await store.setZvzAfter(hook.user_id, hook.region, fight.startTime);
+    sent++;
+  }
+  return sent;
+}
+
+/** Turns the ZvZ report on (premium only; greets the channel) or off. */
+async function setZvz(deps, user, body) {
+  const { store, discord } = deps;
+  const region = String(body?.region ?? "");
+  const on = body?.on === true;
+  const hook = await store.getWebhook(user.id, region);
+  if (!hook) return fail(409, "Connect a Discord webhook first.");
+  if (on && !(deps.premium && (await deps.premium(user.id)))) return fail(403, "The ZvZ report is part of Premium.");
+  if (on && !hook.zvz) {
+    const guild = await store.getMark(user.id, region);
+    if (!guild) return fail(409, "Mark your guild first: the report is about the guild you marked.");
+    const hello = await discord.post(hook.url, zvzHello(guild));
+    if (hello === "gone") {
+      await store.removeWebhook(user.id, region);
+      return fail(410, "Discord deleted this webhook. Connect it again.");
+    }
+    if (hello !== "ok") return fail(502, "Discord did not take the message. Try again in a minute.");
+  }
+  // from now on: the fights before turning it on are not posted
+  const after = on ? (hook.zvz ? hook.zvz_after : deps.now().toISOString()) : null;
+  await store.setZvz(user.id, region, on, after);
+  return ok({ hook: hookView({ ...hook, zvz: on }) });
+}
+
 /** Sets the player's Discord webhook: checked with Discord, then greeted. Only its name goes back. */
 async function saveHook(deps, user, body) {
   const { store, discord } = deps;
@@ -645,7 +753,7 @@ async function saveHook(deps, user, body) {
   const hello = await discord.post(url, helloMessage(guild));
   if (hello !== "ok") return fail(502, "Discord did not take the first message. Try again in a minute.");
   await store.saveWebhook(user.id, region, url, name);
-  return ok({ hook: { name, lastSentOn: null } });
+  return ok({ hook: hookView((await store.getWebhook(user.id, region)) ?? { name }) });
 }
 
 /**
@@ -665,8 +773,8 @@ async function getStatus({ gameinfo, store, now }) {
   return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "status", "regear-paid", "regear-fights", "bank", "splits"]);
-const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "regear-pay", "regear-mark", "bank-save", "split-save", "split-remove"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "zvz", "status", "regear-paid", "regear-fights", "bank", "splits"]);
+const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "hook-zvz", "regear-pay", "regear-mark", "bank-save", "split-save", "split-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 /** The player's own data: only the database, never the killboard. */
 const PRIVATE_ACTIONS = new Set(["regear-paid", "regear-pay", "regear-fights", "regear-mark", "bank", "bank-save", "splits", "split-save", "split-remove"]);
@@ -687,12 +795,17 @@ export async function handleGuild(action, request, deps) {
   const region = String(query.region ?? "").toLowerCase();
   // every action that can reach Albion's killboard is limited per visitor (ticking paid in a big
   // regear is many quick clicks, and reaches the database only)
-  if (action !== "sync" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
+  if (action !== "sync" && action !== "zvz" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
   try {
     if (action === "sync") {
       if (!deps.cronSecret || authorization !== `Bearer ${deps.cronSecret}`) return fail(401, "Unauthorized");
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await syncDue(deps);
+    }
+    if (action === "zvz") {
+      if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");
+      if (!deps.store) return fail(503, "Guild tracking is not set up.");
+      return await zvzDue(deps);
     }
     if (action === "status") return await getStatus(deps);
     if (PUBLIC_ACTIONS.has(action)) {
@@ -726,7 +839,8 @@ export async function handleGuild(action, request, deps) {
     if (!deps.store) return fail(503, "Guild tracking is not set up yet.");
     // writes per player: a script cannot fill the database, nor use the webhook check to post to channels
     if (POST_ACTIONS.has(action) && deps.writeLimiter && !deps.writeLimiter.take(user.id)) return fail(429, "Too many changes at once. Wait a minute and try again.");
-    if (action === "hook-save" && deps.hookLimiter && !deps.hookLimiter.take(user.id)) return fail(429, "Too many webhooks tried. Wait a few minutes and try again.");
+    // both post to the channel (the first message, the ZvZ greeting): not a way to spam it
+    if ((action === "hook-save" || action === "hook-zvz") && deps.hookLimiter && !deps.hookLimiter.take(user.id)) return fail(429, "Too many webhooks tried. Wait a few minutes and try again.");
     if (PRIVATE_ACTIONS.has(action)) return await handlePrivate(action, { query, body }, deps, user);
     if (action === "mark") return await mark(deps, user, body);
     // unmark and the webhook are per server: one marked guild on each
@@ -735,10 +849,11 @@ export async function handleGuild(action, request, deps) {
     if (action === "unmark") return ok({ unmarked: Boolean(await deps.store.removeMark(user.id, server)) });
     if (action === "hook") {
       const hook = await deps.store.getWebhook(user.id, server);
-      return ok({ hook: hook ? { name: hook.name ?? "Discord webhook", lastSentOn: hook.last_sent_on } : null });
+      return ok({ hook: hook ? hookView(hook) : null });
     }
     if (!deps.discord) return fail(503, "The Discord report is not set up yet.");
     if (action === "hook-save") return await saveHook(deps, user, body);
+    if (action === "hook-zvz") return await setZvz(deps, user, body);
     return ok({ removed: await deps.store.removeWebhook(user.id, server) });
   } catch (error) {
     if (error instanceof GameinfoError) {

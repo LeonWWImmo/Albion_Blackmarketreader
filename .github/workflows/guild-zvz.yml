@@ -1,0 +1,30 @@
+name: Guild ZvZ Reports
+
+# Guild Pro (premium): every 30 minutes, the site posts the report of each new big fight of a marked
+# guild to the Discord webhooks of its premium players who turned the ZvZ report on
+# (/api/guild/zvz, see Albion_ProfitChecker/ui/api/_lib/guildApi.js). Vercel Hobby allows one cron a
+# day, so GitHub starts it. ACTIONS_CRON_SECRET is the same value as the Vercel env of that name.
+# The job itself only calls the site; a run with nothing new does nothing.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: guild-zvz
+  cancel-in-progress: false
+
+jobs:
+  zvz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Post new ZvZ reports
+        env:
+          SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
+        run: |
+          curl -fsS --max-time 90 -H "Authorization: Bearer $SECRET" https://blackmarketreader.com/api/guild/zvz
+          echo

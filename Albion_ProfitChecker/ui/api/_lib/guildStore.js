@@ -120,6 +120,17 @@ export function createGuildStore(db) {
     async setWebhookSent(userId, region, day) {
       must(await db.from("guild_webhooks").update({ last_sent_on: day }).eq("user_id", userId).eq("region", region));
     },
+    /** Every webhook with the ZvZ report on (premium, Guild Pro). */
+    async zvzWebhooks() {
+      return must(await db.from("guild_webhooks").select("*").eq("zvz", true));
+    },
+    /** Turns the ZvZ report on or off; `after`: only fights that start later are reported. */
+    async setZvz(userId, region, on, after) {
+      must(await db.from("guild_webhooks").update({ zvz: on, zvz_after: after }).eq("user_id", userId).eq("region", region));
+    },
+    async setZvzAfter(userId, region, after) {
+      must(await db.from("guild_webhooks").update({ zvz_after: after }).eq("user_id", userId).eq("region", region));
+    },
     /** The deaths of one fight this player ticked as paid (kill event ids). */
     async getRegearPaid(userId, region, battleId) {
       return must(await db.from("guild_regear_paid").select("event_id").eq("user_id", userId).eq("region", region).eq("battle_id", battleId)).map((r) => Number(r.event_id));

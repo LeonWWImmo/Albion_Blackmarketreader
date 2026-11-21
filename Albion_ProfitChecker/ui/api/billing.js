@@ -10,7 +10,7 @@
 // - PREMIUM_LAUNCHED=1: premium open to everyone; until then only to PREMIUM_TESTERS
 // - PREMIUM_TESTERS: comma-separated user ids that can buy and use premium before the launch
 import { sendResult } from "./_lib/aodp.js";
-import { handleBilling } from "./_lib/billing.js";
+import { handleBilling, premiumEnv } from "./_lib/billing.js";
 import { createBillingStore } from "./_lib/billingStore.js";
 import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { createStripe } from "./_lib/stripeApi.js";
@@ -62,8 +62,7 @@ export default async function handler(req, res) {
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
         allowTestMode: process.env.STRIPE_TEST_MODE === "1",
         managedPayments: process.env.STRIPE_MANAGED_PAYMENTS === "1",
-        launched: process.env.PREMIUM_LAUNCHED === "1",
-        testers: (process.env.PREMIUM_TESTERS ?? "").split(",").map((id) => id.trim()).filter(Boolean),
+        ...premiumEnv(process.env),
         siteUrl: (process.env.SITE_URL || "https://blackmarketreader.com").replace(/\/+$/, "")
       }
     }

@@ -202,7 +202,7 @@ describe("Discord report webhook", () => {
     expect(deps.discord.post.mock.calls.find(([url]) => url === HOOK)[1].embeds[0].description).toContain("**Angry fuzzies**");
     expect(store.webhooks.get("user-ann:eu")).toMatchObject({ url: HOOK, name: "Guild news" });
     const read = await call("hook", { token: "tok-ann", query: { region: "eu" } });
-    expect(read.body).toEqual({ hook: { name: "Guild news", lastSentOn: null } });
+    expect(read.body).toEqual({ hook: { name: "Guild news", lastSentOn: null, zvz: false } });
     expect((await call("hook", { token: "tok-ann", query: { region: "us" } })).body).toEqual({ hook: null });
     expect(await call("hook-remove", { method: "POST", token: "tok-ann", body: { region: "eu" } })).toMatchObject({ status: 200, body: { removed: true } });
     expect((await call("hook", { token: "tok-ann", query: { region: "eu" } })).body).toEqual({ hook: null });

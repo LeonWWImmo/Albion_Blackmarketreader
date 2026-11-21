@@ -42,6 +42,8 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 
 Crons (`ui/vercel.json`, production only, Hobby = once a day each): Discord daily, health check,
 guild sync + Discord reports (03:30 UTC).
+GitHub Actions `guild-zvz.yml` (every 30 min, from `main`): `/api/guild/zvz` posts the ZvZ reports
+of Guild Pro (premium), authorized with `ACTIONS_CRON_SECRET` (same value in Vercel and GitHub).
 
 ## Commands (in `Albion_ProfitChecker/ui`)
 

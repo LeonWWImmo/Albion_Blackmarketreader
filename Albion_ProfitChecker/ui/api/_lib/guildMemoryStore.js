@@ -5,7 +5,7 @@ export function createMemoryGuildStore() {
   const marks = new Map(); // "user:region" -> guild id
   const players = new Map();
   const snapshots = new Map();
-  const webhooks = new Map(); // "user:region" -> { user_id, region, url, name, last_sent_on }
+  const webhooks = new Map(); // "user:region" -> { user_id, region, url, name, last_sent_on, zvz, zvz_after }
   const regearPaid = new Map(); // "user:region:event" -> row
   const regearFights = new Map(); // "user:region:battle" -> row
   const bankLogs = new Map(); // "user:guild" -> rows
@@ -55,13 +55,24 @@ export function createMemoryGuildStore() {
     },
     getWebhook: async (userId, region) => webhooks.get(`${userId}:${region}`) ?? null,
     saveWebhook: async (userId, region, url, name) => {
-      webhooks.set(`${userId}:${region}`, { user_id: userId, region, url, name, last_sent_on: null });
+      // like the database's upsert: a new link keeps the ZvZ setting
+      const old = webhooks.get(`${userId}:${region}`);
+      webhooks.set(`${userId}:${region}`, { zvz: false, zvz_after: null, ...old, user_id: userId, region, url, name, last_sent_on: null });
     },
     removeWebhook: async (userId, region) => webhooks.delete(`${userId}:${region}`),
     webhooksOfGuild: async (guildId, region) => [...webhooks.values()].filter((w) => w.region === region && marks.get(`${w.user_id}:${region}`) === guildId),
     setWebhookSent: async (userId, region, day) => {
       const key = `${userId}:${region}`;
       if (webhooks.has(key)) webhooks.set(key, { ...webhooks.get(key), last_sent_on: day });
+    },
+    zvzWebhooks: async () => [...webhooks.values()].filter((w) => w.zvz),
+    setZvz: async (userId, region, on, after) => {
+      const key = `${userId}:${region}`;
+      if (webhooks.has(key)) webhooks.set(key, { ...webhooks.get(key), zvz: on, zvz_after: after });
+    },
+    setZvzAfter: async (userId, region, after) => {
+      const key = `${userId}:${region}`;
+      if (webhooks.has(key)) webhooks.set(key, { ...webhooks.get(key), zvz_after: after });
     },
     regearPaid,
     bankLogs,

@@ -148,7 +148,7 @@ export type AttendanceFight = {
   ours: { id: string; name: string; kills: number; deaths: number; killFame: number }[];
 };
 /** The signed-in player's Discord webhook: only its name, never its link. */
-export type DiscordHook = { name: string; lastSentOn: string | null };
+export type DiscordHook = { name: string; lastSentOn: string | null; /** Guild Pro: a report after every big fight */ zvz: boolean };
 
 /** An answer the API gave with an error text, shown to the visitor as it is. */
 export class GuildApiError extends Error {
@@ -201,6 +201,10 @@ export const fetchHook = (token: string, region: Region) => call<{ hook: Discord
 
 export const saveHook = (token: string, region: Region, url: string) =>
   call<{ hook: DiscordHook }>("hook-save", { token, method: "POST", body: { region, url } }).then((r) => r.hook);
+
+/** Guild Pro (premium): the ZvZ report on or off. */
+export const setZvz = (token: string, region: Region, on: boolean) =>
+  call<{ hook: DiscordHook }>("hook-zvz", { token, method: "POST", body: { region, on } }).then((r) => r.hook);
 
 export const removeHook = (token: string, region: Region) => call<{ removed: boolean }>("hook-remove", { token, method: "POST", body: { region } });
 

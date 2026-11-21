@@ -1912,6 +1912,130 @@ h2.gd-guild-name {
   width: 100%;
 }
 
+/* Guild Pro: the ZvZ report switch under the connected webhook */
+.gd-zvz {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 196, 81, 0.22);
+  background: linear-gradient(135deg, rgba(245, 196, 81, 0.08), rgba(245, 196, 81, 0.02) 60%);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gd-zvz.is-on {
+  border-color: rgba(245, 196, 81, 0.5);
+  box-shadow: 0 0 24px -12px rgba(245, 196, 81, 0.6);
+}
+
+.gd-zvz-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gd-zvz-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(245, 196, 81, 0.12);
+  font-size: 18px;
+}
+
+.gd-zvz-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.gd-discord-body .gd-zvz-text p {
+  font-size: 13px;
+}
+
+.gd-discord-body .gd-zvz-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.gd-zvz-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(245, 196, 81, 0.16);
+  color: var(--gd-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gd-zvz-switch {
+  flex: none;
+  position: relative;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--gd-line);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.gd-zvz-switch span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.gd-zvz-switch[aria-checked="true"] {
+  background: var(--gd-gold);
+  border-color: var(--gd-gold);
+}
+
+.gd-zvz-switch[aria-checked="true"] span {
+  transform: translateX(20px);
+  background: #17120a;
+}
+
+.gd-zvz-switch:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.gd-zvz-switch:focus-visible {
+  outline: 2px solid var(--gd-gold);
+  outline-offset: 2px;
+}
+
+.gd-discord-body .gd-zvz-get {
+  flex: none;
+  justify-self: auto;
+  border-color: rgba(245, 196, 81, 0.4);
+  color: var(--gd-gold);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gd-zvz-switch,
+  .gd-zvz-switch span {
+    transition: none;
+  }
+}
+
 .gd-discord-list {
   margin: 0;
   padding: 0 18px 12px 38px;

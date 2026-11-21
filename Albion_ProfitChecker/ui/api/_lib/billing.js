@@ -47,6 +47,17 @@ export function premiumOpenFor(env, userId) {
   return Boolean(env.launched) || (Array.isArray(env.testers) && env.testers.includes(userId));
 }
 
+/** The launch switches from the environment: PREMIUM_LAUNCHED=1, PREMIUM_TESTERS (comma-separated user ids). */
+export function premiumEnv(env) {
+  return {
+    launched: env.PREMIUM_LAUNCHED === "1",
+    testers: String(env.PREMIUM_TESTERS ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean)
+  };
+}
+
 /** The one check for premium features: a paid subscription, and premium open for this player. */
 export function hasPremium(row, userId, env, now) {
   return premiumOpenFor(env, userId) && isPremium(row, now);

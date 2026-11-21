@@ -142,6 +142,119 @@ export function helloMessage(guild) {
   };
 }
 
+const ZVZ_TOP = 3;
+const ZVZ_ENEMIES = 3;
+const RESULT = {
+  won: { word: "Won", icon: "🟢", color: 0x4ade80 },
+  lost: { word: "Lost", icon: "🔴", color: 0xf87171 },
+  even: { word: "Even", icon: "🟡", color: 0xf5c451 }
+};
+
+/** The three best of the guild's players by one number, with medals. */
+function podium(players, value, show) {
+  const best = players
+    .filter((p) => value(p) > 0)
+    .sort((a, b) => value(b) - value(a))
+    .slice(0, ZVZ_TOP);
+  return best.length ? best.map((p, i) => `${MEDALS[i]} **${p.name}** · ${show(value(p))}`).join("\n") : "–";
+}
+
+/** The biggest enemy groups of a fight: alliances, or guilds without one, by players. */
+function enemiesOf(players, isFriend) {
+  const groups = new Map();
+  for (const p of players) {
+    if (isFriend(p)) continue;
+    const key = p.allianceId ?? p.guildId ?? "none";
+    const name = p.allianceName ? `[${p.allianceName}]` : (p.guildName ?? "No guild");
+    const g = groups.get(key) ?? { name, n: 0 };
+    g.n++;
+    groups.set(key, g);
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.n - a.n)
+    .slice(0, ZVZ_ENEMIES)
+    .map((g) => `${g.name} ${g.n}`)
+    .join(" · ");
+}
+
+/**
+ * Guild Pro: the report of one big fight of the marked guild, from its battle report answer
+ * (api/_lib/guildApi.js getBattleReport): the result, kills and deaths, what the deaths cost in gear,
+ * the top damage, kill fame and support of the guild, and links to the fight and its regear.
+ */
+export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
+  const ours = players.filter((p) => p.guildId === guild.id);
+  const row = guilds.find((g) => g.id === guild.id);
+  const k = row?.kills ?? ours.reduce((t, p) => t + p.kills, 0);
+  const d = row?.deaths ?? ours.reduce((t, p) => t + p.deaths, 0);
+  const fame = row?.killFame ?? ours.reduce((t, p) => t + p.killFame, 0);
+  const result = RESULT[k > d ? "won" : k < d ? "lost" : "even"];
+  // the side the guild fought on: its alliance when it has one
+  const alliance = ours.find((p) => p.allianceId)?.allianceId ?? null;
+  const enemies = enemiesOf(players, (p) => p.guildId === guild.id || (alliance !== null && p.allianceId === alliance));
+  const regear = priced ? kills.filter((e) => e.victim.guildId === guild.id).reduce((t, e) => t + e.victim.gearValue, 0) : null;
+  const start = Math.round(Date.parse(battle.startTime) / 1000);
+  const minutes = Math.max(1, Math.round((Date.parse(battle.endTime) - Date.parse(battle.startTime)) / 60_000));
+  const battleUrl = `${SITE}/guild/battle/${guild.region}/${battle.id}`;
+  return {
+    username: "Blackmarket Reader",
+    avatar_url: ICON,
+    allowed_mentions: { parse: [] },
+    embeds: [
+      {
+        author,
+        title: `⚔️ ${result.word} · ${guild.allianceTag ? `[${guild.allianceTag}] ` : ""}${guild.name}`,
+        url: battleUrl,
+        description: [
+          `🕒 <t:${start}:f> · ${minutes} min · ${REGION[guild.region] ?? guild.region.toUpperCase()}`,
+          `👥 **${ours.length}** of ours · ${battle.players} players in the fight`,
+          ...(enemies ? [`🆚 ${enemies}`] : [])
+        ].join("\n"),
+        color: result.color,
+        fields: [
+          { name: "🗡️ Kills", value: `**${k}**`, inline: true },
+          { name: "💀 Deaths", value: `**${d}**`, inline: true },
+          { name: "⚖️ K/D", value: `**${d ? (k / d).toFixed(2) : k ? "∞" : "–"}**`, inline: true },
+          { name: "⭐ Kill fame", value: `**${shortNumber(fame)}**`, inline: true },
+          { name: "💰 Regear", value: regear === null ? `[open](${guildUrl(guild, "regear")})` : `**${shortNumber(regear)}** silver`, inline: true },
+          { name: `${result.icon} Result`, value: `**${result.word}**`, inline: true },
+          { name: "🔥 Top damage", value: podium(ours, (p) => p.damage, shortNumber), inline: true },
+          { name: "🏆 Top kill fame", value: podium(ours, (p) => p.killFame, shortNumber), inline: true },
+          { name: "💚 Top support", value: podium(ours, (p) => p.healAssists, (n) => `${n} healed`), inline: true },
+          { name: "🔗 Open", value: `[Battle report](${battleUrl}) · [Regear](${guildUrl(guild, "regear")}) · [Attendance](${guildUrl(guild, "attendance")})` }
+        ],
+        footer: { text: "ZvZ report · Guild Pro · blackmarketreader.com", icon_url: ICON },
+        timestamp: battle.endTime
+      }
+    ]
+  };
+}
+
+/** The message when the ZvZ report is turned on: what comes, and when. */
+export function zvzHello(guild) {
+  return {
+    username: "Blackmarket Reader",
+    avatar_url: ICON,
+    allowed_mentions: { parse: [] },
+    embeds: [
+      {
+        author,
+        title: "⚔️ ZvZ reports on",
+        url: guildUrl(guild, "discord"),
+        description: `After every big fight of **${guild.name}**, its report comes to this channel.`,
+        color: ACCENT,
+        fields: [
+          { name: "🕓 When", value: "About 15 to 45 minutes after the fight ends", inline: true },
+          { name: "🔕 Pings", value: "None", inline: true },
+          { name: "⚔️ Big fight", value: "20+ players, 5+ of the guild", inline: true },
+          { name: "📋 In the report", value: "Won or lost · kills, deaths, K/D, kill fame · regear cost · top damage, kill fame and support · the enemy" }
+        ],
+        footer: { text: "Guild Pro · change it in the Discord tab of the guild page", icon_url: ICON }
+      }
+    ]
+  };
+}
+
 /** The webhook's name when Discord knows it, else null (deleted, or not a webhook). */
 export async function checkWebhook(url) {
   if (!isWebhookUrl(url)) return null;

@@ -1,6 +1,8 @@
 // /api/guild/<action> (vercel.json rewrites it to /api/guild?action=<action>): the Guild section's
 // server, see api/_lib/guildApi.js. One function for every guild tool, the Hobby plan allows 12.
 import { sendResult } from "./_lib/aodp.js";
+import { hasPremium, premiumEnv } from "./_lib/billing.js";
+import { createBillingStore } from "./_lib/billingStore.js";
 import * as gameinfo from "./_lib/gameinfo.js";
 import { handleGuild } from "./_lib/guildApi.js";
 import { checkWebhook, postWebhook } from "./_lib/guildDiscord.js";
@@ -23,6 +25,14 @@ function readBody(raw) {
   }
 }
 
+let billing = null;
+
+/** Guild Pro: whether this player has premium (a paid subscription, and premium open for them). */
+async function premium(db, userId) {
+  billing ??= createBillingStore(db);
+  return hasPremium(await billing.getByUser(userId), userId, premiumEnv(process.env), new Date());
+}
+
 export default async function handler(req, res) {
   const live = liveGuildStore();
   const { action, ...query } = req.query ?? {};
@@ -43,6 +53,8 @@ export default async function handler(req, res) {
       userFromToken: (token) => (live ? userFromToken(live.db, token) : null),
       now: () => new Date(),
       cronSecret: process.env.CRON_SECRET,
+      actionsSecret: process.env.ACTIONS_CRON_SECRET,
+      premium: live ? (userId) => premium(live.db, userId) : null,
       limiter,
       writeLimiter,
       hookLimiter,

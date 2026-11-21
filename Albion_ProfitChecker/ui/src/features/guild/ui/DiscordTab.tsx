@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { GuildApiError, fetchHook, guildPath, removeHook, saveHook, type DiscordHook, type GuildPageData } from "../api";
+import { GuildApiError, fetchHook, guildPath, removeHook, saveHook, setZvz, type DiscordHook, type GuildPageData } from "../api";
+import { premiumVisible } from "@shared/premium/premium";
+import { usePremium } from "@shared/premium/usePremium";
 import type { Region } from "@shared/types";
 import type { MyGuild } from "../useMyGuild";
 import { Loading } from "./Loading";
@@ -133,6 +135,7 @@ function HookForm({ token, region, guildName }: { token: string; region: Region;
               {busy ? "…" : "Turn off"}
             </button>
           </div>
+          {premiumVisible() ? <ZvzSwitch token={token} region={region} hook={hook} onChange={setHook} /> : null}
         </>
       ) : (
         <>
@@ -160,6 +163,64 @@ function HookForm({ token, region, guildName }: { token: string; region: Region;
           </div>
         </>
       )}
+      {error ? (
+        <p className="gd-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Guild Pro: the ZvZ report after every big fight, on the same webhook. Premium players switch it, others see what it is. */
+function ZvzSwitch({ token, region, hook, onChange }: { token: string; region: Region; hook: DiscordHook; onChange: (hook: DiscordHook) => void }) {
+  const premium = usePremium(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const has = typeof premium.state === "object" && premium.state !== null && premium.state.premium;
+
+  const toggle = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      onChange(await setZvz(token, region, !hook.zvz));
+    } catch (err) {
+      setError(err instanceof GuildApiError ? err.message : "Something went wrong. Try again in a minute.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={`gd-zvz${hook.zvz && has ? " is-on" : ""}`}>
+      <div className="gd-zvz-head">
+        <span className="gd-zvz-icon" aria-hidden="true">
+          ⚔️
+        </span>
+        <div className="gd-zvz-text">
+          <p className="gd-zvz-title">
+            ZvZ report after every fight <span className="gd-zvz-badge">Guild Pro</span>
+          </p>
+          <p className="gd-muted">Won or lost, K/D, regear cost and your best players, 15 to 45 minutes after each big fight (20+ players, 5+ of yours).</p>
+        </div>
+        {premium.state === null ? null : has ? (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={hook.zvz}
+            aria-label="ZvZ report after every fight"
+            className="gd-zvz-switch"
+            disabled={busy}
+            onClick={() => void toggle()}
+          >
+            <span />
+          </button>
+        ) : (
+          <a className="gd-btn gd-zvz-get" href="/premium">
+            Get Premium
+          </a>
+        )}
+      </div>
       {error ? (
         <p className="gd-error" role="alert">
           {error}
