@@ -1,41 +1,44 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useSeo } from "../shared/seo/useSeo";
 import { checkoutUrl, PREMIUM_OPEN, portalUrl, premiumVisible } from "../shared/premium/premium";
 import { premiumDay, usePremium, type PremiumState } from "../shared/premium/usePremium";
+import { AlertMock, AttendanceMock, DiscordZvzMock, ResellMock, TrendMock } from "./PremiumVisuals";
 import "./premium-page.css";
 
-/** "soon": shown with a Coming soon badge until the feature is built. */
-type Feature = { title: string; text: string; points: string[]; icon: string; soon: boolean };
+/** One tile of the feature grid. `live`: in Premium today; otherwise shown as coming soon. */
+type Feature = { title: string; text: string; points: string[]; visual: ReactNode; live: boolean; wide?: boolean };
 
 const FEATURES: Feature[] = [
   {
     title: "Guild Pro",
     text: "Run your guild from one place instead of spreadsheets and screenshots.",
-    points: ["Mark several guilds per server", "Attendance over 90 days instead of 7", "A Discord report after every ZvZ", "Regear and bank shared with your officers"],
-    icon: "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm0 2.2 6 2.25V11c0 3.9-2.5 7.6-6 8.9-3.5-1.3-6-5-6-8.9V6.45l6-2.25Z",
-    soon: true
+    points: ["Mark several guilds per server", "Attendance over 90 days instead of 7", "Regear and bank shared with your officers"],
+    visual: <AttendanceMock />,
+    live: false,
+    wide: true
   },
   {
     title: "Price alerts",
-    text: "Get a Discord message when the market moves, instead of checking it all day.",
-    points: ["Your own rules: item, city and price", "Black Market crafts above your margin", "Checked after every market update"],
-    icon: "M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z",
-    soon: true
+    text: "Get a Discord message the moment the market moves, instead of checking it all day.",
+    points: ["Your own rules: item, city, price", "Black Market crafts above your margin"],
+    visual: <AlertMock />,
+    live: false
   },
   {
     title: "Black Market resell",
-    text: "See what the Black Market buys right now and what is worth taking there.",
-    points: ["Black Market price and daily sales in one view", "Best flips from the cities", "A watchlist for your items"],
-    icon: "M14 3 4 9l6 3.5 8-4.7V14h2V6L14 3Zm-4 11-6-3.5V15l6 3.5V14Zm2 4.5L18 15v-2.5L12 16v2.5Z",
-    soon: true
+    text: "What the Black Market buys right now, and what is worth carrying there.",
+    points: ["Black Market price and daily sales in one view", "The best flips from every city"],
+    visual: <ResellMock />,
+    live: false
   },
   {
     title: "Price trends",
-    text: "Charts that show if a price is climbing or falling before you buy or sell.",
-    points: ["Trend charts for your watchlist", "Spot drops and spikes early", "The best days to buy and sell"],
-    icon: "M3 17.25 9.5 10.75l4 4L21 7.25V12h2V4h-8v2h4.59L13.5 12.09l-4-4L1.59 16 3 17.25ZM3 20h18v2H3v-2Z",
-    soon: true
+    text: "See if a price is climbing or falling before you buy or sell.",
+    points: ["Trend charts for your watchlist", "Spot drops and spikes early"],
+    visual: <TrendMock />,
+    live: false,
+    wide: true
   }
 ];
 
@@ -43,10 +46,10 @@ const FEATURES: Feature[] = [
 const COMPARE: Array<[string, boolean | string, boolean | string]> = [
   ["Every tool: crafters, calculators, price checker, guild pages", true, true],
   ["All market data for every city", true, true],
-  ["Marked guilds per server", "1", "Several"],
-  ["Guild attendance history", "7 days", "90 days"],
   ["Daily guild report in Discord", true, true],
   ["Report after every ZvZ", false, true],
+  ["Marked guilds per server", "1", "Several"],
+  ["Guild attendance history", "7 days", "90 days"],
   ["Price alerts", false, true],
   ["Black Market resell tool", false, true],
   ["Price trends", false, true]
@@ -66,7 +69,36 @@ const FAQ: Array<[string, string]> = [
   ["Why pay at all?", "Servers, the database and the Discord bot cost money every month. Premium keeps the free tools running and pays for new ones."]
 ];
 
+const PERKS = [
+  { icon: "⚔️", title: "Works while you play", text: "Reports and alerts come to Discord by themselves." },
+  { icon: "🛡️", title: "Built for guilds", text: "One subscription, your whole guild sees the reports." },
+  { icon: "🔓", title: "Nothing taken away", text: "Every free tool and all the data stay free." }
+];
+
 const welcomeBack = () => new URLSearchParams(window.location.search).get("premium") === "welcome";
+
+/** Adds "is-in" to the page's [data-reveal] blocks as they scroll into view (once). */
+function useReveal() {
+  useEffect(() => {
+    const blocks = document.querySelectorAll<HTMLElement>(".pp-page [data-reveal]");
+    if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      blocks.forEach((b) => b.classList.add("is-in"));
+      return;
+    }
+    const seen = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          e.target.classList.add("is-in");
+          seen.unobserve(e.target);
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px" }
+    );
+    blocks.forEach((b) => seen.observe(b));
+    return () => seen.disconnect();
+  }, []);
+}
 
 export function PremiumPage() {
   const visible = premiumVisible();
@@ -76,7 +108,7 @@ export function PremiumPage() {
 
   useSeo({
     title: "Premium | Blackmarket Reader",
-    description: "Blackmarket Reader Premium: guild reports, price alerts and new tools for Albion Online. Every free tool stays free.",
+    description: "Blackmarket Reader Premium: a Discord report after every ZvZ, guild tools, price alerts and new tools for Albion Online. Every free tool stays free.",
     canonical: "https://blackmarketreader.com/premium",
     noindex: !PREMIUM_OPEN
   });
@@ -88,6 +120,8 @@ export function PremiumPage() {
       document.body.classList.remove("premium-page-body");
     };
   }, []);
+
+  useReveal();
 
   // back from Stripe: the webhook can land a few seconds after the player, so ask again for a while
   const waiting = welcome && typeof state === "object" && state !== null && !state.premium && tries.current < 8;
@@ -102,8 +136,14 @@ export function PremiumPage() {
 
   if (!visible) return <Navigate to="/" replace />;
 
+  const hasPremium = typeof state === "object" && state !== null && state.premium;
+  const plan = (
+    <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
+  );
+
   return (
     <div className="pp-page">
+      <div className="pp-glow" aria-hidden="true" />
       <header className="pp-top">
         <a className="pp-brand" href="/">
           Blackmarket <span>Reader</span>
@@ -114,7 +154,7 @@ export function PremiumPage() {
       </header>
 
       <main className="pp-shell">
-        {welcome && typeof state === "object" && state?.premium ? (
+        {welcome && hasPremium ? (
           <div className="pp-welcome" role="status">
             <strong>Welcome to Premium.</strong> Thanks for supporting the tools, everything is unlocked on your account.
           </div>
@@ -122,67 +162,88 @@ export function PremiumPage() {
 
         <section className="pp-hero">
           <div className="pp-hero-copy">
-            <span className="pp-kicker">Blackmarket Reader Premium</span>
+            <span className="pp-kicker">
+              <span className="pp-kicker-dot" /> Blackmarket Reader Premium
+            </span>
             <h1>
-              Tools that work <span>while you play.</span>
+              Every fight.
+              <span>Reported for you.</span>
             </h1>
             <p className="pp-lead">
-              Every tool and all market data stay free for everyone. Premium adds the extras that run for you in the background: guild
-              reports, price alerts and new tools. And it keeps the site running.
+              After every ZvZ your guild's Discord gets the full story: won or lost, K/D, regear cost and who carried. Plus guild tools,
+              price alerts and new tools that work while you play.
             </p>
-            <ul className="pp-points">
-              <li>Cancel any time</li>
-              <li>Every free tool stays free</li>
-              <li>Secure payment by Stripe</li>
-            </ul>
+            <div className="pp-hero-cta">
+              {hasPremium ? (
+                <a className="pp-cta pp-cta-inline" href="#plan">
+                  Your Premium
+                </a>
+              ) : (
+                <a className="pp-cta pp-cta-inline" href="#plan">
+                  Get Premium · 4.99 CHF
+                </a>
+              )}
+              <a className="pp-ghost" href="#features">
+                See everything
+              </a>
+            </div>
+            <p className="pp-hero-note">Per month · cancel any time · every free tool stays free</p>
           </div>
 
-          <aside className="pp-plan" aria-label="Premium plan">
-            <span className="pp-plan-name">Premium</span>
-            <div className="pp-price">
-              <strong>4.99</strong>
-              <span>
-                CHF
-                <br />
-                per month
-              </span>
-            </div>
-            <p className="pp-plan-note">Tax for your country is worked out at checkout.</p>
-            <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
-            {error ? (
-              <p className="pp-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </aside>
+          <div className="pp-hero-visual">
+            <span className="pp-example">Example</span>
+            <DiscordZvzMock />
+          </div>
         </section>
 
-        <section className="pp-section" aria-labelledby="pp-features">
-          <h2 id="pp-features">What you get</h2>
-          <div className="pp-features">
+        <section className="pp-perks" data-reveal>
+          {PERKS.map((p) => (
+            <div className="pp-perk" key={p.title}>
+              <span className="pp-perk-icon" aria-hidden="true">
+                {p.icon}
+              </span>
+              <div>
+                <b>{p.title}</b>
+                <p>{p.text}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="pp-section" id="features" aria-labelledby="pp-features">
+          <div className="pp-section-head" data-reveal>
+            <span className="pp-eyebrow">What you get</span>
+            <h2 id="pp-features">More than a report.</h2>
+            <p>The ZvZ report is the start. More tools for guilds and traders join Premium over time, at the same price.</p>
+          </div>
+          <div className="pp-bento">
             {FEATURES.map((f) => (
-              <article className="pp-feature" key={f.title}>
-                <div className="pp-feature-head">
-                  <svg className="pp-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d={f.icon} />
-                  </svg>
-                  <h3>{f.title}</h3>
-                  {f.soon ? <span className="pp-soon">Coming soon</span> : null}
+              <article className={`pp-tile${f.wide ? " is-wide" : ""}`} key={f.title} data-reveal>
+                <div className="pp-tile-copy">
+                  <div className="pp-tile-head">
+                    <h3>{f.title}</h3>
+                    <span className={f.live ? "pp-live" : "pp-soon"}>{f.live ? "Live" : "Coming soon"}</span>
+                  </div>
+                  <p>{f.text}</p>
+                  <ul>
+                    {f.points.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
                 </div>
-                <p>{f.text}</p>
-                <ul>
-                  {f.points.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
+                <div className="pp-tile-visual">{f.visual}</div>
               </article>
             ))}
           </div>
         </section>
 
         <section className="pp-section" aria-labelledby="pp-compare">
-          <h2 id="pp-compare">Free and Premium</h2>
-          <div className="pp-table-wrap">
+          <div className="pp-section-head" data-reveal>
+            <span className="pp-eyebrow">Free and Premium</span>
+            <h2 id="pp-compare">Free stays free.</h2>
+            <p>Premium only adds. Nothing you use today moves behind a paywall.</p>
+          </div>
+          <div className="pp-table-wrap" data-reveal>
             <table className="pp-table">
               <thead>
                 <tr>
@@ -212,9 +273,40 @@ export function PremiumPage() {
           </div>
         </section>
 
+        <section className="pp-section pp-pricing" id="plan" aria-labelledby="pp-plan">
+          <div className="pp-plan" data-reveal>
+            <span className="pp-plan-name" id="pp-plan">
+              Premium
+            </span>
+            <div className="pp-price">
+              <strong>4.99</strong>
+              <span>
+                CHF
+                <br />
+                per month
+              </span>
+            </div>
+            <ul className="pp-plan-list">
+              <li>ZvZ report after every fight</li>
+              <li>Guild Pro, price alerts and every new Premium tool</li>
+              <li>Cancel any time, in one click</li>
+            </ul>
+            {plan}
+            {error ? (
+              <p className="pp-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <p className="pp-plan-note">Tax for your country is worked out at checkout. Secure payment by Stripe.</p>
+          </div>
+        </section>
+
         <section className="pp-section" aria-labelledby="pp-faq">
-          <h2 id="pp-faq">Questions</h2>
-          <div className="pp-faq">
+          <div className="pp-section-head" data-reveal>
+            <span className="pp-eyebrow">Questions</span>
+            <h2 id="pp-faq">Good to know.</h2>
+          </div>
+          <div className="pp-faq" data-reveal>
             {FAQ.map(([q, a]) => (
               <details key={q}>
                 <summary>{q}</summary>
@@ -222,6 +314,16 @@ export function PremiumPage() {
               </details>
             ))}
           </div>
+        </section>
+
+        <section className="pp-final" data-reveal>
+          <h2>
+            Your next ZvZ, <span>in Discord.</span>
+          </h2>
+          <p>Turn it on once. Every big fight after that reports itself.</p>
+          <a className="pp-cta pp-cta-inline" href="#plan">
+            {hasPremium ? "Your Premium" : "Get Premium"}
+          </a>
         </section>
 
         <footer className="pp-footer">
@@ -316,12 +418,9 @@ function PlanAction({ state, busy, waiting, onBuy, onManage, onRetry }: PlanActi
   }
   if (state.open) {
     return (
-      <>
-        <button type="button" className="pp-cta" onClick={onBuy} disabled={busy}>
-          {busy ? "Opening checkout…" : "Get Premium"}
-        </button>
-        <p className="pp-plan-sub">Cancel any time in one click.</p>
-      </>
+      <button type="button" className="pp-cta" onClick={onBuy} disabled={busy}>
+        {busy ? "Opening checkout…" : "Get Premium"}
+      </button>
     );
   }
   return (
