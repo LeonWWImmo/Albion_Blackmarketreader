@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-import { checkoutUrl, loadPremium, portalUrl, premiumVisible, type PremiumStatus } from "./premium";
+import { checkoutUrl, portalUrl, premiumVisible } from "./premium";
+import { premiumDay as day, usePremium } from "./usePremium";
 import "./premium.css";
-
-const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 /**
  * Account panel section: the player's premium (active until when, manage it) or the way to get it.
@@ -10,34 +8,9 @@ const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "n
  */
 export function PremiumSection({ open }: { open: boolean }) {
   const visible = premiumVisible();
-  const [state, setState] = useState<PremiumStatus | "guest" | "failed" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!open || !visible) return;
-    let alive = true;
-    loadPremium().then(
-      (next) => alive && setState(next),
-      () => alive && setState("failed")
-    );
-    return () => {
-      alive = false;
-    };
-  }, [open, visible]);
+  const { state, busy, error, go } = usePremium(open && visible);
 
   if (!visible) return null;
-
-  async function go(url: () => Promise<string>) {
-    setBusy(true);
-    setError("");
-    try {
-      window.location.assign(await url());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong, try again.");
-      setBusy(false);
-    }
-  }
 
   const login = `/login?next=${encodeURIComponent(window.location.pathname)}`;
 
@@ -50,10 +23,11 @@ export function PremiumSection({ open }: { open: boolean }) {
         <p className="prem-note">Could not load your premium right now.</p>
       ) : state === "guest" ? (
         <>
-          <p className="prem-note">Price alerts, longer price history and more guild tools. Every tool stays free.</p>
+          <p className="prem-note">Guild reports, price alerts and more tools. Every tool stays free.</p>
           <a className="prem-btn" href={login}>
             Sign in to get premium
           </a>
+          <More />
         </>
       ) : state.premium ? (
         <>
@@ -80,10 +54,11 @@ export function PremiumSection({ open }: { open: boolean }) {
         </>
       ) : state.open ? (
         <>
-          <p className="prem-note">Price alerts, longer price history and more guild tools. Every tool stays free.</p>
+          <p className="prem-note">Guild reports, price alerts and more tools. Every tool stays free.</p>
           <button type="button" className="prem-btn" onClick={() => void go(checkoutUrl)} disabled={busy}>
             {busy ? "Opening checkout…" : "Get premium"}
           </button>
+          <More />
           {error ? (
             <p className="prem-error" role="alert">
               {error}
@@ -91,8 +66,19 @@ export function PremiumSection({ open }: { open: boolean }) {
           ) : null}
         </>
       ) : (
-        <p className="prem-note">Premium is coming soon: price alerts, longer price history and more guild tools.</p>
+        <>
+          <p className="prem-note">Premium is coming soon: guild reports, price alerts and more tools.</p>
+          <More />
+        </>
       )}
     </div>
+  );
+}
+
+function More() {
+  return (
+    <a className="prem-more" href="/premium">
+      What's in premium<span aria-hidden="true"> &rsaquo;</span>
+    </a>
   );
 }

@@ -33,8 +33,8 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `api/` | Vercel functions; shared code in `api/_lib/`, tests in `api/_tests/` |
 | `api/guild.js` → `api/_lib/guildApi.js` | the guild API, one function, `/api/guild/<action>` |
 | `api/_lib/guildStore.js` / `guildMemoryStore.js` | Supabase store / in-memory store (tests, `npm run dev`) |
-| `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`) |
-| `src/shared/premium/` | premium status + account-panel section; hidden until launch (`PREMIUM_OPEN`, preview: `localStorage["bmr-premium-preview"]="1"`) |
+| `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`); before the launch only `PREMIUM_TESTERS` (user ids) can buy or use it, `PREMIUM_LAUNCHED=1` opens it; premium features check `hasPremium()` |
+| `src/shared/premium/`, `src/pages/PremiumPage.tsx` | premium status, account-panel section, `/premium` page; all hidden until launch (`PREMIUM_OPEN`, preview: `localStorage["bmr-premium-preview"]="1"`). New premium UI goes behind `premiumVisible()`; keep `/premium` out of the sitemap until launch |
 | `scripts/` | data refresh jobs, prerender, health check; `scripts/e2e/` browser checks |
 | `public/data/`, `public/results-*.js` | market data, refreshed by bots on `main` (never edit by hand) |
 | `../../supabase/migrations/` | SQL migrations (run by the user) |

@@ -2,8 +2,12 @@
 // server decides; nothing here unlocks anything). Premium data itself is guarded by the database.
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 
-/** Off until launch: visitors see nothing of premium. `localStorage["bmr-premium-preview"] = "1"` shows it for testing. */
-const PREMIUM_OPEN = false;
+/**
+ * Off until launch: visitors see nothing of premium (account panel, /premium).
+ * `localStorage["bmr-premium-preview"] = "1"` shows it for testing. This only hides: the server has
+ * its own gate (PREMIUM_LAUNCHED / PREMIUM_TESTERS, api/billing.js).
+ */
+export const PREMIUM_OPEN = false;
 
 export function premiumVisible(): boolean {
   if (PREMIUM_OPEN) return true;

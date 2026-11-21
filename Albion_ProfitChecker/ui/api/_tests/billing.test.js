@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
-import { handleBilling, isPremium, isValidSignature, rowFromSubscription } from "../_lib/billing.js";
+import { handleBilling, hasPremium, isPremium, isValidSignature, premiumOpenFor, rowFromSubscription } from "../_lib/billing.js";
 import { createMemoryBillingStore } from "../_lib/billingStore.js";
 import { formEncode } from "../_lib/stripeApi.js";
 
@@ -38,7 +38,7 @@ function setup({ env = {} } = {}) {
     store,
     userFromToken: async (token) => users[token] ?? null,
     now: () => NOW,
-    env: { stripe, priceId: "price_1", webhookSecret: SECRET, allowTestMode: false, siteUrl: "https://blackmarketreader.com", ...env }
+    env: { stripe, priceId: "price_1", webhookSecret: SECRET, allowTestMode: false, launched: true, siteUrl: "https://blackmarketreader.com", ...env }
   };
   const hook = (body, signature) => {
     const raw = Buffer.from(JSON.stringify(body));
@@ -72,6 +72,21 @@ describe("isPremium", () => {
     for (const s of ["paused", "unpaid", "expired", "incomplete", "incomplete_expired"]) expect(isPremium(row(s), NOW)).toBe(false);
     expect(isPremium(row("cancelled", "2026-11-30T00:00:00Z"), NOW)).toBe(true);
     expect(isPremium(row("cancelled", "2026-11-20T00:00:00Z"), NOW)).toBe(false);
+  });
+});
+
+describe("premiumOpenFor / hasPremium", () => {
+  const paid = { status: "active", endsAt: null };
+  it("is open to everyone after the launch, before it to the testers only", () => {
+    expect(premiumOpenFor({ launched: true }, ANN)).toBe(true);
+    expect(premiumOpenFor({ launched: false, testers: [BO] }, ANN)).toBe(false);
+    expect(premiumOpenFor({ launched: false, testers: [BO] }, BO)).toBe(true);
+    expect(premiumOpenFor({}, ANN)).toBe(false);
+  });
+  it("needs both a paid subscription and premium open for the player", () => {
+    expect(hasPremium(paid, ANN, { launched: true }, NOW)).toBe(true);
+    expect(hasPremium(paid, ANN, { testers: [BO] }, NOW)).toBe(false);
+    expect(hasPremium(null, ANN, { launched: true }, NOW)).toBe(false);
   });
 });
 
@@ -228,6 +243,16 @@ describe("status, checkout and portal", () => {
     const { call } = setup({ env: { priceId: undefined } });
     expect((await call("checkout", "token-ann")).status).toBe(503);
     expect((await call("status", "token-ann", { method: "GET" })).body.open).toBe(false);
+  });
+
+  it("before the launch only the testers can buy or use premium", async () => {
+    const { call, hook, stripe } = setup({ env: { launched: false, testers: [BO] } });
+    await hook(event(subscription()));
+    expect((await call("status", "token-ann", { method: "GET" })).body).toMatchObject({ premium: false, open: false });
+    expect((await call("checkout", "token-ann")).status).toBe(503);
+    expect(stripe).not.toHaveBeenCalled();
+    expect((await call("status", "token-bo", { method: "GET" })).body.open).toBe(true);
+    expect((await call("checkout", "token-bo")).status).toBe(200);
   });
 
   it("a Stripe failure is a plain 500, not a crash", async () => {

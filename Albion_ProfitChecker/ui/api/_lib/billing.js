@@ -39,6 +39,19 @@ export function isPremium(row, now) {
   return row.status === "cancelled" && row.endsAt !== null && new Date(row.endsAt) > now;
 }
 
+/**
+ * Premium is open to everyone after the launch (env.launched); before it only to the testers
+ * (env.testers, user ids), so code on production can wait unseen and nobody buys it early.
+ */
+export function premiumOpenFor(env, userId) {
+  return Boolean(env.launched) || (Array.isArray(env.testers) && env.testers.includes(userId));
+}
+
+/** The one check for premium features: a paid subscription, and premium open for this player. */
+export function hasPremium(row, userId, env, now) {
+  return premiumOpenFor(env, userId) && isPremium(row, now);
+}
+
 const iso = (seconds) => (typeof seconds === "number" ? new Date(seconds * 1000).toISOString() : null);
 
 /**
@@ -116,11 +129,11 @@ async function status(req, { store, userFromToken, now, env }) {
   if (!user) return answer(401, { error: "Sign in to see your premium." });
   const row = store ? await store.getByUser(user.id) : null;
   return answer(200, {
-    premium: isPremium(row, now()),
+    premium: hasPremium(row, user.id, env, now()),
     status: row?.status ?? null,
     renewsAt: row?.renewsAt ?? null,
     endsAt: row?.endsAt ?? null,
-    open: Boolean(env.priceId && env.stripe),
+    open: Boolean(env.priceId && env.stripe && premiumOpenFor(env, user.id)),
     // the customer portal needs a Stripe customer, which only a checkout creates
     manage: Boolean(row?.customerId && env.stripe)
   });
@@ -134,6 +147,7 @@ async function checkout(req, { store, userFromToken, now, env }) {
   if (!env.priceId || !env.stripe) return answer(503, { error: "Premium is not open yet." });
   const user = await userFromToken(req.token);
   if (!user) return answer(401, { error: "Sign in to get premium." });
+  if (!premiumOpenFor(env, user.id)) return answer(503, { error: "Premium is not open yet." });
   const row = store ? await store.getByUser(user.id) : null;
   if (isPremium(row, now())) return answer(409, { error: "You already have premium." });
   const back = backTo(env, req.body?.path);
