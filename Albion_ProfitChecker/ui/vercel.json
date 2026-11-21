@@ -89,6 +89,10 @@
       "destination": "/api/guild?action=:action"
     },
     {
+      "source": "/api/market/:action",
+      "destination": "/api/market?action=:action"
+    },
+    {
       "source": "/api/billing/:action",
       "destination": "/api/billing?action=:action"
     },

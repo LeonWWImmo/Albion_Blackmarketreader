@@ -34,6 +34,7 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `api/guild.js` → `api/_lib/guildApi.js` | the guild API, one function, `/api/guild/<action>` |
 | `api/_lib/guildStore.js` / `guildMemoryStore.js` | Supabase store / in-memory store (tests, `npm run dev`) |
 | `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`); before the launch only `PREMIUM_TESTERS` (user ids) can buy or use it, `PREMIUM_LAUNCHED=1` opens it; premium features check `hasPremium()` |
+| `api/market.js` → `api/_lib/marketLive.js`, `src/features/dashboard/live/` | live market (premium): snapshot of all dashboard items in 8 markets every 30 min (GitHub job `scripts/market-live.mjs` → `/api/market/ingest` → table `market_live`), `/api/market/live` for premium players only; the dashboard panel computes the flips (`flips.ts`). AODP has no order quantities |
 | `src/shared/premium/`, `src/pages/PremiumPage.tsx` | premium status, account-panel section, `/premium` page; all hidden until launch (`PREMIUM_OPEN`, preview: `localStorage["bmr-premium-preview"]="1"`). New premium UI goes behind `premiumVisible()`; keep `/premium` out of the sitemap until launch |
 | `scripts/` | data refresh jobs, prerender, health check; `scripts/e2e/` browser checks |
 | `public/data/`, `public/results-*.js` | market data, refreshed by bots on `main` (never edit by hand) |
@@ -44,6 +45,8 @@ Crons (`ui/vercel.json`, production only, Hobby = once a day each): Discord dail
 guild sync + Discord reports (03:30 UTC).
 GitHub Actions `guild-zvz.yml` (every 30 min, from `main`): `/api/guild/zvz` posts the ZvZ reports
 of Guild Pro (premium), authorized with `ACTIONS_CRON_SECRET` (same value in Vercel and GitHub).
+GitHub Actions `market-live.yml` (:07 and :37, from `main`): the live market snapshot, same secret;
+the volume only every 6 hours. AODP throttles requests without gzip.
 
 ## Commands (in `Albion_ProfitChecker/ui`)
 

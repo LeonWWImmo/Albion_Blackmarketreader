@@ -32,7 +32,8 @@ export type PremiumStatus = {
 
 let auth: AuthService | null = null;
 
-async function accessToken(): Promise<string | null> {
+/** The confirmed sign-in's access token for our own APIs, or null. */
+export async function accessToken(): Promise<string | null> {
   const cfg = window.env;
   if (!cfg?.SUPABASE_URL || !cfg?.SUPABASE_ANON_KEY) return null;
   auth ??= createAuthService({ supabaseUrl: cfg.SUPABASE_URL, supabaseAnonKey: cfg.SUPABASE_ANON_KEY });

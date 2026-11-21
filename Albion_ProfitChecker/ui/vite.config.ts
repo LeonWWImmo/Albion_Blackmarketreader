@@ -96,6 +96,53 @@ function devApi(): Plugin {
         );
         sendResult(res, result);
       });
+
+      // live market (premium): locally every signed-in player counts as premium so the panel can be
+      // seen, and the first visit per region takes a real snapshot from AODP (about 30 s, then kept
+      // in memory for 30 minutes). Production gets its snapshots from the GitHub job instead.
+      const marketStore = import("./api/_lib/marketLive.js").then((m) => m.createMemoryMarketStore());
+      const marketFetching = new Map<string, Promise<void>>();
+      server.middlewares.use("/api/market", async (req, res) => {
+        const url = new URL(req.url || "/", "http://localhost");
+        const [market, { sendResult }, { createClient }, envJs] = await Promise.all([
+          import("./api/_lib/marketLive.js"),
+          import("./api/_lib/aodp.js"),
+          import("@supabase/supabase-js"),
+          readFile(path.join(rootDir, "public/env.js"), "utf8")
+        ]);
+        const store = await marketStore;
+        const region = url.searchParams.get("region") ?? "";
+        if (market.LIVE_REGIONS.includes(region)) {
+          const row = await store.read(region);
+          const stale = !row?.pricesAt || Date.now() - Date.parse(row.pricesAt) > 30 * 60000;
+          if (stale && !marketFetching.has(region)) {
+            const ids = market.liveItemIds(JSON.parse(await readFile(path.join(rootDir, "../Data/ItemList.json"), "utf8")));
+            const at = new Date().toISOString();
+            const job = Promise.all([market.fetchLive(region, ids, "prices"), market.fetchLive(region, ids, "volume")])
+              .then(([prices, volume]) => store.write(region, { prices, pricesAt: at, volume, volumeAt: at }))
+              .finally(() => marketFetching.delete(region));
+            marketFetching.set(region, job);
+          }
+          if (!row?.prices) await marketFetching.get(region)?.catch(() => {});
+        }
+        const env = (name: string) => envJs.match(new RegExp(`${name}:\\s*"([^"]+)"`))?.[1] ?? "";
+        const auth = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } }).auth;
+        const result = await market.handleMarket(
+          url.pathname.replace(/^\/+/, ""),
+          { method: req.method, query: Object.fromEntries(url.searchParams), token: (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "") || null, body: null },
+          {
+            store,
+            actionsSecret: undefined,
+            userFromToken: async (token: string) => {
+              const { data } = await auth.getUser(token);
+              return data?.user?.email_confirmed_at ? { id: data.user.id } : null;
+            },
+            premium: async () => true,
+            now: () => new Date()
+          }
+        );
+        sendResult(res, result);
+      });
     }
   };
 }

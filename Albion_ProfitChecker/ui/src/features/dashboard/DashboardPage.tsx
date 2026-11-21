@@ -11,6 +11,8 @@ import { RegionSwitch } from "@shared/ui/RegionSwitch";
 import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
 import { PremiumSection } from "@shared/premium/PremiumSection";
+import { premiumVisible } from "@shared/premium/premium";
+import { LiveMarket } from "./live/LiveMarket";
 
 type Region = "us" | "eu";
 type City = "ALL" | "Lymhurst" | "Martlock" | "Fort Sterling" | "Thetford" | "Bridgewatch" | "Caerleon";
@@ -1366,6 +1368,8 @@ export function DashboardPage() {
             onSort={setSortBySilver}
           />
         ) : null}
+
+        {premiumVisible() ? <LiveMarket region={region} nameOf={baseName} /> : null}
 
         <section className="kpi-row">
           <article className="kpi-card"><span className="kpi-label">Signals</span><strong className="kpi-value">{kpis.deals}</strong></article>

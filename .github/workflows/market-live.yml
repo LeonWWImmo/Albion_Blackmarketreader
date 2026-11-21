@@ -1,0 +1,43 @@
+name: Live Market Snapshot
+
+# Premium live market: every 30 minutes, the current AODP prices of every dashboard item in all
+# eight markets (both regions) go to /api/market/ingest (stored in Supabase, not in git, so no
+# commit and no deploy). Every 6 hours also the sales volume. See
+# Albion_ProfitChecker/ui/scripts/market-live.mjs. ACTIONS_CRON_SECRET = the Vercel env of that name.
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      volume:
+        description: "Also fetch the sales volume"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-live
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Albion_ProfitChecker/Data
+            Albion_ProfitChecker/ui/api/_lib
+            Albion_ProfitChecker/ui/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send the snapshot
+        working-directory: Albion_ProfitChecker/ui
+        env:
+          MARKET_SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
+          MARKET_VOLUME: ${{ inputs.volume && '1' || '' }}
+        run: node scripts/market-live.mjs
