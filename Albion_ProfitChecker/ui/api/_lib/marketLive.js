@@ -148,22 +148,27 @@ async function aodpJson(url, { fetchImpl = fetch, retries = 3, wait = pause } = 
 }
 
 /**
- * Asks AODP for every id in chunks, one after the other with a short pause (be nice to the
- * community server). part "prices" (all qualities) or "volume" (daily history). Returns the raw rows.
+ * Asks AODP for every id in chunks, `concurrency` at a time with a short pause between rounds (be
+ * nice to the community server). part "prices" (all qualities) or "volume" (daily history). Returns
+ * the raw rows.
  */
-export async function fetchRows(region, ids, part, { fetchImpl = fetch, wait = pause, gapMs = 150 } = {}) {
+export async function fetchRows(region, ids, part, { fetchImpl = fetch, wait = pause, gapMs = 150, concurrency = 1 } = {}) {
   const host = HOSTS[region];
   if (!host) throw new Error(`unknown region ${region}`);
   const locations = encodeURIComponent(LIVE_LOCATIONS.join(","));
-  const rows = [];
+  const urls = [];
   for (let i = 0; i < ids.length; i += LIVE_CHUNK) {
     const chunk = ids.slice(i, i + LIVE_CHUNK).map(encodeURIComponent).join(",");
-    const url =
+    urls.push(
       part === "prices"
         ? `https://${host}.albion-online-data.com/api/v2/stats/prices/${chunk}.json?locations=${locations}`
-        : `https://${host}.albion-online-data.com/api/v2/stats/history/${chunk}?locations=${locations}&time-scale=24`;
-    const body = await aodpJson(url, { fetchImpl, wait });
-    if (Array.isArray(body)) rows.push(...body);
+        : `https://${host}.albion-online-data.com/api/v2/stats/history/${chunk}?locations=${locations}&time-scale=24`
+    );
+  }
+  const rows = [];
+  for (let i = 0; i < urls.length; i += concurrency) {
+    const bodies = await Promise.all(urls.slice(i, i + concurrency).map((url) => aodpJson(url, { fetchImpl, wait })));
+    for (const body of bodies) if (Array.isArray(body)) rows.push(...body);
     if (gapMs) await wait(gapMs);
   }
   return rows;
