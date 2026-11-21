@@ -3,18 +3,23 @@ import { DailyBonusTag } from "../../../shared";
 import { normalizeItemId } from "../domain";
 import type { BmCrafterRow } from "../hooks";
 import { formatNumber, formatPct, tierLabel } from "./format";
+import type { PriceSource } from "@shared/live/liveData";
 
 export type MaterialLine = {
   itemId: string;
   qty: number;
   unit: number | null;
   total: number | null;
+  /** premium live prices: where the unit price came from */
+  source?: PriceSource;
 };
 
 type CrafterInsightProps = {
   row: BmCrafterRow | null;
   materials: MaterialLine[];
   artefactCost: number | null;
+  /** premium live prices: where the BM price and the artefact price came from */
+  sources?: { bm?: PriceSource; artefact?: PriceSource };
 };
 
 const lossOrProfit = (value: number | null | undefined) => (typeof value === "number" && value < 0 ? "loss" : "profit");
@@ -25,7 +30,7 @@ const lossOrProfit = (value: number | null | undefined) => (typeof value === "nu
  * so both always show the same numbers. `data-metric` lets the sheet rearrange the figures
  * without the panel noticing.
  */
-export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightProps) {
+export function CrafterInsight({ row, materials, artefactCost, sources }: CrafterInsightProps) {
   return (
     <>
       <div className="side-hero teal-gradient-bg" data-tier={row?.tier ?? undefined}>
@@ -45,7 +50,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
         </div>
       </div>
       <div className="side-metrics">
-        <div data-metric="bm"><span>BM Price</span><strong className="profit">{row ? formatNumber(row.item.bm) : "--"}</strong></div>
+        <div data-metric="bm"><span>BM Price</span><strong className="profit" data-src={sources?.bm}>{row ? formatNumber(row.item.bm) : "--"}</strong></div>
         <div data-metric="sold"><span>Sold / Day</span><strong className="primary">{row ? formatNumber(row.item.sold) : "--"}</strong></div>
         <div data-metric="cost"><span>Craft Cost</span><strong>{row ? formatNumber(row.economics.craftCost) : "--"}</strong></div>
         <div data-metric="fee"><span>Station Fee</span><strong>{row ? formatNumber(row.economics.stationFee) : "--"}</strong></div>
@@ -70,7 +75,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
               <div className="material-name">{mat.itemId}</div>
               <div className="material-meta">
                 <span className="material-qty">x{mat.qty}</span>
-                <span className="material-price">{formatNumber(mat.total)}</span>
+                <span className="material-price" data-src={mat.source}>{formatNumber(mat.total)}</span>
               </div>
             </div>
           ))}
@@ -79,7 +84,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
               <div className="material-name">{mat.itemId} · Unit</div>
               <div className="material-meta">
                 <span className="material-qty">x1</span>
-                <span className="material-price">{formatNumber(mat.unit)}</span>
+                <span className="material-price" data-src={mat.source}>{formatNumber(mat.unit)}</span>
               </div>
             </div>
           ))}
@@ -88,7 +93,7 @@ export function CrafterInsight({ row, materials, artefactCost }: CrafterInsightP
           <div className="material-name">{row?.recipe.artifactId || "Artefact"}</div>
           <div className="material-meta">
             <span className="material-qty">x1</span>
-            <span className="material-price">{formatNumber(artefactCost)}</span>
+            <span className="material-price" data-src={sources?.artefact}>{formatNumber(artefactCost)}</span>
           </div>
         </div>
       </div>

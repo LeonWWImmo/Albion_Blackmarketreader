@@ -2297,3 +2297,14 @@ body.panel-open::before {
   outline: 2px solid rgba(var(--fx-accent-rgb), 0.7);
   outline-offset: 2px;
 }
+
+/* premium live prices: the Daily / Live / Live + fill switch needs two filter columns */
+.bm-filters .bm-live-block {
+  grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .bm-filters .bm-live-block {
+    grid-column: auto;
+  }
+}

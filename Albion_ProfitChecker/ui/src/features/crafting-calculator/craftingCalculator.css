@@ -2451,3 +2451,11 @@ body.panel-open::before {
     overflow: visible;
   }
 }
+
+/* premium live prices: the Daily / Live / Live + fill switch under the cities */
+.cc-live {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

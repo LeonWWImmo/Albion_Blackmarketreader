@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { assetUrl, onItemIconError } from "@shared/assets/assets";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
+import { premiumVisible } from "@shared/premium/premium";
+import { useLiveMode } from "@shared/live/liveData";
+import { LiveModeSwitch } from "@shared/live/LiveModeSwitch";
+import { withLivePrices } from "../data/liveBundle";
 import { createAuthService, type AuthService } from "@shared/auth/authService";
 import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/guestMode";
 import { RegionService } from "@shared/region/regionService";
@@ -87,7 +91,11 @@ export function BmCrafterPage() {
   const ROWS_STEP = 40;
 
   const [region, setRegion] = useRegion();
-  const { data, loading, error } = useBmCrafterData(region);
+  const { data: dailyData, loading, error } = useBmCrafterData(region);
+  // premium: live prices from the 30-minute snapshot (Daily / Live / Live + fill)
+  const live = useLiveMode("bm-crafter", region);
+  const priced = useMemo(() => withLivePrices(dailyData, live.snap, live.active), [dailyData, live.snap, live.active]);
+  const data = priced.bundle;
   const journals = useJournals(region);
   // BM Crafter lists every item type, so all four journals always apply — ownership is not a
   // per-profession choice here (unlike the single-item Crafting Calculator).
@@ -329,8 +337,8 @@ export function BmCrafterPage() {
   }, [rows.length, region, filters.selectedTiers, filters.selectedEnchants, filters.minSold, filters.searchTerm, filters.sortByDailyTop, filters.showOnlyProfitable, filters.onlyBonusItems]);
 
   const lastUpdated = useMemo(
-    () => formatUpdated(data?.market.generatedAt ?? data?.materials.generatedAt ?? null),
-    [data]
+    () => formatUpdated(dailyData?.market.generatedAt ?? dailyData?.materials.generatedAt ?? null),
+    [dailyData]
   );
 
   const soldMax = 200;
@@ -344,15 +352,18 @@ export function BmCrafterPage() {
 
     return selectedRow.recipe.materials.map((mat) => {
       const key = buildMaterialId(mat.itemId, tier, enchant);
-      const unit = key ? (data.materials.byItemId.get(key) ?? null) : null;
+      // live prices: the craft city's price, the one the cost is made of, with its source
+      const source = key && priced.sources ? priced.sources.materials.get(key)?.[filters.craftCity] : undefined;
+      const unit = key ? (priced.sources ? (data.cityMaterials.get(key)?.[filters.craftCity] ?? null) : (data.materials.byItemId.get(key) ?? null)) : null;
       return {
         itemId: mat.itemId,
         qty: mat.qty,
         unit,
-        total: typeof unit === "number" ? unit * mat.qty : null
+        total: typeof unit === "number" ? unit * mat.qty : null,
+        source
       };
     });
-  }, [selectedRow, data]);
+  }, [selectedRow, data, priced.sources, filters.craftCity]);
 
   const artefactCost = useMemo(() => {
     if (!selectedRow || !data || !selectedRow.recipe.artifactId) return null;
@@ -362,6 +373,13 @@ export function BmCrafterPage() {
     if (!key) return null;
     return data.artefacts.byItemId.get(key) ?? null;
   }, [selectedRow, data]);
+
+  const insightSources = useMemo(() => {
+    if (!selectedRow || !priced.sources || !selectedRow.recipe.artifactId) return { bm: selectedRow ? priced.sources?.bm.get(selectedRow.item.id) : undefined };
+    const tier = parseTier(selectedRow.item.id);
+    const key = tier ? buildArtefactId(selectedRow.recipe.artifactId, tier) : null;
+    return { bm: priced.sources.bm.get(selectedRow.item.id), artefact: key ? priced.sources.artefacts.get(key) : undefined };
+  }, [selectedRow, priced.sources]);
 
   async function onLogout() {
     if (isGuest()) {
@@ -729,6 +747,13 @@ export function BmCrafterPage() {
           </div>
         </div>
 
+        {premiumVisible() ? (
+          <div className="filter-block bm-live-block">
+            <p>Prices</p>
+            <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
+          </div>
+        ) : null}
+
         <div className="filter-block">
           <div className="filter-head">
             <p>Usage Fee / 100</p>
@@ -843,7 +868,7 @@ export function BmCrafterPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="num bm-cell-bm">{formatNumber(row.item.bm)}</td>
+                      <td className="num bm-cell-bm" data-src={priced.sources?.bm.get(row.item.id)}>{formatNumber(row.item.bm)}</td>
                       <td className="num muted bm-cell-cost">{formatNumber(row.economics.craftCost)}</td>
                       <td className={`num bm-cell-profit ${row.economics.profit >= 0 ? "profit" : "loss"}`}>
                         {formatNumber(row.economics.profit)}
@@ -875,7 +900,7 @@ export function BmCrafterPage() {
                 <h3>Crafter Insight</h3>
                 <span className="material-symbols-outlined">info</span>
               </div>
-              <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} />
+              <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} sources={insightSources} />
               <div className="side-chart">
                 <div className="side-chart-head">
                   <span className="material-symbols-outlined">trending_up</span>
@@ -918,7 +943,7 @@ export function BmCrafterPage() {
                 before crafting.
               </p>
             ) : null}
-            <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} />
+            <CrafterInsight row={selectedRow} materials={materialBreakdown} artefactCost={artefactCost} sources={insightSources} />
           </div>
         </BottomSheet>
       ) : null}

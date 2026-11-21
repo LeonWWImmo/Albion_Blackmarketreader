@@ -6,6 +6,9 @@ import { isGuest, buildGuestProfile, enterGuest, exitGuest } from "@shared/auth/
 import { RegionService } from "@shared/region/regionService";
 import { formatUpdated } from "@shared/time/lastUpdated";
 import { LastUpdatedBadge } from "@shared/time/LastUpdatedBadge";
+import { premiumVisible } from "@shared/premium/premium";
+import { BLACK_MARKET, mergeBuyMap, mergeCities, mergeCityMap, sourceOf, useLiveMode, type LiveMode, type LiveSnapshot, type PriceSource } from "@shared/live/liveData";
+import { LiveModeSwitch } from "@shared/live/LiveModeSwitch";
 import { useSeo } from "../../shared/seo/useSeo";
 import { SeoHeading } from "../../shared/seo/SeoHeading";
 import { JournalControls, MobileNavBurger, ToolNav, NumberStepper, professionForItem, resolveJournalProfit, useJournals, useSessionState, GuestSignInLink, exitGuestToLogin, CommunityTile, useFactionTheme, hasChosenFaction, markFactionChosen, StylePicker, RegionPicker, needsRegionChoice, ResponsiveFilters, BottomSheet, useMediaQuery, PHONE_QUERY, useFestivities, DailyBonusInfo, craftBonusPercentFor, craftCategoryOf, craftCategoryLabel, nextDailyReset } from "../../shared";
@@ -411,6 +414,27 @@ function useRegion(): [MarketRegion, (next: MarketRegion) => void] {
   return [region, update];
 }
 
+/** A crafted item's daily price per city, from its rows of crafting-results (the cheapest per city). */
+function dailyCityRecord(matches: ResultItem[]): Record<string, number> {
+  const record: Record<string, number> = {};
+  const add = (city: string, price: number) => {
+    if (city && price > 0 && (!record[city] || price < record[city])) record[city] = price;
+  };
+  for (const entry of matches) {
+    for (const [city, price] of Object.entries(entry.prices ?? {})) add(city, Number(price) || 0);
+    if (entry.city) add(String(entry.city), Number(entry.price || 0));
+  }
+  return record;
+}
+
+/** Premium live prices: a crafted item's sell price in a city (or anywhere), with its source. */
+function liveMarketPrice(matches: ResultItem[], snap: LiveSnapshot, id: string, city: string, mode: LiveMode): { price: number; source?: PriceSource } {
+  const merged = mergeCities(dailyCityRecord(matches), snap, id, KNOWN_CITIES, mode);
+  const exact = resolvePriceByCity(merged.prices, city);
+  const price = exact > 0 ? exact : resolvePriceByCity(merged.prices, "ALL");
+  return { price, source: sourceOf(merged.prices, merged.sources, exact > 0 ? city : "ALL", price) };
+}
+
 export function CraftingCalculatorPage() {
   const [savedRegion, saveRegion] = useRegion();
   // A shared link shows the prices of the server it was made on, without changing the region the
@@ -523,6 +547,11 @@ export function CraftingCalculatorPage() {
   // Black Market sell prices keyed by full item id (T{tier}_{base}@{enchant}), from the same
   // dataset the Dashboard and BM Crafter use — crafting-results.json has no Black Market prices.
   const [bmSellByItemId, setBmSellByItemId] = useState<Map<string, number>>(new Map());
+  // premium: live prices from the 30-minute snapshot (Daily / Live / Live + fill); daily = the maps above
+  const live = useLiveMode("crafting", region);
+  const materialLive = useMemo(() => mergeCityMap(materialPriceMap, live.snap, live.active, KNOWN_CITIES), [materialPriceMap, live.snap, live.active]);
+  const artefactLive = useMemo(() => mergeCityMap(artefactPriceMap, live.snap, live.active, KNOWN_CITIES), [artefactPriceMap, live.snap, live.active]);
+  const bmLive = useMemo(() => mergeBuyMap(bmSellByItemId, live.snap, live.active, BLACK_MARKET), [bmSellByItemId, live.snap, live.active]);
   const [rowEdits, setRowEdits] = useState<Record<string, RowEdit>>(() => {
     const entries: Array<[string, RowEdit]> = TABLE_SECTIONS
       .flatMap((section) => section.rows)
@@ -1041,14 +1070,14 @@ export function CraftingCalculatorPage() {
         if (!MATERIAL_BASES.has(normalized)) return mat;
         const itemId = buildMaterialItemId(normalized, tier, enchant);
         if (!itemId) return mat;
-        const price = resolvePriceByCity(materialPriceMap.get(itemId), craftCity);
+        const price = resolvePriceByCity(materialLive.prices.get(itemId), craftCity);
         return { ...mat, price };
       })
     );
-  }, [selectedRow.uid, materialPriceMap, craftCity]);
+  }, [selectedRow.uid, materialLive, craftCity]);
 
   useEffect(() => {
-    if (!selectedItem || !materialPriceMap.size) return;
+    if (!selectedItem || !materialLive.prices.size) return;
     const filteredMaterialPairs = (Array.isArray(selectedItem.materials) ? selectedItem.materials : [])
       .map((mat) => {
         const source = String(mat.itemId || mat.id || mat.name || "").trim();
@@ -1068,8 +1097,8 @@ export function CraftingCalculatorPage() {
         const { tier, enchant } = parseTierEnchant(row.uid);
         const mat1Id = buildMaterialItemId(baseMaterials[0], tier, enchant);
         const mat2Id = baseMaterials[1] ? buildMaterialItemId(baseMaterials[1], tier, enchant) : null;
-        const mat1 = resolvePriceByCity(mat1Id ? materialPriceMap.get(mat1Id) : undefined, craftCity) * (quantities[0] || 0);
-        const mat2 = resolvePriceByCity(mat2Id ? materialPriceMap.get(mat2Id) : undefined, craftCity) * (quantities[1] || 0);
+        const mat1 = resolvePriceByCity(mat1Id ? materialLive.prices.get(mat1Id) : undefined, craftCity) * (quantities[0] || 0);
+        const mat2 = resolvePriceByCity(mat2Id ? materialLive.prices.get(mat2Id) : undefined, craftCity) * (quantities[1] || 0);
         const current = next[row.key] || {
           mat1: parseCompactNumber(row.mat1),
           mat2: parseCompactNumber(row.mat2),
@@ -1086,7 +1115,7 @@ export function CraftingCalculatorPage() {
       });
       return next;
     });
-  }, [selectedItem, materialPriceMap, craftCity]);
+  }, [selectedItem, materialLive, craftCity]);
 
   useEffect(() => {
     // Black Market prices come from bmSellByItemId, not resultsItems, so don't block on the latter
@@ -1102,7 +1131,9 @@ export function CraftingCalculatorPage() {
         const targetItemId = buildCraftedItemId(selectedItem.id, tier, enchant);
         const matches = resultsItems.filter((entry) => String(entry.id || entry.itemId || "").trim() === targetItemId);
         const resolvedMarket = isBlackMarketSell
-          ? (bmSellByItemId.get(targetItemId) ?? 0)
+          ? (bmLive.prices.get(targetItemId) ?? 0)
+          : live.snap && live.active !== "daily"
+            ? liveMarketPrice(matches, live.snap, targetItemId, effectiveSellCity, live.active).price
           : matches.length
             ? (() => {
               const exactCityPrice = resolveResultPrice(matches, effectiveSellCity);
@@ -1127,7 +1158,7 @@ export function CraftingCalculatorPage() {
       });
       return next;
     });
-  }, [selectedItem, resultsItems, effectiveSellCity, isBlackMarketSell, bmSellByItemId]);
+  }, [selectedItem, resultsItems, effectiveSellCity, isBlackMarketSell, bmLive, live.snap, live.active]);
 
   useEffect(() => {
     if (!selectedItem) return;
@@ -1137,7 +1168,7 @@ export function CraftingCalculatorPage() {
       const next = { ...prev };
       for (const tier of [4, 5, 6, 7, 8]) {
         const artefactKey = artifactId ? `T${tier}_${artifactId}` : "";
-        const resolved = artefactKey ? resolveArtefactPriceByCity(artefactPriceMap.get(artefactKey), craftCity) : 0;
+        const resolved = artefactKey ? resolveArtefactPriceByCity(artefactLive.prices.get(artefactKey), craftCity) : 0;
         const artefactValue = Number.isFinite(resolved) && resolved > 0 ? resolved : 0;
 
         TABLE_SECTIONS.flatMap((section) => section.rows).forEach((row) => {
@@ -1155,7 +1186,58 @@ export function CraftingCalculatorPage() {
       }
       return next;
     });
-  }, [selectedItem, artefactPriceMap, craftCity]);
+  }, [selectedItem, artefactLive, craftCity]);
+
+  // Live / Live + fill: where each looked-up price of a row came from, with the value it had (a
+  // price typed over it loses its mark)
+  const rowSources = useMemo(() => {
+    const out: Record<string, Partial<Record<"mat1" | "mat2" | "artefact" | "market", { source: PriceSource; value: number }>>> = {};
+    if (!selectedItem || !live.snap || live.active === "daily") return out;
+    const snap = live.snap;
+    const mats = (Array.isArray(selectedItem.materials) ? selectedItem.materials : [])
+      .map((mat) => ({
+        name: String(mat.itemId || mat.id || mat.name || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/^T\d+_/, "").replace(/^T\d+/, ""),
+        qty: Number(mat.qty) || 0
+      }))
+      .filter(({ name }) => MATERIAL_BASES.has(name))
+      .slice(0, 2);
+    const artifactId = String(selectedItem.artifactId || "").trim();
+    TABLE_SECTIONS.flatMap((section) => section.rows).forEach((row) => {
+      const { tier, enchant } = parseTierEnchant(row.uid);
+      const entry: (typeof out)[string] = {};
+      mats.forEach(({ name, qty }, i) => {
+        const id = buildMaterialItemId(name, tier, enchant);
+        const record = id ? materialLive.prices.get(id) : undefined;
+        const unit = resolvePriceByCity(record, craftCity);
+        const source = sourceOf(record, id ? materialLive.sources?.get(id) : undefined, craftCity, unit);
+        if (source) entry[i === 0 ? "mat1" : "mat2"] = { source, value: unit * qty };
+      });
+      if (artifactId) {
+        const key = `T${tier}_${artifactId}`;
+        const record = artefactLive.prices.get(key);
+        const price = resolveArtefactPriceByCity(record, craftCity);
+        const source = sourceOf(record, artefactLive.sources?.get(key), craftCity, price);
+        if (source) entry.artefact = { source, value: price };
+      }
+      const targetItemId = buildCraftedItemId(selectedItem.id, tier, enchant);
+      if (isBlackMarketSell) {
+        const price = bmLive.prices.get(targetItemId) ?? 0;
+        const source = bmLive.sources?.get(targetItemId);
+        if (source && price > 0) entry.market = { source, value: price };
+      } else {
+        const matches = resultsItems.filter((item) => String(item.id || item.itemId || "").trim() === targetItemId);
+        const { price, source } = liveMarketPrice(matches, snap, targetItemId, effectiveSellCity, live.active);
+        if (source && price > 0) entry.market = { source, value: price };
+      }
+      out[row.key] = entry;
+    });
+    return out;
+  }, [selectedItem, live.snap, live.active, materialLive, artefactLive, bmLive, resultsItems, craftCity, effectiveSellCity, isBlackMarketSell]);
+  /** The live / daily mark of a shown price, when it is still the looked-up one. */
+  const srcOf = (rowKey: string, field: "mat1" | "mat2" | "artefact" | "market", shown: number): PriceSource | undefined => {
+    const hit = rowSources[rowKey]?.[field];
+    return hit && Math.round(hit.value) === Math.round(shown) ? hit.source : undefined;
+  };
 
   const journals = useJournals(region);
   const totalResourceCount = useMemo(
@@ -1469,16 +1551,16 @@ export function CraftingCalculatorPage() {
     const tone = (value: unknown): Tone => (typeof value === "number" ? (value >= 0 ? "gain" : "loss") : "none");
     const prices: PriceLine[] = [];
     if (view.qty1 > 0) {
-      prices.push({ key: "mat1", label: nameOf(0), hint: `× ${view.qty1} per craft, price each`, value: view.mat1Unit, onCommit: (unit) => updateRowField(selectedRow.key, "mat1", String(unit * view.qty1)) });
+      prices.push({ key: "mat1", label: nameOf(0), hint: `× ${view.qty1} per craft, price each`, value: view.mat1Unit, source: srcOf(selectedRow.key, "mat1", view.values.mat1), onCommit: (unit) => updateRowField(selectedRow.key, "mat1", String(unit * view.qty1)) });
     }
     if (view.qty2 > 0) {
-      prices.push({ key: "mat2", label: nameOf(1), hint: `× ${view.qty2} per craft, price each`, value: view.mat2Unit, onCommit: (unit) => updateRowField(selectedRow.key, "mat2", String(unit * view.qty2)) });
+      prices.push({ key: "mat2", label: nameOf(1), hint: `× ${view.qty2} per craft, price each`, value: view.mat2Unit, source: srcOf(selectedRow.key, "mat2", view.values.mat2), onCommit: (unit) => updateRowField(selectedRow.key, "mat2", String(unit * view.qty2)) });
     }
     if (view.itemNeedsArtifact) {
       // updateRowField applies an artefact price to every enchant of the row's tier.
-      prices.push({ key: "art", label: "Artefact", hint: `shared by every T${view.tier} enchant`, value: artefactByTier[view.tier] ?? 0, onCommit: (value) => updateRowField(selectedRow.key, "artefact", String(value)) });
+      prices.push({ key: "art", label: "Artefact", hint: `shared by every T${view.tier} enchant`, value: artefactByTier[view.tier] ?? 0, source: srcOf(selectedRow.key, "artefact", artefactByTier[view.tier] ?? 0), onCommit: (value) => updateRowField(selectedRow.key, "artefact", String(value)) });
     }
-    prices.push({ key: "market", label: isBlackMarketSell ? "Black Market value" : "Market value", value: view.values.market, onCommit: (value) => updateRowField(selectedRow.key, "market", String(value)) });
+    prices.push({ key: "market", label: isBlackMarketSell ? "Black Market value" : "Market value", value: view.values.market, source: srcOf(selectedRow.key, "market", view.values.market), onCommit: (value) => updateRowField(selectedRow.key, "market", String(value)) });
     return {
       label: `${selectedItem?.name || "Item"} ${selectedRow.uid} breakdown`,
       props: {
@@ -1648,6 +1730,7 @@ export function CraftingCalculatorPage() {
                         <td className="cc-cell-uid">{row.uid}{rowSuspect ? <span className="cc-suspect-overlay">This profit looks unrealistic — market price probably not real</span> : null}{rowSuspect ? <span className="cc-suspect-chip">Check price</span> : null}</td>
                         <td
                           className="mono-num editable-cell cc-cell-mat1"
+                          data-src={srcOf(row.key, "mat1", values.mat1)}
                           contentEditable
                           suppressContentEditableWarning
                           title={qty1 > 0 ? `Unit price × ${qty1}` : undefined}
@@ -1662,6 +1745,7 @@ export function CraftingCalculatorPage() {
                         </td>
                         <td
                           className="mono-num editable-cell cc-cell-mat2"
+                          data-src={srcOf(row.key, "mat2", values.mat2)}
                           contentEditable
                           suppressContentEditableWarning
                           title={qty2 > 0 ? `Unit price × ${qty2}` : undefined}
@@ -1678,6 +1762,7 @@ export function CraftingCalculatorPage() {
                           <td
                             rowSpan={section.rows.length}
                             className="mono-num editable-cell cc-cell-art"
+                            data-src={srcOf(row.key, "artefact", artefactByTier[rowTier] ?? 0)}
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => updateRowField(section.rows[0].key, "artefact", e.currentTarget.textContent || "0")}
@@ -1690,7 +1775,7 @@ export function CraftingCalculatorPage() {
                         ) : (
                           <td rowSpan={section.rows.length} className="mono-num muted cc-cell-art">Non Artefact</td>
                         )) : null}
-                        <td className="mono-num editable-cell cc-cell-market" contentEditable suppressContentEditableWarning onBlur={(e) => updateRowField(row.key, "market", e.currentTarget.textContent || "0")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}>{formatCompactOrDash(values.market)}</td>
+                        <td className="mono-num editable-cell cc-cell-market" data-src={srcOf(row.key, "market", values.market)} contentEditable suppressContentEditableWarning onBlur={(e) => updateRowField(row.key, "market", e.currentTarget.textContent || "0")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}>{formatCompactOrDash(values.market)}</td>
                         <td className="mono-num muted cc-cell-sold" data-empty={values.sold > 0 ? undefined : ""}>{values.sold > 0 ? formatCompact(values.sold) : "-"}</td>
                         <td className={`mono-num cc-cell-profit ${typeof rowProfit === "number" ? (rowProfit >= 0 ? "value-positive" : "value-negative") : ""}`}>
                           {typeof rowProfit === "number" ? formatCompact(rowProfit) : "-"}
@@ -1798,6 +1883,12 @@ export function CraftingCalculatorPage() {
                 </select>
               </div>
             </div>
+            {premiumVisible() ? (
+              <div className="cc-live">
+                <div className="cc-caption">Prices</div>
+                <LiveModeSwitch mode={live.mode} setMode={live.setMode} status={live.status} />
+              </div>
+            ) : null}
             <input
               className="detail-input"
               list="cc-item-suggestions"

@@ -118,7 +118,10 @@ function devApi(): Plugin {
           const row = await store.read(region);
           const stale = !row?.pricesAt || Date.now() - Date.parse(row.pricesAt) > 30 * 60000;
           if (stale && !marketFetching.has(region)) {
-            const ids = market.liveItemIds(JSON.parse(await readFile(path.join(rootDir, "../Data/ItemList.json"), "utf8")));
+            const ids = market.allLiveIds(
+              JSON.parse(await readFile(path.join(rootDir, "../Data/ItemList.json"), "utf8")),
+              JSON.parse(await readFile(path.join(rootDir, "public/items-categorized-crafting.json"), "utf8"))
+            );
             const at = new Date().toISOString();
             const job = Promise.all([market.fetchLive(region, ids, "prices"), market.fetchLive(region, ids, "volume")])
               .then(([prices, volume]) => store.write(region, { prices, pricesAt: at, volume, volumeAt: at }))

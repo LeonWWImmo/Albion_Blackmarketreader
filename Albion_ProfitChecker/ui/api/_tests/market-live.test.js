@@ -6,6 +6,7 @@ import {
   LIVE_CHUNK,
   LIVE_LOCATIONS,
   liveItemIds,
+  allLiveIds,
   parseLivePrices,
   parseLiveVolume
 } from "../_lib/marketLive.js";
@@ -30,6 +31,16 @@ describe("liveItemIds", () => {
     expect(ids).toHaveLength(50);
     expect(ids.slice(0, 5)).toEqual(["T4_BAG", "T4_BAG@1", "T4_BAG@2", "T4_BAG@3", "T4_BAG@4"]);
     expect(ids).toContain("T8_2H_AXE@4");
+  });
+});
+
+describe("allLiveIds", () => {
+  it("adds the crafting items, their artefacts, refined materials and journals", () => {
+    const recipes = { categories: [{ items: [{ id: "MAIN_SWORD_CRYSTAL", artifactId: "ARTEFACT_MAIN_SWORD_CRYSTAL" }, { id: "BAG" }] }] };
+    const ids = allLiveIds(["BAG"], recipes);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(expect.arrayContaining(["T4_BAG", "T8_MAIN_SWORD_CRYSTAL@4", "T6_ARTEFACT_MAIN_SWORD_CRYSTAL", "T5_PLANKS_LEVEL2@2", "T7_METALBAR", "T4_STONEBLOCK", "T8_JOURNAL_MAGE_FULL"]));
+    expect(ids).not.toContain("T4_STONEBLOCK_LEVEL1@1");
   });
 });
 

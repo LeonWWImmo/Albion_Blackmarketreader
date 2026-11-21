@@ -1,12 +1,12 @@
 // The live market snapshot job (GitHub Actions, .github/workflows/market-live.yml, every 30 min):
-// asks AODP for the current prices of every dashboard item in both regions and sends them to
+// asks AODP for the current prices of every dashboard and crafting item in both regions and sends them to
 // /api/market/ingest. The sales volume changes slowly, so it is fetched only every VOLUME_EVERY_H
 // hours (or with MARKET_VOLUME=1). See api/_lib/marketLive.js.
 //
 // Env: MARKET_SECRET (= ACTIONS_CRON_SECRET), MARKET_SITE (default https://blackmarketreader.com),
 // MARKET_REGIONS (default "eu,us"), MARKET_VOLUME=1 to force the volume, MARKET_DRY=1 to only print.
 import { readFile } from "node:fs/promises";
-import { fetchLive, liveItemIds, LIVE_REGIONS } from "../api/_lib/marketLive.js";
+import { allLiveIds, fetchLive, LIVE_REGIONS } from "../api/_lib/marketLive.js";
 
 const VOLUME_EVERY_H = 6;
 
@@ -24,7 +24,8 @@ if (!secret && !dry) {
 }
 
 const baseCodes = JSON.parse(await readFile(new URL("../../Data/ItemList.json", import.meta.url), "utf8"));
-const ids = liveItemIds(baseCodes);
+const recipes = JSON.parse(await readFile(new URL("../public/items-categorized-crafting.json", import.meta.url), "utf8"));
+const ids = allLiveIds(baseCodes, recipes);
 console.log(`${ids.length} items, regions ${regions.join(", ")}, volume ${withVolume ? "yes" : "no"}`);
 
 let failed = false;

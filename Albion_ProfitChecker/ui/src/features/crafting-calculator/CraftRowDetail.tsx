@@ -8,6 +8,8 @@ export type PriceLine = {
   label: string;
   hint?: string;
   value: number;
+  /** premium live prices: where the shown price came from */
+  source?: "live" | "daily";
   onCommit: (value: number) => void;
 };
 
@@ -71,7 +73,7 @@ export function CraftRowDetail({ itemName, iconSrc, tierLabel, profit, gain, sil
       <h3 className="bsheet-section-title">Prices</h3>
       <div className="cc-sheet-prices">
         {prices.map((line) => (
-          <PriceField key={line.key} label={line.label} hint={line.hint} value={line.value} onCommit={line.onCommit} />
+          <PriceField key={line.key} label={line.label} hint={line.hint} value={line.value} source={line.source} onCommit={line.onCommit} />
         ))}
       </div>
       <p className="cc-sheet-note">Edits update this tier straight away, the same as typing into the table on a computer.</p>

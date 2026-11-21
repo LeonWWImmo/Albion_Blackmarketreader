@@ -5,6 +5,8 @@ type PriceFieldProps = {
   /** Optional second line under the label, e.g. how many of the material one craft takes. */
   hint?: string;
   value: number;
+  /** premium live prices: marks the label live or daily */
+  source?: "live" | "daily";
   onCommit: (value: number) => void;
 };
 
@@ -18,7 +20,7 @@ const display = (value: number) => (Number.isFinite(value) && value > 0 ? String
  * Binding the box straight to the number would turn a cleared field into "0" mid-edit and
  * fight the user for the cursor.
  */
-export function PriceField({ label, hint, value, onCommit }: PriceFieldProps) {
+export function PriceField({ label, hint, value, source, onCommit }: PriceFieldProps) {
   const id = useId();
   const [draft, setDraft] = useState(() => display(value));
   const focused = useRef(false);
@@ -31,7 +33,7 @@ export function PriceField({ label, hint, value, onCommit }: PriceFieldProps) {
   return (
     <label className="cc-price-field" htmlFor={id}>
       <span className="cc-price-label">
-        {label}
+        <span data-src={source}>{label}</span>
         {hint ? <span className="cc-price-hint">{hint}</span> : null}
       </span>
       <span className="cc-price-input-wrap">

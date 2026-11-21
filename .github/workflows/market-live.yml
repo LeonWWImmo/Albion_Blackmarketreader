@@ -28,10 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # patterns, not cone mode: one file of public/ is enough
+          sparse-checkout-cone-mode: false
           sparse-checkout: |
-            Albion_ProfitChecker/Data
-            Albion_ProfitChecker/ui/api/_lib
-            Albion_ProfitChecker/ui/scripts
+            /Albion_ProfitChecker/Data/
+            /Albion_ProfitChecker/ui/api/_lib/
+            /Albion_ProfitChecker/ui/scripts/
+            /Albion_ProfitChecker/ui/public/items-categorized-crafting.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22

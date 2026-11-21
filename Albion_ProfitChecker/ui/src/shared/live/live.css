@@ -1,0 +1,83 @@
+/* Live prices in the tools (premium): LiveModeSwitch.tsx and the live / daily marks on prices.
+   A price cell gets data-src="live" or "daily" (Live + fill marks both, Live only the live ones);
+   the mark is drawn with ::after, so it never becomes part of an editable cell's text. */
+.lv-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.lv-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 201, 106, 0.28);
+  background: rgba(6, 10, 18, 0.6);
+}
+.lv-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 6px 11px;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lv-seg button.is-on {
+  color: #fff;
+  background: rgba(245, 201, 106, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(245, 201, 106, 0.45);
+}
+.lv-pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5fe0a0;
+  box-shadow: 0 0 8px #5fe0a0;
+}
+.lv-seg button:not(.is-on) .lv-pulse { opacity: 0.5; box-shadow: none; }
+.lv-badge {
+  margin: 0 4px 0 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1306;
+  background: linear-gradient(135deg, #ffe3a0, #f5c96a 55%, #d9a441);
+}
+.lv-status { font-size: 12.5px; color: rgba(255, 255, 255, 0.55); }
+.lv-status b { color: #fff; }
+.lv-status a { color: #f5c96a; font-weight: 700; text-decoration: none; }
+.lv-legend { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; }
+
+.lv-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.lv-dot.is-live { background: #5fe0a0; box-shadow: 0 0 6px rgba(95, 224, 160, 0.8); }
+.lv-dot.is-daily { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); }
+
+[data-src="live"]::after,
+[data-src="daily"]::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 5px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+[data-src="live"]::after { background: #5fe0a0; box-shadow: 0 0 6px rgba(95, 224, 160, 0.8); }
+[data-src="daily"]::after { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45); }

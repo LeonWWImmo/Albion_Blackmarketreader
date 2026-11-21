@@ -39,6 +39,26 @@ export function liveItemIds(baseCodes) {
   return ids;
 }
 
+const JOURNALS = ["WARRIOR", "HUNTER", "MAGE", "TOOLMAKER"];
+const REFINED = ["METALBAR", "PLANKS", "CLOTH", "LEATHER"];
+
+/**
+ * Every id a snapshot covers: the dashboard items (Data/ItemList.json) plus what the crafting tools
+ * price (public/items-categorized-crafting.json): all recipe items, their artefacts, the refined
+ * materials and the journals.
+ */
+export function allLiveIds(baseCodes, recipes) {
+  const items = (recipes?.categories ?? []).flatMap((c) => c.items ?? []);
+  const ids = new Set(liveItemIds([...new Set([...baseCodes, ...items.map((i) => i.id).filter(Boolean)])]));
+  for (let tier = 4; tier <= 8; tier += 1) {
+    for (const artefact of new Set(items.map((i) => i.artifactId).filter(Boolean))) ids.add(`T${tier}_${artefact}`);
+    for (const base of REFINED) for (let e = 0; e <= 4; e += 1) ids.add(e ? `T${tier}_${base}_LEVEL${e}@${e}` : `T${tier}_${base}`);
+    ids.add(`T${tier}_STONEBLOCK`);
+    for (const kind of JOURNALS) for (const state of ["EMPTY", "FULL"]) ids.add(`T${tier}_JOURNAL_${kind}_${state}`);
+  }
+  return [...ids];
+}
+
 const stampMs = (stamp) => Date.parse(/[zZ]$/.test(String(stamp)) ? stamp : `${stamp}Z`);
 /** Times in a snapshot are whole minutes since 1970 (smaller than ISO strings, enough precision). */
 const toMinute = (ms) => Math.round(ms / 60000);
