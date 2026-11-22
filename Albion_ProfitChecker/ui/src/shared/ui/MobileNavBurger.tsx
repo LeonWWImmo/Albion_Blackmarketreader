@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { TOOL_TABS, isActiveTab } from "./ToolNav";
+import { isActiveTab, toolTabs } from "./ToolNav";
 import "./mobileNavBurger.css";
 
 /**
@@ -32,11 +32,11 @@ export function MobileNavBurger({ accent }: { accent?: string }) {
                     ×
                   </button>
                 </div>
-                {TOOL_TABS.map((tool) => (
+                {toolTabs().map((tool) => (
                   <Link
                     key={tool.to}
                     to={tool.to}
-                    className={`mnav-item ${isActiveTab(tool.to, pathname) ? "active" : ""}`}
+                    className={`mnav-item ${isActiveTab(tool.to, pathname) ? "active" : ""}${tool.premium ? " is-premium" : ""}`}
                     onClick={() => setOpen(false)}
                   >
                     {tool.label}

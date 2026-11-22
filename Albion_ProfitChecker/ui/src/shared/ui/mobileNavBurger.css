@@ -130,3 +130,21 @@
 .mnav-item-community {
   color: #c7cdfb;
 }
+
+/* Premium: gold, whatever the tool's colour */
+.mnav-item.is-premium {
+  color: #ffe7a8;
+  border-color: rgba(224, 178, 82, 0.4);
+  background: linear-gradient(160deg, rgba(224, 178, 82, 0.16), rgba(5, 8, 12, 0.6));
+}
+.mnav-item.is-premium::before {
+  content: "✦  ";
+  color: #e0b252;
+}
+.mnav-item.is-premium:hover,
+.mnav-item.is-premium.active {
+  color: #fff6dc;
+  border-color: rgba(255, 231, 168, 0.7);
+  background: rgba(224, 178, 82, 0.2);
+  box-shadow: 0 0 18px rgba(224, 178, 82, 0.25);
+}

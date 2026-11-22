@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSeo } from "../shared/seo/useSeo";
 import { assetUrl, assets, CommunityTile, DemoVideo } from "@shared/index";
+import { premiumVisible } from "@shared/premium/premium";
 import "./landing.css";
 
 /** Phone hero: the crafting tools as tiles under the one main action. Icons match the dashboard's tool rail. */
@@ -66,7 +67,16 @@ type ToolSlide = {
 
 const CAROUSEL_DURATION_MS = 6000;
 
+/** The Premium teaser: one line per feature (the full story is on /premium). */
+const PREMIUM_TEASER: Array<[string, string]> = [
+  ["Live market", "Every city and the Black Market, fresh every 30 minutes"],
+  ["Price alerts", "Discord pings you when an item hits your price"],
+  ["Guild Pro", "A ZvZ report after every big fight, 90 day attendance"],
+  ["Live crafting", "All four calculators on live prices"]
+];
+
 export function LandingPage() {
+  const showPremium = premiumVisible();
   const previewRef = useRef<HTMLDivElement | null>(null);
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -202,6 +212,11 @@ export function LandingPage() {
           <a href="#how-it-works">How it works</a>
           <a href="#dashboard-views">Screens</a>
           <a href="#faq">FAQ</a>
+          {showPremium ? (
+            <a className="nav-premium" href="/premium">
+              Premium
+            </a>
+          ) : null}
         </div>
         <a className="nav-signin" href="/login">
           Sign in
@@ -256,6 +271,11 @@ export function LandingPage() {
               <a className="hero-cta" href="/guild">
                 Guild Tools
               </a>
+              {showPremium ? (
+                <a className="hero-cta is-premium" href="/premium">
+                  ✦ Premium · Live market, alerts, Guild Pro
+                </a>
+              ) : null}
             </div>
             {/* Phone only (landing.css): one main action, then the crafting tools as tiles,
                 instead of five identical buttons stacked down the screen. */}
@@ -283,6 +303,12 @@ export function LandingPage() {
                   </a>
                 ))}
               </div>
+              {showPremium ? (
+                <a className="hero-launch-premium" href="/premium">
+                  <strong>✦ Premium</strong>
+                  <span>Live market, price alerts, Guild Pro</span>
+                </a>
+              ) : null}
             </nav>
             <p>A free community market tool for Albion Online. Free users get one market data sync per day.</p>
           </div>
@@ -319,6 +345,31 @@ export function LandingPage() {
             </div>
           </div>
         </section>
+
+        {showPremium ? (
+          <section className="section lp-premium" id="premium" aria-labelledby="lp-premium-title">
+            <div className="container lp-premium-in">
+              <div className="lp-premium-head">
+                <span className="lp-premium-kicker">✦ Premium</span>
+                <h2 id="lp-premium-title">See the market before everyone else.</h2>
+                <p>Every free tool stays free. Premium adds live data and comfort on top.</p>
+              </div>
+              <ol className="lp-premium-list">
+                {PREMIUM_TEASER.map(([title, line], i) => (
+                  <li key={title}>
+                    <span className="lp-premium-num">0{i + 1}</span>
+                    <b>{title}</b>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ol>
+              <a className="lp-premium-cta" href="/premium">
+                <span>Discover Premium</span>
+                <b>4.99 CHF / month</b>
+              </a>
+            </div>
+          </section>
+        ) : null}
 
         <section className="section demo-section" id="gold-tracker-demo">
           <div className="container demo-grid">

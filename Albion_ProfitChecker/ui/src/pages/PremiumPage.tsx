@@ -3,6 +3,12 @@ import { Navigate } from "react-router-dom";
 import { useSeo } from "../shared/seo/useSeo";
 import { checkoutUrl, PREMIUM_OPEN, portalUrl, premiumVisible } from "../shared/premium/premium";
 import { premiumDay, usePremium, type PremiumState } from "../shared/premium/usePremium";
+import { useToolAccount } from "@shared/account/useToolAccount";
+import { useRegion } from "@shared/region/useRegion";
+import { MobileNavBurger } from "@shared/ui/MobileNavBurger";
+import { ToolRail } from "@shared/ui/ToolRail";
+// the account panel, region pill and modals (as on every tool), then this page on top
+import "../features/bm-crafter/ui/bmCrafter.css";
 import "./premium-page.css";
 
 // /premium: "obsidian and gold". Few words, a few effects: a spotlight that follows the pointer and
@@ -159,6 +165,8 @@ export function PremiumPage() {
   const welcome = useRef(welcomeBack()).current;
   const tries = useRef(0);
   const hero = useRef<HTMLElement | null>(null);
+  const [region, setRegion] = useRegion();
+  const { meta, layers } = useToolAccount("/premium", null, region, setRegion);
 
   useSeo({
     title: "Premium | Blackmarket Reader",
@@ -197,14 +205,14 @@ export function PremiumPage() {
   return (
     <div className="ob">
       <header className="ob-bar">
+        <MobileNavBurger accent="#e0b252" />
         <a className="ob-brand" href="/">
           <img src="/apple-touch-icon.png" alt="" width={28} height={28} />
           Blackmarket Reader
         </a>
-        <a className="ob-bar-link" href="/dashboard">
-          Back to the tools
-        </a>
+        {meta}
       </header>
+      <ToolRail />
 
       {/* 1. the spotlight */}
       <section className="ob-hero" ref={hero} aria-labelledby="ob-title">
@@ -294,6 +302,7 @@ export function PremiumPage() {
         <a href="/">blackmarketreader.com</a>
         <span>Data from the Albion Online Data Project and Albion's killboard.</span>
       </footer>
+      {layers}
     </div>
   );
 }
@@ -334,8 +343,8 @@ function AlertVisual() {
           <span className="ov-ping-head">
             Blackmarket Reader <em>APP</em> <small>now</small>
           </span>
-          <b>🔔 Adept's Bag dropped to 2.140</b>
-          <span>Cheapest listing in Martlock · your alert ≤ 2.200</span>
+          <b>🔔 Buy now: Adept's Bag at 2.140</b>
+          <span>Instant buy · sell order in Martlock ≤ 2.200</span>
         </div>
       </div>
       <div className="ov-ping is-second">
@@ -344,8 +353,8 @@ function AlertVisual() {
           <span className="ov-ping-head">
             Blackmarket Reader <em>APP</em> <small>4 min</small>
           </span>
-          <b>🔔 Elder's Bloodletter buy order at 1.31m</b>
-          <span>Best buy order in Black Market · your alert ≥ 1.3m</span>
+          <b>🔔 Sell now: Elder's Bloodletter at 1.31m</b>
+          <span>Instant sell · buy order in Black Market ≥ 1.3m</span>
         </div>
       </div>
     </div>

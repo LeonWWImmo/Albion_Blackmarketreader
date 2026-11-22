@@ -56,6 +56,9 @@
   cursor: pointer;
 }
 .pa-seg small { font-weight: 600; font-size: 12px; color: var(--pc-muted); }
+.pa-seg-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pc-muted); }
+.pa-seg button.is-on .pa-seg-tag { color: rgb(var(--pc-accent-rgb)); }
+.pa-seg button.is-on:last-child .pa-seg-tag { color: rgb(var(--pc-gold-rgb)); }
 .pa-seg button.is-on { border-color: rgba(var(--pc-accent-rgb), 0.7); background: rgba(var(--pc-accent-rgb), 0.12); }
 .pa-seg button.is-on:last-child { border-color: rgba(var(--pc-gold-rgb), 0.7); background: rgba(var(--pc-gold-rgb), 0.1); }
 

@@ -1,5 +1,6 @@
 // The price alert panel on an item's Price Checker page (premium, hidden until the launch), always
-// open: set "drops below" / "buy order above" for this item, see and delete its alerts, connect Discord.
+// open: "instant buy" (a sell order at or below the price) or "instant sell" (a buy order at or above
+// it) for this item, see and delete its alerts, connect Discord.
 import { useState, type FormEvent } from "react";
 import { MARKETS } from "../core/quotes";
 import { alertRule, useAlerts, type NewAlert, type PriceAlert } from "./useAlerts";
@@ -75,7 +76,7 @@ export function AlertPanel({ base, cheapest, bestSell }: Props) {
       {state.kind === "error" ? <p className="pa-error">{state.message}</p> : null}
       {state.kind === "guest" ? (
         <div className="pa-gate">
-          <p>Sign in to get a Discord ping when this item drops below your price.</p>
+          <p>Sign in to get a Discord ping when this item hits your price.</p>
           <a className="pa-cta" href={`/login?next=${encodeURIComponent(base.path)}`}>
             Sign in
           </a>
@@ -107,14 +108,16 @@ export function AlertPanel({ base, cheapest, bestSell }: Props) {
       {state.kind === "ok" && state.hook && !changeHook ? (
         <>
           <form className="pa-form" onSubmit={submit}>
-            <div className="pa-seg" role="group" aria-label="When">
-              <button type="button" className={side === "below" ? "is-on" : ""} onClick={() => pickSide("below")}>
-                Price drops below
-                <small>to buy cheap</small>
+            <div className="pa-seg" role="group" aria-label="What do you want to do?">
+              <button type="button" className={side === "below" ? "is-on" : ""} aria-pressed={side === "below"} onClick={() => pickSide("below")}>
+                <span className="pa-seg-tag">I want to buy</span>
+                Instant buy
+                <small>Ping when someone lists it at or below my price (cheapest sell order)</small>
               </button>
-              <button type="button" className={side === "above" ? "is-on" : ""} onClick={() => pickSide("above")}>
-                Buy order rises above
-                <small>to sell high</small>
+              <button type="button" className={side === "above" ? "is-on" : ""} aria-pressed={side === "above"} onClick={() => pickSide("above")}>
+                <span className="pa-seg-tag">I want to sell</span>
+                Instant sell
+                <small>Ping when a buy order pays my price or more (best buy order)</small>
               </button>
             </div>
             <div className="pa-row">
@@ -130,7 +133,7 @@ export function AlertPanel({ base, cheapest, bestSell }: Props) {
                 </select>
               </label>
               <label className="pa-field">
-                <span>{side === "below" ? "At or below" : "At or above"}</span>
+                <span>{side === "below" ? "Sell order at or below" : "Buy order at or above"}</span>
                 <input inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="silver" />
               </label>
               <button type="submit" className="pa-cta" disabled={busy}>
@@ -138,7 +141,7 @@ export function AlertPanel({ base, cheapest, bestSell }: Props) {
               </button>
             </div>
             <p className="pa-note">
-              {side === "below" ? "Cheapest" : "Best buy order"} now:{" "}
+              {side === "below" ? "Cheapest sell order" : "Best buy order"} now:{" "}
               <b>{(side === "below" ? cheapest : bestSell)?.toLocaleString("de-DE") ?? "no recent price"}</b> · pings go to <b>#{state.hook.name}</b>{" "}
               <button type="button" className="pa-link" onClick={() => setChangeHook(true)}>
                 change

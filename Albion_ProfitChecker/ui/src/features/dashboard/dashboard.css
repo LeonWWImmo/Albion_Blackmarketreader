@@ -38,96 +38,6 @@ body.dashboard-body {
   padding-top: 150px;
   padding-left: 24px;
 }
-.tool-rail {
-  position: fixed;
-  left: 0;
-  top: 116px;
-  width: 68px;
-  z-index: 42;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 10px 8px;
-  border-radius: 0 18px 18px 0;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-left: none;
-  background: linear-gradient(180deg, rgba(14,22,34,0.88), rgba(8,14,24,0.9));
-  backdrop-filter: blur(10px);
-  box-shadow: 12px 18px 42px rgba(0,0,0,0.35);
-  overflow: hidden;
-  transition: width 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
-}
-.tool-rail:hover {
-  width: 300px;
-  border-color: rgba(var(--fx-accent-rgb),0.25);
-  box-shadow: 12px 20px 48px rgba(0,0,0,0.46), 0 0 24px rgba(var(--fx-accent-rgb),0.12);
-}
-.tool-rail-link {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: rgba(233,237,245,0.88);
-  border: 1px solid transparent;
-  white-space: nowrap;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
-}
-.tool-rail-link:hover {
-  background: rgba(255,255,255,0.05);
-  border-color: rgba(255,255,255,0.12);
-  transform: translateX(2px);
-}
-.tool-rail-link.active {
-  color: var(--fx-accent);
-  background: rgba(var(--fx-accent-rgb),0.12);
-  border-color: rgba(var(--fx-accent-rgb),0.3);
-}
-.tool-rail-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #d9e2f0;
-  background: rgba(10,18,28,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
-  flex: 0 0 auto;
-}
-.tool-rail-icon svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-  display: block;
-}
-.tool-rail-link.active .tool-rail-icon {
-  color: #071017;
-  background: var(--fx-accent);
-  border-color: rgba(var(--fx-accent-rgb),0.6);
-  box-shadow: 0 0 14px rgba(var(--fx-accent-rgb),0.32);
-}
-.tool-rail-label {
-  opacity: 0;
-  transform: translateX(-10px);
-  pointer-events: none;
-  transition: opacity 150ms ease, transform 180ms ease;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.tool-rail:hover .tool-rail-label {
-  opacity: 1;
-  transform: translateX(0);
-}
 .hero {
   display: flex;
   justify-content: space-between;
@@ -219,6 +129,17 @@ body.dashboard-body {
   color: var(--fx-accent);
   border-color: rgba(var(--fx-accent-rgb),0.25);
   background: rgba(var(--fx-accent-rgb),0.12);
+}
+/* Premium (behind premiumVisible): gold, whatever the faction colour */
+.nav-link.nav-link-premium {
+  color: #f2cd78;
+  border-color: rgba(224,178,82,0.35);
+  background: rgba(224,178,82,0.08);
+}
+.nav-link.nav-link-premium:hover {
+  color: #ffe7a8;
+  border-color: rgba(255,231,168,0.6);
+  background: rgba(224,178,82,0.16);
 }
 .topbar-right {
   display: flex;
@@ -1720,9 +1641,6 @@ body.dashboard-body.panel-open::before {
   .dashboard .page {
     padding-left: 24px;
   }
-  .tool-rail {
-    display: none;
-  }
 }
 
 .city-crest-img {
@@ -2979,93 +2897,6 @@ body.dashboard-body.panel-open::before {
   .dashboard .page {
     width: 100% !important;
     max-width: 100% !important;
-  }
-}
-
-/* ===========================================================================
-   Tool rail unfurls like a banner
-   Closed it is the same narrow icon strip as before. On hover it does not just
-   get wider — a pennant notch opens in its trailing edge and a bright pole line
-   runs down the hinge, so it reads as a flag being unrolled.
-   =========================================================================== */
-
-.tool-rail {
-  /* Five points in both states so the notch can animate rather than pop in. */
-  clip-path: polygon(0 0, 100% 0, 100% 50%, 100% 100%, 0 100%);
-  /* Closed it is a soft rounded tab; unfurled the cloth squares off for the point. */
-  border-radius: 0 18px 18px 0;
-  transition:
-    width 280ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    clip-path 280ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    border-radius 280ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    border-color 220ms ease,
-    box-shadow 220ms ease;
-}
-
-.tool-rail:hover,
-.tool-rail:focus-within {
-  clip-path: polygon(0 0, 100% 0, calc(100% - 52px) 50%, 100% 100%, 0 100%);
-  border-radius: 0 6px 6px 0;
-  /* deep swallowtail, so the labels need to clear it */
-  padding-right: 58px;
-}
-
-/* Sword watermark woven into the cloth, behind the icons. Faint so it reads as
-   texture rather than another control; it lifts a little once the banner opens. */
-.tool-rail::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  width: 56px;
-  height: 250px;
-  transform: translateY(-50%);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 72' fill='%235cf0c8'%3E%3Cpath d='M12 1l3.2 8.6v34.2h-6.4V9.6z'/%3E%3Crect x='2.5' y='45' width='19' height='4.2' rx='2.1'/%3E%3Crect x='10.2' y='50' width='3.6' height='15' rx='1.2'/%3E%3Ccircle cx='12' cy='68' r='3.2'/%3E%3C/svg%3E") center / contain no-repeat;
-  opacity: 0.05;
-  transition: opacity 260ms ease, left 280ms cubic-bezier(0.22, 0.61, 0.36, 1), width 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Unfurled there is real cloth to charge, so the blade slides out and grows into it. */
-.tool-rail:hover::after,
-.tool-rail:focus-within::after {
-  left: 118px;
-  width: 110px;
-  opacity: 0.09;
-}
-
-/* The pole the banner hangs from. */
-.tool-rail::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, rgba(var(--fx-accent-rgb), 0.15), rgba(var(--fx-accent-rgb), 0.55), rgba(var(--fx-accent-rgb), 0.15));
-  opacity: 0;
-  transition: opacity 240ms ease;
-  pointer-events: none;
-}
-
-.tool-rail:hover::before,
-.tool-rail:focus-within::before {
-  opacity: 1;
-}
-
-/* Labels ride out with the cloth instead of appearing in place. */
-.tool-rail-label {
-  transform: translateX(-14px);
-  transition: opacity 200ms ease 60ms, transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1) 40ms;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tool-rail,
-  .tool-rail::before,
-  .tool-rail::after,
-  .tool-rail-label {
-    transition: none;
   }
 }
 

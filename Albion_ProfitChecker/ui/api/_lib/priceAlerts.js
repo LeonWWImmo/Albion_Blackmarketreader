@@ -74,17 +74,17 @@ export function alertMessage(alert, best) {
     avatar_url: ICON,
     embeds: [
       {
-        author: { name: "Blackmarket Reader · Price alert", icon_url: ICON },
-        title: `🔔 ${alert.item_name}${quality} ${below ? "dropped to" : "buy order at"} ${silver(best.price)}`,
+        author: { name: `Price alert · ${below ? "Instant buy" : "Instant sell"}`, icon_url: ICON },
+        title: `🔔 ${below ? "Buy now" : "Sell now"}: ${alert.item_name}${quality} at ${silver(best.price)}`,
         url: `${SITE}${alert.path}`,
         color: below ? 0x5fe0a0 : 0xf5c96a,
         description: below
-          ? `Cheapest listing in **${best.market}** · ${REGION[alert.region]}`
-          : `Best buy order in **${best.market}** · ${REGION[alert.region]}`,
+          ? `A sell order in **${best.market}** is at or below your price: buy it instantly. · ${REGION[alert.region]}`
+          : `A buy order in **${best.market}** pays your price or more: sell to it instantly. · ${REGION[alert.region]}`,
         thumbnail: { url: `https://render.albiononline.com/v1/item/${encodeURIComponent(alert.item_id)}.png?quality=${alert.quality}` },
         fields: [
-          { name: below ? "💰 Price" : "💰 Pays", value: `${silver(best.price)} silver`, inline: true },
-          { name: "🎯 Your alert", value: `${below ? "≤" : "≥"} ${silver(alert.price)}`, inline: true },
+          { name: below ? "🛒 Sell order" : "💰 Buy order", value: `${silver(best.price)} silver`, inline: true },
+          { name: "🎯 Your alert", value: `${below ? "Sell order ≤" : "Buy order ≥"} ${silver(alert.price)}`, inline: true },
           { name: "🕒 Seen", value: `<t:${Math.floor(best.at / 1000)}:R>`, inline: true }
         ],
         footer: { text: "Price alert · Premium · blackmarketreader.com · fires again once the price went back" }

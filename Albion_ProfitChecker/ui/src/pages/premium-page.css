@@ -54,8 +54,23 @@ body.premium-page-body {
 }
 .ob-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ob-ink); text-decoration: none; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; }
 .ob-brand img { border-radius: 8px; }
-.ob-bar-link { color: var(--ob-muted); text-decoration: none; font-size: 13px; font-weight: 600; }
-.ob-bar-link:hover { color: var(--ob-ink); }
+/* region pill and account button (useToolAccount), in gold */
+.ob-bar .bm-pill {
+  color: var(--ob-gold-hi);
+  border-color: rgba(var(--ob-gold-rgb), 0.55);
+  background: rgba(var(--ob-gold-rgb), 0.1);
+  font-family: "Inter", system-ui, sans-serif;
+  cursor: pointer;
+}
+.ob-bar .bm-pill:hover { background: rgba(var(--ob-gold-rgb), 0.18); }
+.ob-bar .account-btn { border: 1px solid rgba(var(--ob-gold-rgb), 0.5); box-shadow: 0 0 18px rgba(var(--ob-gold-rgb), 0.18); }
+/* the rail turns gold here */
+.ob .tool-rail {
+  --fx-accent: var(--ob-gold);
+  --fx-accent-rgb: var(--ob-gold-rgb);
+  background: linear-gradient(180deg, rgba(20, 16, 9, 0.9), rgba(6, 6, 8, 0.94));
+  border-color: var(--ob-line);
+}
 
 /* ---------- 1. the spotlight ---------- */
 .ob-hero {
@@ -468,6 +483,12 @@ h1.ob-foil {
   .ob-kicker i { width: 26px; }
   .ob-cta > span { padding: 14px 20px; font-size: 15px; }
   .ob-cta > b { padding-right: 18px; font-size: 13px; }
+}
+
+/* phone: room for the menu button top left; the region lives in the account panel */
+@media (max-width: 640px) {
+  .ob-bar { padding: 10px 12px 10px 64px; }
+  .ob-bar .bm-pill { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

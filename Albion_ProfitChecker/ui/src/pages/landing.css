@@ -2162,3 +2162,211 @@ body {
     transition: none;
   }
 }
+
+/* ------------------------------------------------------------------ premium (behind premiumVisible)
+   Gold on black, like /premium: a nav link, a wide gold plate under the tool buttons, a phone tile
+   and one teaser band. */
+
+.nav-links a.nav-premium {
+  color: #f2cd78;
+}
+
+/* one more link: a little less air between them, and room before "Sign in" */
+.nav-links:has(.nav-premium) {
+  gap: 34px;
+  margin-right: 28px;
+}
+
+@media (min-width: 721px) {
+  .hero-cta.is-premium {
+    grid-column: 1 / -1;
+  }
+}
+
+.hero-cta.is-premium {
+  color: #1a1204;
+  border-color: rgba(255, 231, 168, 0.8);
+  background: linear-gradient(100deg, #b8862f 0%, #e0b252 22%, #fff3cf 34%, #e9bd5c 48%, #b8862f 70%, #f2cd78 100%);
+  background-size: 200% 100%;
+  animation: lp-foil 6s ease-in-out infinite alternate;
+}
+
+.hero-cta.is-premium:hover {
+  color: #1a1204;
+  box-shadow: 0 0 0 1px rgba(255, 231, 168, 0.4), 0 12px 34px rgba(224, 178, 82, 0.35);
+}
+
+/* back and forth across a gradient twice the width: no jump at the end */
+@keyframes lp-foil {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+.hero-launch-premium {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 231, 168, 0.55);
+  background: linear-gradient(120deg, rgba(224, 178, 82, 0.26), rgba(20, 14, 4, 0.9) 70%);
+  color: #ffe7a8;
+  text-decoration: none;
+}
+
+.hero-launch-premium strong {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+
+.hero-launch-premium span {
+  font-size: 12px;
+  color: rgba(255, 231, 168, 0.7);
+  text-align: right;
+}
+
+.lp-premium {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 80% at 50% 0%, rgba(224, 178, 82, 0.14), transparent 70%),
+    #050608;
+  border-top: 1px solid rgba(224, 178, 82, 0.22);
+  border-bottom: 1px solid rgba(224, 178, 82, 0.22);
+}
+
+.lp-premium-in {
+  display: grid;
+  gap: 36px;
+  justify-items: center;
+  text-align: center;
+}
+
+.lp-premium-kicker {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #e0b252;
+}
+
+.lp-premium-head h2 {
+  margin: 14px 0 10px;
+  font-size: clamp(28px, 4.4vw, 52px);
+  line-height: 1.05;
+  background: linear-gradient(100deg, #b8862f 0%, #e0b252 20%, #fff3cf 32%, #e9bd5c 46%, #8f6420 62%, #f2cd78 80%, #fff6dc 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-foil 8s ease-in-out infinite alternate;
+}
+
+.lp-premium-head p {
+  margin: 0;
+  color: rgba(246, 241, 228, 0.6);
+}
+
+.lp-premium-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(224, 178, 82, 0.18);
+  border: 1px solid rgba(224, 178, 82, 0.18);
+  border-radius: 20px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.lp-premium-list li {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 24px 22px;
+  background: #07080b;
+  transition: background 200ms ease;
+}
+
+.lp-premium-list li:hover {
+  background: #0d0b07;
+}
+
+.lp-premium-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: rgba(224, 178, 82, 0.7);
+}
+
+.lp-premium-list b {
+  font-size: 18px;
+  color: #f6f1e4;
+}
+
+.lp-premium-list span:last-child {
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(246, 241, 228, 0.6);
+}
+
+.lp-premium-cta {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 231, 168, 0.6);
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: 0 0 40px rgba(224, 178, 82, 0.18);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.lp-premium-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 54px rgba(224, 178, 82, 0.32);
+}
+
+.lp-premium-cta span {
+  padding: 16px 26px;
+  font-weight: 800;
+  color: #1a1204;
+  background: linear-gradient(100deg, #b8862f, #ffe7a8 45%, #e0b252);
+}
+
+.lp-premium-cta b {
+  padding: 16px 22px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  color: #ffe7a8;
+}
+
+@media (max-width: 900px) {
+  .lp-premium-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .lp-premium-list {
+    grid-template-columns: 1fr;
+  }
+  .lp-premium-cta span,
+  .lp-premium-cta b {
+    padding: 14px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cta.is-premium,
+  .lp-premium-head h2 {
+    animation: none;
+  }
+}

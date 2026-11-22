@@ -12,6 +12,7 @@ import { sanitizeAvatarUrl } from "@shared/account/avatarUrl";
 import { PriceCoverage } from "@shared/account/PriceCoverage";
 import { PremiumSection } from "@shared/premium/PremiumSection";
 import { premiumVisible } from "@shared/premium/premium";
+import { ToolRail } from "@shared/ui/ToolRail";
 import { LiveMarket } from "./live/LiveMarket";
 
 type Region = "us" | "eu";
@@ -1126,88 +1127,7 @@ export function DashboardPage() {
       <div className="page">
       <img src={assetUrl("picture/testo ohne background.png")} alt="Logo" className="logo-fixed" onClick={() => { window.location.href = "/"; }} />
       <button className="mobile-back" onClick={() => { window.location.href = "/"; }}>Back</button>
-      <aside className="tool-rail">
-        <a className="tool-rail-link" href="/" title="Home">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M12 3 3 10v10h6v-6h6v6h6V10l-9-7Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Home</span>
-        </a>
-        <a className="tool-rail-link active" href="/dashboard" title="Blackmarket Reader">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M4 5h16v14H4zM7 15h2v3H7zm4-4h2v7h-2zm4-2h2v9h-2z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Blackmarket Reader</span>
-        </a>
-        <a className="tool-rail-link" href="/bm-crafter" title="Blackmarket Crafter">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M14 3 4 9l6 3.5 8-4.7V14h2V6L14 3Zm-4 11-6-3.5V15l6 3.5V14Zm2 4.5L18 15v-2.5L12 16v2.5Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Blackmarket Crafter</span>
-        </a>
-        <a className="tool-rail-link" href="/crafting-calculator" title="Crafting Calculator">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 4h10V5H7v2Zm0 4h2V9H7v2Zm4 0h2V9h-2v2Zm4 0h2V9h-2v2ZM7 15h2v-2H7v2Zm4 0h6v-2h-6v2Zm-4 4h2v-2H7v2Zm4 0h6v-2h-6v2Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Crafting Calculator</span>
-        </a>
-        <a className="tool-rail-link" href="/refining-calculator" title="Refining Calculator">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M7 3h10v2H7V3Zm2 4h6l4 6-7 8-7-8 4-6Zm.96 2-2.23 3.35L12 17.2l4.27-4.85L14.04 9H9.96Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Refining Calculator</span>
-        </a>
-        <a className="tool-rail-link" href="/food-potion-crafter" title="Food & Potion Crafter">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M11 2h2v6h-2V2Zm-4 0h2v6a3 3 0 0 1-6 0V2h2v6a1 1 0 0 0 2 0V2Zm10 0h2v20h-2v-8h-2V7a5 5 0 0 1 2-5Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Food &amp; Potion Crafter</span>
-        </a>
-        <a className="tool-rail-link" href="/gold-tracker" title="Gold Tracker">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 4V8.5C5.7 9.6 8.7 10 12 10s6.3-.4 8-1.5V10c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V14c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V18c0 1.7-3.6 3-8 3s-8-1.3-8-3Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Gold Tracker</span>
-        </a>
-        <a className="tool-rail-link" href="/loot-split" title="Loot Split">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2Zm-5 12H9v-2h6v2Zm5-7H4V4l16-.02V7Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Loot Split</span>
-        </a>
-        <a className="tool-rail-link" href="/prices" title="Price Checker">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42ZM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Price Checker</span>
-        </a>
-        <a className="tool-rail-link" href="/guild" title="Guild Tools">
-          <span className="tool-rail-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path d="M12 2 4 5v6c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5l-8-3Zm0 2.2 6 2.25V11c0 4.1-2.5 7.9-6 8.9-3.5-1-6-4.8-6-8.9V6.45l6-2.25Z" />
-            </svg>
-          </span>
-          <span className="tool-rail-label">Guild Tools</span>
-        </a>
-      </aside>
+      <ToolRail />
 
       <header className={`topbar ${topbarHidden ? "topbar-hidden" : ""}`}>
         <MobileNavBurger accent="var(--fx-accent)" />
@@ -1231,6 +1151,7 @@ export function DashboardPage() {
           <a className="nav-link" href="/prices">Price Checker</a>
           <a className="nav-link" href="/guild">Guild</a>
           <a className="nav-link" href="/community">Community</a>
+          {premiumVisible() ? <a className="nav-link nav-link-premium" href="/premium">Premium</a> : null}
         </nav>
         <div className="topbar-right">
           <div className="topbar-meta">

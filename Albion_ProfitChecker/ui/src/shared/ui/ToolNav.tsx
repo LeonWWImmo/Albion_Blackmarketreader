@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { premiumVisible } from "@shared/premium/premium";
 import "./toolNav.css";
 
-type Tab = { to: string; label: string; hint?: string; crafting?: true };
+type Tab = { to: string; label: string; hint?: string; crafting?: true; premium?: true };
 
 /** Every page in the tool switcher, in order: the desktop tabs and the phone menu both use this list. */
 export const TOOL_TABS: ReadonlyArray<Tab> = [
@@ -15,8 +16,12 @@ export const TOOL_TABS: ReadonlyArray<Tab> = [
   { to: "/prices", label: "Price Checker" },
   { to: "/gold-tracker", label: "Gold Tracker" },
   { to: "/loot-split", label: "Loot Split" },
-  { to: "/guild", label: "Guild" }
+  { to: "/guild", label: "Guild" },
+  { to: "/premium", label: "Premium", premium: true }
 ];
+
+/** The tabs to show: Premium only once it is visible (premiumVisible). */
+export const toolTabs = () => (premiumVisible() ? TOOL_TABS : TOOL_TABS.filter((tab) => !tab.premium));
 
 const CRAFTING = TOOL_TABS.filter((tab) => tab.crafting);
 
@@ -90,17 +95,17 @@ function CraftingMenu({ pathname }: { pathname: string }) {
 /** The tabs in a tool page's header (desktop; phones get MobileNavBurger with the full list). */
 export function ToolNav() {
   const { pathname } = useLocation();
-  const tab = ({ to, label }: Tab) =>
+  const tab = ({ to, label, premium }: Tab) =>
     isActiveTab(to, pathname) ? (
-      <span key={to} className="nav-tab active" aria-current="page">
-        {label}
+      <span key={to} className={`nav-tab active${premium ? " is-premium" : ""}`} aria-current="page" title={premium ? label : undefined}>
+        {premium ? <span className="nav-tab-text">{label}</span> : label}
       </span>
     ) : (
-      <Link key={to} className="nav-tab" to={to}>
-        {label}
+      <Link key={to} className={`nav-tab${premium ? " is-premium" : ""}`} to={to} title={premium ? label : undefined}>
+        {premium ? <span className="nav-tab-text">{label}</span> : label}
       </Link>
     );
-  const [home, dashboard, ...rest] = TOOL_TABS.filter((t) => !t.crafting);
+  const [home, dashboard, ...rest] = toolTabs().filter((t) => !t.crafting);
   return (
     <nav className="bm-nav bm-nav-switch" aria-label="Tools">
       {tab(home)}

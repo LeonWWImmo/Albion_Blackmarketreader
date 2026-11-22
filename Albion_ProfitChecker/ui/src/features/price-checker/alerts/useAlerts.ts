@@ -96,9 +96,10 @@ export function useAlerts(active: boolean) {
 
 const QUALITY = ["Normal", "Good", "Outstanding", "Excellent", "Masterpiece"];
 
-/** "Cheapest listing ≤ 20.000 in any city" */
+/** "Instant buy · sell order ≤ 20.000 in any city" */
 export function alertRule(alert: Pick<PriceAlert, "side" | "price" | "market" | "quality">): string {
   const where = alert.market === "ANY" ? (alert.side === "below" ? "any city" : "any market") : alert.market;
   const quality = alert.quality > 1 ? ` · ${QUALITY[alert.quality - 1]}` : "";
-  return `${alert.side === "below" ? "Listing ≤" : "Buy order ≥"} ${alert.price.toLocaleString("de-DE")} in ${where}${quality}`;
+  const rule = alert.side === "below" ? "Instant buy · sell order ≤" : "Instant sell · buy order ≥";
+  return `${rule} ${alert.price.toLocaleString("de-DE")} in ${where}${quality}`;
 }
