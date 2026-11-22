@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T12:06:52.608Z",
+  "generatedAt": "2026-11-22T12:17:26.488Z",
   "region": "us",
   "cities": [
     "Lymhurst",
@@ -16,183 +16,192 @@
       "itemId": "T1_FISHSAUCE_LEVEL1",
       "tier": 1,
       "prices": {
-        "Martlock": 4739,
-        "Fort Sterling": 4090,
-        "Thetford": 3948,
-        "Bridgewatch": 4199,
-        "Caerleon": 4691
+        "Lymhurst": 3990,
+        "Martlock": 4120,
+        "Fort Sterling": 4160
       },
-      "sold": 65961
+      "sold": 69260
     },
     {
       "itemId": "T1_MEAL_SOUP",
       "tier": 1,
       "prices": {
-        "Lymhurst": 402,
-        "Thetford": 420,
-        "Caerleon": 378,
-        "Brecilien": 402
+        "Lymhurst": 467,
+        "Martlock": 345,
+        "Thetford": 360,
+        "Bridgewatch": 500,
+        "Caerleon": 379,
+        "Brecilien": 399
       },
-      "sold": 51102
+      "sold": 51875
     },
     {
       "itemId": "T1_FISHSAUCE_LEVEL2",
       "tier": 1,
       "prices": {
+        "Lymhurst": 12490,
         "Martlock": 12884,
-        "Fort Sterling": 11539,
-        "Thetford": 12758,
-        "Caerleon": 15790
+        "Fort Sterling": 12942,
+        "Caerleon": 15788
       },
-      "sold": 31507
+      "sold": 31361
     },
     {
       "itemId": "T1_MEAL_SOUP_FISH",
       "tier": 1,
       "prices": {
+        "Lymhurst": 897,
         "Thetford": 663,
-        "Caerleon": 1190
+        "Bridgewatch": 1090
       },
-      "sold": 130
+      "sold": 133
     },
     {
       "itemId": "T1_MEAL_GRILLEDFISH",
       "tier": 1,
       "prices": {
-        "Fort Sterling": 260,
-        "Thetford": 98,
+        "Lymhurst": 339,
+        "Thetford": 335,
+        "Bridgewatch": 700,
         "Caerleon": 310
       },
-      "sold": 1480
+      "sold": 1449
     },
     {
       "itemId": "T1_MEAL_SEAWEEDSALAD",
       "tier": 1,
       "prices": {
-        "Martlock": 556,
-        "Fort Sterling": 220,
-        "Bridgewatch": 465
+        "Lymhurst": 697,
+        "Thetford": 353,
+        "Bridgewatch": 542
       },
-      "sold": 1011
+      "sold": 1006
     },
     {
       "itemId": "T1_FISHSAUCE_LEVEL3",
       "tier": 1,
       "prices": {
-        "Fort Sterling": 32390,
-        "Thetford": 34469,
-        "Caerleon": 39970
+        "Lymhurst": 34994,
+        "Fort Sterling": 35000
       },
-      "sold": 4905
+      "sold": 4894
     },
     {
       "itemId": "T2_MEAL_SALAD",
       "tier": 2,
       "prices": {
-        "Martlock": 550,
-        "Fort Sterling": 570,
-        "Bridgewatch": 532
+        "Lymhurst": 938,
+        "Thetford": 829,
+        "Bridgewatch": 544
       },
-      "sold": 17038
+      "sold": 15719
     },
     {
       "itemId": "T2_MEAL_SALAD_FISH",
       "tier": 2,
       "prices": {
+        "Thetford": 999,
         "Bridgewatch": 799
       },
-      "sold": 10
+      "sold": 9
     },
     {
       "itemId": "T3_MEAL_OMELETTE_AVALON",
       "tier": 3,
       "prices": {
-        "Martlock": 39949,
-        "Bridgewatch": 15069
+        "Lymhurst": 11406,
+        "Martlock": 39948,
+        "Bridgewatch": 9997
       },
-      "sold": 48
+      "sold": 49
     },
     {
       "itemId": "T3_MEAL_OMELETTE",
       "tier": 3,
       "prices": {
-        "Lymhurst": 478,
-        "Martlock": 489,
-        "Fort Sterling": 511,
-        "Thetford": 498,
-        "Bridgewatch": 499,
-        "Brecilien": 538
+        "Lymhurst": 496,
+        "Martlock": 529,
+        "Fort Sterling": 629,
+        "Thetford": 492,
+        "Bridgewatch": 474,
+        "Caerleon": 444,
+        "Brecilien": 535
       },
-      "sold": 20201
+      "sold": 20068
     },
     {
       "itemId": "T3_MEAL_PIE",
       "tier": 3,
       "prices": {
-        "Lymhurst": 600,
-        "Fort Sterling": 518,
-        "Thetford": 575,
+        "Lymhurst": 625,
+        "Martlock": 560,
+        "Thetford": 592,
         "Bridgewatch": 565,
-        "Caerleon": 409
+        "Caerleon": 409,
+        "Brecilien": 796
       },
-      "sold": 33176
+      "sold": 33055
     },
     {
       "itemId": "T3_FLOUR",
       "tier": 3,
       "prices": {
-        "Lymhurst": 409,
-        "Martlock": 403,
-        "Fort Sterling": 451,
-        "Thetford": 414,
-        "Bridgewatch": 466
+        "Thetford": 429,
+        "Bridgewatch": 449
       },
-      "sold": 107629
+      "sold": 108185
     },
     {
       "itemId": "T3_MEAL_OMELETTE_FISH",
       "tier": 3,
-      "prices": {},
-      "sold": 53
+      "prices": {
+        "Martlock": 1183,
+        "Fort Sterling": 3295,
+        "Thetford": 1291,
+        "Bridgewatch": 1850,
+        "Caerleon": 1893,
+        "Brecilien": 1500
+      },
+      "sold": 39
     },
     {
       "itemId": "T3_MEAL_SOUP_FISH",
       "tier": 3,
-      "prices": {
-        "Thetford": 8986,
-        "Caerleon": 15300
-      },
-      "sold": 68
+      "prices": {},
+      "sold": 66
     },
     {
       "itemId": "T3_MEAT",
       "tier": 3,
       "prices": {
-        "Martlock": 392,
-        "Fort Sterling": 335,
-        "Thetford": 395,
-        "Bridgewatch": 320,
-        "Caerleon": 340
+        "Lymhurst": 387,
+        "Martlock": 382,
+        "Thetford": 345,
+        "Bridgewatch": 318
       },
-      "sold": 181622
+      "sold": 179203
     },
     {
       "itemId": "T3_MEAL_ROAST",
       "tier": 3,
       "prices": {
-        "Lymhurst": 522,
-        "Bridgewatch": 419,
-        "Brecilien": 391
+        "Lymhurst": 520,
+        "Thetford": 399,
+        "Bridgewatch": 576,
+        "Brecilien": 393
       },
-      "sold": 2252
+      "sold": 2270
     },
     {
       "itemId": "T3_MEAL_ROAST_FISH",
       "tier": 3,
       "prices": {
-        "Lymhurst": 1333,
-        "Bridgewatch": 1550,
-        "Brecilien": 737
+        "Lymhurst": 1330,
+        "Martlock": 1800,
+        "Fort Sterling": 1500,
+        "Thetford": 5889,
+        "Bridgewatch": 1549,
+        "Brecilien": 731
       },
       "sold": 308
     },
@@ -200,105 +209,107 @@
       "itemId": "T3_MEAL_PIE_FISH",
       "tier": 3,
       "prices": {
-        "Fort Sterling": 1494,
-        "Caerleon": 1899
+        "Martlock": 840,
+        "Thetford": 2764,
+        "Bridgewatch": 949,
+        "Caerleon": 1899,
+        "Brecilien": 2994
       },
-      "sold": 31
+      "sold": 29
     },
     {
       "itemId": "T3_MEAL_SOUP",
       "tier": 3,
       "prices": {
-        "Martlock": 1743,
-        "Thetford": 1943,
+        "Lymhurst": 2300,
+        "Martlock": 1386,
+        "Thetford": 1700,
         "Bridgewatch": 2146,
-        "Brecilien": 2280
+        "Brecilien": 2200
       },
-      "sold": 12754
+      "sold": 12631
     },
     {
       "itemId": "T4_MEAL_SANDWICH_AVALON",
       "tier": 4,
-      "prices": {
-        "Thetford": 8893,
-        "Brecilien": 13585
-      },
+      "prices": {},
       "sold": 67
     },
     {
       "itemId": "T4_MEAL_STEW_AVALON",
       "tier": 4,
       "prices": {
-        "Martlock": 11998,
-        "Bridgewatch": 12947,
-        "Brecilien": 17500
+        "Fort Sterling": 28998,
+        "Thetford": 15083,
+        "Bridgewatch": 12947
       },
-      "sold": 696
+      "sold": 668
     },
     {
       "itemId": "T4_BREAD",
       "tier": 4,
       "prices": {
-        "Lymhurst": 408,
-        "Martlock": 348,
-        "Thetford": 355,
-        "Bridgewatch": 385
+        "Martlock": 362,
+        "Fort Sterling": 400,
+        "Thetford": 359,
+        "Bridgewatch": 380,
+        "Caerleon": 278
       },
-      "sold": 141656
+      "sold": 137726
     },
     {
       "itemId": "T4_MEAL_SANDWICH",
       "tier": 4,
       "prices": {
-        "Lymhurst": 494,
-        "Martlock": 433,
-        "Thetford": 539
+        "Lymhurst": 466,
+        "Martlock": 450,
+        "Fort Sterling": 455,
+        "Thetford": 538,
+        "Bridgewatch": 598
       },
-      "sold": 6582
+      "sold": 6761
     },
     {
       "itemId": "T4_MEAL_STEW",
       "tier": 4,
       "prices": {
-        "Lymhurst": 550,
-        "Martlock": 590,
-        "Fort Sterling": 553,
-        "Thetford": 597,
-        "Bridgewatch": 543,
-        "Caerleon": 662,
-        "Brecilien": 1699
+        "Lymhurst": 574,
+        "Martlock": 606,
+        "Fort Sterling": 550,
+        "Thetford": 797,
+        "Bridgewatch": 546,
+        "Caerleon": 661,
+        "Brecilien": 1688
       },
-      "sold": 11871
+      "sold": 10929
     },
     {
       "itemId": "T4_BUTTER",
       "tier": 4,
       "prices": {
-        "Martlock": 198,
-        "Fort Sterling": 199,
-        "Thetford": 240,
-        "Caerleon": 186
+        "Fort Sterling": 198,
+        "Thetford": 240
       },
-      "sold": 8472
+      "sold": 8469
     },
     {
       "itemId": "T4_MEAL_STEW_FISH",
       "tier": 4,
       "prices": {
-        "Martlock": 1786,
-        "Fort Sterling": 43725,
-        "Thetford": 1173,
-        "Bridgewatch": 1800,
-        "Caerleon": 1279,
+        "Martlock": 4200,
+        "Thetford": 1169,
+        "Bridgewatch": 1600,
+        "Caerleon": 1274,
         "Brecilien": 4988
       },
-      "sold": 261
+      "sold": 260
     },
     {
       "itemId": "T4_MEAL_SALAD_FISH",
       "tier": 4,
       "prices": {
-        "Martlock": 7257
+        "Thetford": 14996,
+        "Bridgewatch": 6900
       },
       "sold": 23
     },
@@ -306,479 +317,461 @@
       "itemId": "T4_MEAT",
       "tier": 4,
       "prices": {
-        "Martlock": 378,
-        "Thetford": 378,
-        "Bridgewatch": 322,
-        "Caerleon": 394
+        "Lymhurst": 388,
+        "Fort Sterling": 367,
+        "Thetford": 345,
+        "Bridgewatch": 318
       },
-      "sold": 66793
+      "sold": 66351
     },
     {
       "itemId": "T4_MEAL_SANDWICH_FISH",
       "tier": 4,
       "prices": {
-        "Lymhurst": 1438,
+        "Lymhurst": 1439,
         "Martlock": 1537,
-        "Thetford": 1700
+        "Fort Sterling": 1500,
+        "Thetford": 1697,
+        "Bridgewatch": 1025,
+        "Brecilien": 2335
       },
-      "sold": 53
+      "sold": 54
     },
     {
       "itemId": "T4_MEAL_SALAD",
       "tier": 4,
       "prices": {
-        "Thetford": 2598
+        "Thetford": 2596,
+        "Bridgewatch": 1799
       },
-      "sold": 6611
+      "sold": 6473
     },
     {
       "itemId": "T5_MEAL_OMELETTE_AVALON",
       "tier": 5,
       "prices": {
-        "Martlock": 36476
+        "Lymhurst": 40970,
+        "Martlock": 36487,
+        "Fort Sterling": 29000,
+        "Thetford": 33378,
+        "Bridgewatch": 33952,
+        "Brecilien": 33910
       },
-      "sold": 136
+      "sold": 131
     },
     {
       "itemId": "T5_MEAL_SOUP_FISH",
       "tier": 5,
       "prices": {
-        "Lymhurst": 17470,
-        "Martlock": 18958,
-        "Fort Sterling": 17985,
-        "Caerleon": 23900,
-        "Brecilien": 13986
+        "Thetford": 14754
       },
-      "sold": 878
+      "sold": 858
     },
     {
       "itemId": "T5_MEAL_SOUP",
       "tier": 5,
       "prices": {
-        "Lymhurst": 5885,
-        "Martlock": 5854,
-        "Fort Sterling": 5939,
-        "Thetford": 4774,
-        "Bridgewatch": 5866,
-        "Caerleon": 5299,
-        "Brecilien": 5889
+        "Lymhurst": 5900,
+        "Martlock": 5658,
+        "Fort Sterling": 5907,
+        "Thetford": 4744,
+        "Bridgewatch": 5829,
+        "Caerleon": 5386,
+        "Brecilien": 5700
       },
-      "sold": 47008
+      "sold": 45867
     },
     {
       "itemId": "T5_MEAL_OMELETTE_FISH",
       "tier": 5,
       "prices": {
-        "Martlock": 3794
+        "Fort Sterling": 4464,
+        "Thetford": 5491
       },
-      "sold": 179
+      "sold": 175
     },
     {
       "itemId": "T5_MEAL_OMELETTE",
       "tier": 5,
       "prices": {
-        "Martlock": 1693,
-        "Brecilien": 1400
+        "Lymhurst": 1218,
+        "Fort Sterling": 1380,
+        "Thetford": 1277,
+        "Bridgewatch": 1258,
+        "Caerleon": 1795,
+        "Brecilien": 1598
       },
-      "sold": 6650
+      "sold": 6631
     },
     {
       "itemId": "T5_MEAL_PIE",
       "tier": 5,
       "prices": {
-        "Lymhurst": 1910,
-        "Martlock": 1908,
-        "Fort Sterling": 2087,
-        "Thetford": 2120,
-        "Caerleon": 2320
+        "Lymhurst": 1908,
+        "Thetford": 2129,
+        "Bridgewatch": 2122,
+        "Caerleon": 2318,
+        "Brecilien": 2091
       },
-      "sold": 12782
+      "sold": 12573
     },
     {
       "itemId": "T5_MEAL_PIE_FISH",
       "tier": 5,
       "prices": {
-        "Martlock": 4993,
-        "Fort Sterling": 2960
+        "Thetford": 2951,
+        "Bridgewatch": 3299
       },
-      "sold": 63
+      "sold": 59
     },
     {
       "itemId": "T5_MEAT",
       "tier": 5,
       "prices": {
-        "Martlock": 376,
-        "Fort Sterling": 389,
-        "Thetford": 419
+        "Lymhurst": 369,
+        "Thetford": 407,
+        "Bridgewatch": 500,
+        "Caerleon": 525
       },
-      "sold": 121241
+      "sold": 117881
     },
     {
       "itemId": "T5_MEAL_ROAST",
       "tier": 5,
       "prices": {
-        "Lymhurst": 1513,
-        "Martlock": 1513,
+        "Lymhurst": 1514,
+        "Martlock": 1527,
+        "Thetford": 1400,
         "Bridgewatch": 1122,
-        "Brecilien": 1578
+        "Brecilien": 1593
       },
-      "sold": 1896
+      "sold": 1905
     },
     {
       "itemId": "T5_MEAL_ROAST_FISH",
       "tier": 5,
       "prices": {
-        "Martlock": 7786,
-        "Fort Sterling": 9486,
-        "Thetford": 8334,
-        "Bridgewatch": 10150,
-        "Caerleon": 7055,
-        "Brecilien": 8967
+        "Martlock": 7796,
+        "Thetford": 8375,
+        "Bridgewatch": 12694
       },
-      "sold": 2018
+      "sold": 1981
     },
     {
       "itemId": "T6_MEAL_SANDWICH_AVALON",
       "tier": 6,
       "prices": {
-        "Martlock": 34327,
-        "Thetford": 35985,
-        "Bridgewatch": 26928,
-        "Caerleon": 50793,
-        "Brecilien": 36734
+        "Thetford": 35999
       },
-      "sold": 306
+      "sold": 289
     },
     {
       "itemId": "T6_MEAL_STEW_AVALON",
       "tier": 6,
       "prices": {
-        "Lymhurst": 24940,
+        "Lymhurst": 26345,
         "Martlock": 27777,
-        "Fort Sterling": 27892,
-        "Thetford": 27567,
-        "Bridgewatch": 27623,
-        "Caerleon": 31999,
-        "Brecilien": 26830
+        "Fort Sterling": 28990,
+        "Thetford": 27510,
+        "Bridgewatch": 27616,
+        "Brecilien": 26810
       },
-      "sold": 5854
+      "sold": 5787
     },
     {
       "itemId": "T6_MEAL_SALAD_FISH",
       "tier": 6,
       "prices": {
-        "Martlock": 22478,
-        "Fort Sterling": 24990,
         "Thetford": 22068,
-        "Bridgewatch": 21728,
-        "Caerleon": 32874
+        "Bridgewatch": 23984
       },
-      "sold": 1194
+      "sold": 1188
     },
     {
       "itemId": "T6_MEAL_SANDWICH",
       "tier": 6,
       "prices": {
-        "Lymhurst": 2340,
-        "Martlock": 1729,
-        "Fort Sterling": 2296,
-        "Thetford": 2145,
-        "Bridgewatch": 2057,
-        "Caerleon": 1797,
-        "Brecilien": 2057
+        "Lymhurst": 2331,
+        "Martlock": 1721,
+        "Fort Sterling": 1999,
+        "Thetford": 2144,
+        "Bridgewatch": 2066
       },
-      "sold": 16991
+      "sold": 16788
     },
     {
       "itemId": "T6_MEAL_STEW",
       "tier": 6,
       "prices": {
-        "Lymhurst": 1799,
-        "Martlock": 1761,
-        "Fort Sterling": 1999,
-        "Thetford": 2136,
-        "Bridgewatch": 1859,
-        "Caerleon": 3990,
-        "Brecilien": 3484
+        "Lymhurst": 1775,
+        "Martlock": 1974,
+        "Fort Sterling": 2186,
+        "Thetford": 2144,
+        "Bridgewatch": 2356,
+        "Caerleon": 2554,
+        "Brecilien": 3480
       },
-      "sold": 21186
+      "sold": 20480
     },
     {
       "itemId": "T6_MEAL_SALAD",
       "tier": 6,
       "prices": {
-        "Martlock": 4200,
-        "Fort Sterling": 6370,
-        "Thetford": 5193,
-        "Brecilien": 4926
+        "Martlock": 4559,
+        "Thetford": 5085,
+        "Bridgewatch": 4699
       },
-      "sold": 11945
+      "sold": 11937
     },
     {
       "itemId": "T6_MEAT",
       "tier": 6,
       "prices": {
-        "Martlock": 359,
-        "Fort Sterling": 448,
-        "Thetford": 395,
-        "Bridgewatch": 445,
-        "Caerleon": 422,
-        "Brecilien": 428
+        "Lymhurst": 423,
+        "Martlock": 355,
+        "Thetford": 377,
+        "Caerleon": 420
       },
-      "sold": 96278
+      "sold": 97319
     },
     {
       "itemId": "T6_MEAL_STEW_FISH",
       "tier": 6,
       "prices": {
-        "Martlock": 7847,
-        "Fort Sterling": 7599,
-        "Bridgewatch": 7999,
-        "Caerleon": 8639,
-        "Brecilien": 8447
+        "Martlock": 7892,
+        "Thetford": 7781,
+        "Bridgewatch": 8000,
+        "Caerleon": 8618,
+        "Brecilien": 8442
       },
-      "sold": 1623
+      "sold": 1596
     },
     {
       "itemId": "T6_MEAL_SANDWICH_FISH",
       "tier": 6,
       "prices": {
-        "Lymhurst": 8396,
-        "Martlock": 3800,
-        "Caerleon": 6967
+        "Lymhurst": 7497,
+        "Thetford": 5216
       },
-      "sold": 161
+      "sold": 157
     },
     {
       "itemId": "T6_BUTTER",
       "tier": 6,
       "prices": {
-        "Martlock": 396,
-        "Fort Sterling": 433,
-        "Thetford": 386,
-        "Caerleon": 314,
-        "Brecilien": 467
+        "Thetford": 385
       },
-      "sold": 31255
+      "sold": 31172
     },
     {
       "itemId": "T7_MEAL_OMELETTE_AVALON",
       "tier": 7,
       "prices": {
-        "Lymhurst": 74873,
+        "Lymhurst": 74836,
         "Martlock": 69859,
-        "Fort Sterling": 71008,
-        "Thetford": 79100,
-        "Caerleon": 71927
+        "Fort Sterling": 70997,
+        "Thetford": 78981,
+        "Bridgewatch": 74984,
+        "Caerleon": 71917,
+        "Brecilien": 74826
       },
-      "sold": 1297
+      "sold": 1290
     },
     {
       "itemId": "T7_MEAL_OMELETTE_FISH",
       "tier": 7,
       "prices": {
-        "Lymhurst": 15836,
-        "Martlock": 17650,
-        "Fort Sterling": 14907,
-        "Bridgewatch": 15294,
-        "Caerleon": 17599
+        "Martlock": 17248,
+        "Fort Sterling": 14922,
+        "Thetford": 13941,
+        "Bridgewatch": 15291
       },
-      "sold": 1628
+      "sold": 1624
     },
     {
       "itemId": "T7_MEAL_PIE_FISH",
       "tier": 7,
       "prices": {
-        "Martlock": 14500,
-        "Bridgewatch": 11983,
-        "Caerleon": 14965,
-        "Brecilien": 12315
+        "Lymhurst": 11575,
+        "Thetford": 12991,
+        "Bridgewatch": 11989,
+        "Caerleon": 14960,
+        "Brecilien": 12318
       },
-      "sold": 776
+      "sold": 753
     },
     {
       "itemId": "T7_MEAL_OMELETTE",
       "tier": 7,
       "prices": {
-        "Lymhurst": 3778,
-        "Martlock": 3846,
-        "Fort Sterling": 3910,
-        "Thetford": 3823,
-        "Bridgewatch": 3708,
-        "Caerleon": 3250,
-        "Brecilien": 3849
+        "Lymhurst": 3825,
+        "Martlock": 3847,
+        "Fort Sterling": 3833,
+        "Thetford": 3744,
+        "Bridgewatch": 3785,
+        "Caerleon": 3457999,
+        "Brecilien": 3879
       },
-      "sold": 47612
+      "sold": 46970
     },
     {
       "itemId": "T7_MEAL_PIE",
       "tier": 7,
       "prices": {
-        "Lymhurst": 4100,
-        "Martlock": 4017,
-        "Fort Sterling": 4083,
-        "Thetford": 3991,
-        "Bridgewatch": 4112,
-        "Caerleon": 3920,
-        "Brecilien": 3996
+        "Lymhurst": 4214,
+        "Martlock": 4009,
+        "Fort Sterling": 4203,
+        "Thetford": 4051,
+        "Bridgewatch": 4094,
+        "Caerleon": 3735,
+        "Brecilien": 40065564
       },
-      "sold": 62943
+      "sold": 61853
     },
     {
       "itemId": "T7_MEAT",
       "tier": 7,
       "prices": {
-        "Lymhurst": 390,
-        "Martlock": 350,
-        "Fort Sterling": 344,
-        "Thetford": 356,
-        "Bridgewatch": 331,
-        "Caerleon": 340,
-        "Brecilien": 363
+        "Lymhurst": 387,
+        "Fort Sterling": 349,
+        "Thetford": 346,
+        "Bridgewatch": 341,
+        "Caerleon": 338
       },
-      "sold": 311653
+      "sold": 309223
     },
     {
       "itemId": "T7_MEAL_ROAST",
       "tier": 7,
       "prices": {
-        "Lymhurst": 3898,
-        "Martlock": 3184,
-        "Fort Sterling": 3996,
-        "Thetford": 6978,
+        "Lymhurst": 4044,
+        "Thetford": 4188,
         "Bridgewatch": 3085,
         "Caerleon": 3947,
-        "Brecilien": 3477
+        "Brecilien": 3482
       },
-      "sold": 15548
+      "sold": 15505
     },
     {
       "itemId": "T7_MEAL_ROAST_FISH",
       "tier": 7,
       "prices": {
-        "Lymhurst": 71970,
-        "Martlock": 75995,
-        "Bridgewatch": 74994,
-        "Caerleon": 78980,
-        "Brecilien": 92766
+        "Martlock": 78436,
+        "Fort Sterling": 78998,
+        "Thetford": 73094,
+        "Brecilien": 92725
       },
-      "sold": 3167
+      "sold": 3246
     },
     {
       "itemId": "T8_MEAL_SANDWICH_AVALON",
       "tier": 8,
       "prices": {
-        "Lymhurst": 80341,
-        "Martlock": 62878,
-        "Fort Sterling": 76716,
-        "Thetford": 79887,
-        "Brecilien": 89834
+        "Thetford": 78989,
+        "Brecilien": 94979
       },
-      "sold": 1026
+      "sold": 1021
     },
     {
       "itemId": "T8_MEAL_STEW_AVALON",
       "tier": 8,
       "prices": {
-        "Lymhurst": 68983,
-        "Martlock": 70945,
-        "Fort Sterling": 70993,
-        "Thetford": 84032,
-        "Caerleon": 86692,
-        "Brecilien": 71864
+        "Lymhurst": 69947,
+        "Martlock": 7094499,
+        "Fort Sterling": 69094,
+        "Thetford": 69997,
+        "Caerleon": 86693,
+        "Brecilien": 69991
       },
-      "sold": 5112
+      "sold": 5020
     },
     {
       "itemId": "T8_MEAL_SANDWICH",
       "tier": 8,
       "prices": {
-        "Lymhurst": 3617,
-        "Martlock": 3397,
-        "Fort Sterling": 4298,
-        "Thetford": 3031,
-        "Bridgewatch": 3477,
-        "Caerleon": 3678,
-        "Brecilien": 3159
+        "Lymhurst": 3498,
+        "Martlock": 3748,
+        "Fort Sterling": 4597,
+        "Thetford": 2923,
+        "Bridgewatch": 3469,
+        "Caerleon": 3959999,
+        "Brecilien": 3154
       },
-      "sold": 14468
+      "sold": 14192
     },
     {
       "itemId": "T8_MEAL_STEW",
       "tier": 8,
       "prices": {
-        "Lymhurst": 4030,
-        "Martlock": 3994,
-        "Fort Sterling": 4083,
-        "Thetford": 4045,
-        "Bridgewatch": 4018,
+        "Lymhurst": 4037,
+        "Martlock": 3500,
+        "Fort Sterling": 4086,
+        "Thetford": 3998,
+        "Bridgewatch": 3999,
         "Caerleon": 3847,
-        "Brecilien": 4958
+        "Brecilien": 4925
       },
-      "sold": 81304
+      "sold": 79805
     },
     {
       "itemId": "T8_BUTTER",
       "tier": 8,
       "prices": {
-        "Lymhurst": 333,
-        "Martlock": 288,
-        "Fort Sterling": 549,
-        "Thetford": 342,
-        "Bridgewatch": 323,
-        "Caerleon": 295,
-        "Brecilien": 589
+        "Lymhurst": 336,
+        "Martlock": 299,
+        "Thetford": 340
       },
-      "sold": 35714
+      "sold": 35433
     },
     {
       "itemId": "T8_MEAL_STEW_FISH",
       "tier": 8,
       "prices": {
-        "Lymhurst": 64147,
-        "Martlock": 61998,
-        "Fort Sterling": 63578,
+        "Martlock": 71986,
+        "Fort Sterling": 63567,
+        "Thetford": 59597,
         "Caerleon": 82997,
-        "Brecilien": 69995
+        "Brecilien": 81984
       },
-      "sold": 2723
+      "sold": 2712
     },
     {
       "itemId": "T8_MEAT",
       "tier": 8,
       "prices": {
-        "Lymhurst": 394,
-        "Martlock": 367,
-        "Fort Sterling": 372,
-        "Thetford": 400,
-        "Bridgewatch": 397,
-        "Caerleon": 395,
-        "Brecilien": 405
+        "Lymhurst": 396,
+        "Martlock": 381,
+        "Fort Sterling": 385,
+        "Thetford": 369,
+        "Bridgewatch": 398,
+        "Caerleon": 393,
+        "Brecilien": 410
       },
-      "sold": 240974
+      "sold": 239490
     },
     {
       "itemId": "T8_MEAL_SANDWICH_FISH",
       "tier": 8,
       "prices": {
-        "Lymhurst": 14977
+        "Thetford": 14994,
+        "Bridgewatch": 18984,
+        "Caerleon": 13495
       },
-      "sold": 1717
+      "sold": 1702
     },
     {
       "itemId": "T1_MEAL_SOUP@1",
       "tier": 1,
-      "prices": {},
+      "prices": {
+        "Thetford": 11111
+      },
       "sold": 11
     },
     {
       "itemId": "T1_MEAL_SOUP@2",
       "tier": 1,
-      "prices": {
-        "Lymhurst": 14441,
-        "Fort Sterling": 4998
-      },
-      "sold": 6
+      "prices": {},
+      "sold": 7
     },
     {
       "itemId": "T1_MEAL_SOUP@3",
@@ -790,13 +783,15 @@
       "itemId": "T1_MEAL_SOUP_FISH@1",
       "tier": 1,
       "prices": {
-        "Bridgewatch": 9999
+        "Thetford": 3997
       }
     },
     {
       "itemId": "T1_MEAL_SOUP_FISH@2",
       "tier": 1,
-      "prices": {},
+      "prices": {
+        "Thetford": 400000
+      },
       "sold": 1
     },
     {
@@ -807,27 +802,38 @@
     {
       "itemId": "T2_MEAL_SALAD@1",
       "tier": 2,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 1198,
+        "Martlock": 49994,
+        "Bridgewatch": 3684
+      },
       "sold": 6
     },
     {
       "itemId": "T2_MEAL_SALAD@2",
       "tier": 2,
       "prices": {
-        "Lymhurst": 6000
+        "Lymhurst": 6000,
+        "Martlock": 49995,
+        "Thetford": 19996
       },
       "sold": 11
     },
     {
       "itemId": "T2_MEAL_SALAD@3",
       "tier": 2,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 199994,
+        "Bridgewatch": 77777
+      },
       "sold": 2
     },
     {
       "itemId": "T2_MEAL_SALAD_FISH@1",
       "tier": 2,
-      "prices": {}
+      "prices": {
+        "Thetford": 4991
+      }
     },
     {
       "itemId": "T2_MEAL_SALAD_FISH@2",
@@ -839,7 +845,9 @@
     {
       "itemId": "T2_MEAL_SALAD_FISH@3",
       "tier": 2,
-      "prices": {},
+      "prices": {
+        "Bridgewatch": 24000
+      },
       "sold": 3
     },
     {
@@ -861,7 +869,8 @@
       "itemId": "T3_MEAL_OMELETTE@1",
       "tier": 3,
       "prices": {
-        "Bridgewatch": 4418
+        "Martlock": 8295,
+        "Fort Sterling": 7996
       },
       "sold": 3
     },
@@ -869,28 +878,26 @@
       "itemId": "T3_MEAL_OMELETTE@2",
       "tier": 3,
       "prices": {
-        "Bridgewatch": 2000
+        "Martlock": 25000
       }
     },
     {
       "itemId": "T3_MEAL_OMELETTE@3",
       "tier": 3,
-      "prices": {}
+      "prices": {
+        "Lymhurst": 26666
+      }
     },
     {
       "itemId": "T3_MEAL_PIE@1",
       "tier": 3,
-      "prices": {
-        "Thetford": 6800
-      },
+      "prices": {},
       "sold": 6
     },
     {
       "itemId": "T3_MEAL_PIE@2",
       "tier": 3,
-      "prices": {
-        "Lymhurst": 16000
-      },
+      "prices": {},
       "sold": 1
     },
     {
@@ -901,7 +908,9 @@
     {
       "itemId": "T3_MEAL_OMELETTE_FISH@1",
       "tier": 3,
-      "prices": {}
+      "prices": {
+        "Fort Sterling": 17999
+      }
     },
     {
       "itemId": "T3_MEAL_OMELETTE_FISH@2",
@@ -911,7 +920,10 @@
     {
       "itemId": "T3_MEAL_OMELETTE_FISH@3",
       "tier": 3,
-      "prices": {}
+      "prices": {
+        "Lymhurst": 69999,
+        "Fort Sterling": 74998
+      }
     },
     {
       "itemId": "T3_MEAL_SOUP_FISH@1",
@@ -960,7 +972,9 @@
     {
       "itemId": "T3_MEAL_ROAST_FISH@3",
       "tier": 3,
-      "prices": {}
+      "prices": {
+        "Fort Sterling": 100000
+      }
     },
     {
       "itemId": "T3_MEAL_PIE_FISH@1",
@@ -981,7 +995,7 @@
       "itemId": "T3_MEAL_SOUP@1",
       "tier": 3,
       "prices": {
-        "Thetford": 40000
+        "Thetford": 39998
       }
     },
     {
@@ -997,13 +1011,17 @@
     {
       "itemId": "T4_MEAL_SANDWICH_AVALON@1",
       "tier": 4,
-      "prices": {},
+      "prices": {
+        "Thetford": 33333
+      },
       "sold": 3
     },
     {
       "itemId": "T4_MEAL_SANDWICH_AVALON@2",
       "tier": 4,
-      "prices": {}
+      "prices": {
+        "Bridgewatch": 20000
+      }
     },
     {
       "itemId": "T4_MEAL_SANDWICH_AVALON@3",
@@ -1014,16 +1032,15 @@
       "itemId": "T4_MEAL_STEW_AVALON@1",
       "tier": 4,
       "prices": {
-        "Bridgewatch": 77773,
-        "Caerleon": 22999
+        "Thetford": 33000
       },
-      "sold": 4
+      "sold": 3
     },
     {
       "itemId": "T4_MEAL_STEW_AVALON@2",
       "tier": 4,
       "prices": {
-        "Fort Sterling": 122122
+        "Thetford": 69999
       }
     },
     {
@@ -1041,7 +1058,10 @@
     {
       "itemId": "T4_MEAL_SANDWICH@2",
       "tier": 4,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 21997,
+        "Bridgewatch": 15000
+      },
       "sold": 2
     },
     {
@@ -1052,30 +1072,27 @@
     {
       "itemId": "T4_MEAL_STEW@1",
       "tier": 4,
-      "prices": {
-        "Bridgewatch": 25552
-      },
-      "sold": 11
+      "prices": {},
+      "sold": 12
     },
     {
       "itemId": "T4_MEAL_STEW@2",
       "tier": 4,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 135000,
+        "Thetford": 55976
+      },
       "sold": 3
     },
     {
       "itemId": "T4_MEAL_STEW@3",
       "tier": 4,
-      "prices": {
-        "Lymhurst": 25000
-      }
+      "prices": {}
     },
     {
       "itemId": "T4_MEAL_STEW_FISH@1",
       "tier": 4,
       "prices": {
-        "Fort Sterling": 32158,
-        "Bridgewatch": 40000,
         "Caerleon": 27000
       },
       "sold": 4
@@ -1088,10 +1105,7 @@
     {
       "itemId": "T4_MEAL_STEW_FISH@3",
       "tier": 4,
-      "prices": {
-        "Lymhurst": 79996,
-        "Fort Sterling": 82000
-      },
+      "prices": {},
       "sold": 1
     },
     {
@@ -1124,19 +1138,23 @@
     {
       "itemId": "T4_MEAL_SANDWICH_FISH@3",
       "tier": 4,
-      "prices": {}
+      "prices": {
+        "Thetford": 55555
+      }
     },
     {
       "itemId": "T4_MEAL_SALAD@1",
       "tier": 4,
-      "prices": {},
+      "prices": {
+        "Bridgewatch": 40000
+      },
       "sold": 6
     },
     {
       "itemId": "T4_MEAL_SALAD@2",
       "tier": 4,
       "prices": {
-        "Martlock": 40000
+        "Thetford": 33333
       },
       "sold": 3
     },
@@ -1150,28 +1168,34 @@
       "itemId": "T5_MEAL_OMELETTE_AVALON@1",
       "tier": 5,
       "prices": {
-        "Fort Sterling": 95792
+        "Lymhurst": 999975,
+        "Bridgewatch": 55000,
+        "Brecilien": 41990
       },
       "sold": 7
     },
     {
       "itemId": "T5_MEAL_OMELETTE_AVALON@2",
       "tier": 5,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 999985,
+        "Fort Sterling": 60000,
+        "Brecilien": 69973
+      },
       "sold": 9
     },
     {
       "itemId": "T5_MEAL_OMELETTE_AVALON@3",
       "tier": 5,
-      "prices": {}
+      "prices": {
+        "Lymhurst": 70000
+      }
     },
     {
       "itemId": "T5_MEAL_SOUP_FISH@1",
       "tier": 5,
       "prices": {
-        "Lymhurst": 94996,
-        "Martlock": 115123,
-        "Caerleon": 125123
+        "Thetford": 79891
       },
       "sold": 5
     },
@@ -1189,33 +1213,31 @@
       "itemId": "T5_MEAL_SOUP@1",
       "tier": 5,
       "prices": {
-        "Martlock": 47909,
-        "Caerleon": 50000,
-        "Brecilien": 44128
+        "Thetford": 41989,
+        "Caerleon": 50000
       },
-      "sold": 58
+      "sold": 57
     },
     {
       "itemId": "T5_MEAL_SOUP@2",
       "tier": 5,
       "prices": {
+        "Martlock": 125000,
         "Caerleon": 119999
       },
-      "sold": 3
+      "sold": 2
     },
     {
       "itemId": "T5_MEAL_SOUP@3",
       "tier": 5,
       "prices": {},
-      "sold": 2
+      "sold": 1
     },
     {
       "itemId": "T5_MEAL_OMELETTE_FISH@1",
       "tier": 5,
-      "prices": {
-        "Martlock": 30000
-      },
-      "sold": 8
+      "prices": {},
+      "sold": 9
     },
     {
       "itemId": "T5_MEAL_OMELETTE_FISH@2",
@@ -1226,17 +1248,16 @@
       "itemId": "T5_MEAL_OMELETTE_FISH@3",
       "tier": 5,
       "prices": {
-        "Martlock": 250000
+        "Fort Sterling": 270000
       }
     },
     {
       "itemId": "T5_MEAL_OMELETTE@1",
       "tier": 5,
       "prices": {
-        "Lymhurst": 12000,
-        "Martlock": 25944
+        "Thetford": 37000
       },
-      "sold": 7
+      "sold": 6
     },
     {
       "itemId": "T5_MEAL_OMELETTE@2",
@@ -1247,14 +1268,16 @@
     {
       "itemId": "T5_MEAL_OMELETTE@3",
       "tier": 5,
-      "prices": {},
+      "prices": {
+        "Lymhurst": 218000
+      },
       "sold": 1
     },
     {
       "itemId": "T5_MEAL_PIE@1",
       "tier": 5,
       "prices": {
-        "Fort Sterling": 19977
+        "Thetford": 17996
       },
       "sold": 6
     },
@@ -1262,14 +1285,16 @@
       "itemId": "T5_MEAL_PIE@2",
       "tier": 5,
       "prices": {
-        "Lymhurst": 44444
+        "Thetford": 33333
       },
       "sold": 4
     },
     {
       "itemId": "T5_MEAL_PIE@3",
       "tier": 5,
-      "prices": {}
+      "prices": {
+        "Bridgewatch": 37000
+      }
     },
     {
       "itemId": "T5_MEAL_PIE_FISH@1",
@@ -1280,20 +1305,22 @@
     {
       "itemId": "T5_MEAL_PIE_FISH@2",
       "tier": 5,
-      "prices": {}
+      "prices": {
+        "Thetford": 150000
+      }
     },
     {
       "itemId": "T5_MEAL_PIE_FISH@3",
       "tier": 5,
       "prices": {
-        "Martlock": 200000
+        "Bridgewatch": 200000
       }
     },
     {
       "itemId": "T5_MEAL_ROAST@1",
       "tier": 5,
       "prices": {
-        "Martlock": 21499
+        "Brecilien": 39851
       },
       "sold": 6
     },
@@ -1305,44 +1332,40 @@
     {
       "itemId": "T5_MEAL_ROAST@3",
       "tier": 5,
-      "prices": {
-        "Martlock": 150000
-      }
+      "prices": {}
     },
     {
       "itemId": "T5_MEAL_ROAST_FISH@1",
       "tier": 5,
       "prices": {
-        "Martlock": 42800,
-        "Bridgewatch": 44257,
-        "Brecilien": 39890
+        "Thetford": 40990,
+        "Bridgewatch": 44238,
+        "Brecilien": 39892
       },
-      "sold": 223
+      "sold": 205
     },
     {
       "itemId": "T5_MEAL_ROAST_FISH@2",
       "tier": 5,
       "prices": {
-        "Bridgewatch": 118999
+        "Thetford": 129749
       },
       "sold": 3
     },
     {
       "itemId": "T5_MEAL_ROAST_FISH@3",
       "tier": 5,
-      "prices": {},
+      "prices": {
+        "Fort Sterling": 239996,
+        "Thetford": 224999
+      },
       "sold": 2
     },
     {
       "itemId": "T6_MEAL_SANDWICH_AVALON@1",
       "tier": 6,
       "prices": {
-        "Lymhurst": 149986,
-        "Martlock": 43000,
-        "Thetford": 42000,
-        "Bridgewatch": 54999,
-        "Caerleon": 78999,
-        "Brecilien": 44999
+        "Thetford": 44999
       },
       "sold": 30
     },
@@ -1350,10 +1373,9 @@
       "itemId": "T6_MEAL_SANDWICH_AVALON@2",
       "tier": 6,
       "prices": {
-        "Lymhurst": 99996,
-        "Martlock": 54000,
-        "Fort Sterling": 62000,
-        "Brecilien": 69997
+        "Lymhurst": 99997,
+        "Thetford": 55000,
+        "Brecilien": 69996
       },
       "sold": 9
     },
@@ -1367,29 +1389,32 @@
       "itemId": "T6_MEAL_STEW_AVALON@1",
       "tier": 6,
       "prices": {
-        "Martlock": 49841,
-        "Bridgewatch": 59962,
-        "Caerleon": 68896,
-        "Brecilien": 49911
+        "Lymhurst": 48442,
+        "Martlock": 49839,
+        "Fort Sterling": 38999,
+        "Thetford": 54998,
+        "Brecilien": 49887
       },
-      "sold": 391
+      "sold": 428
     },
     {
       "itemId": "T6_MEAL_STEW_AVALON@2",
       "tier": 6,
       "prices": {
         "Lymhurst": 107990,
-        "Martlock": 118976,
+        "Martlock": 115979,
         "Fort Sterling": 66000,
-        "Bridgewatch": 119984
+        "Thetford": 101335,
+        "Brecilien": 69985
       },
-      "sold": 49
+      "sold": 40
     },
     {
       "itemId": "T6_MEAL_STEW_AVALON@3",
       "tier": 6,
       "prices": {
-        "Lymhurst": 149901
+        "Lymhurst": 149901,
+        "Thetford": 170000
       },
       "sold": 3
     },
@@ -1397,32 +1422,29 @@
       "itemId": "T6_MEAL_SALAD_FISH@1",
       "tier": 6,
       "prices": {
-        "Martlock": 120863,
-        "Fort Sterling": 109986,
-        "Thetford": 121895,
-        "Bridgewatch": 124883,
-        "Caerleon": 179945
+        "Thetford": 121891,
+        "Bridgewatch": 127998
       },
-      "sold": 206
+      "sold": 205
     },
     {
       "itemId": "T6_MEAL_SALAD_FISH@2",
       "tier": 6,
       "prices": {
-        "Martlock": 399962,
-        "Fort Sterling": 269896,
-        "Thetford": 299875,
-        "Bridgewatch": 263760
+        "Thetford": 299874,
+        "Bridgewatch": 260000
       },
-      "sold": 103
+      "sold": 101
     },
     {
       "itemId": "T6_MEAL_SALAD_FISH@3",
       "tier": 6,
       "prices": {
-        "Martlock": 743990
+        "Fort Sterling": 899999,
+        "Thetford": 793485,
+        "Bridgewatch": 729997
       },
-      "sold": 41
+      "sold": 40
     },
     {
       "itemId": "T6_MEAL_SANDWICH@1",
@@ -1430,8 +1452,7 @@
       "prices": {
         "Lymhurst": 15993,
         "Martlock": 13000,
-        "Bridgewatch": 17487,
-        "Brecilien": 17881
+        "Thetford": 18000
       },
       "sold": 9
     },
@@ -1452,27 +1473,25 @@
       "tier": 6,
       "prices": {
         "Lymhurst": 20995,
-        "Martlock": 35998,
-        "Bridgewatch": 21000,
-        "Caerleon": 150000
+        "Thetford": 18998
       },
-      "sold": 43
+      "sold": 42
     },
     {
       "itemId": "T6_MEAL_STEW@2",
       "tier": 6,
       "prices": {
-        "Lymhurst": 70000,
-        "Bridgewatch": 81999
+        "Lymhurst": 68997,
+        "Martlock": 65000,
+        "Brecilien": 79497
       },
-      "sold": 7
+      "sold": 8
     },
     {
       "itemId": "T6_MEAL_STEW@3",
       "tier": 6,
       "prices": {
-        "Lymhurst": 100000,
-        "Fort Sterling": 110000
+        "Lymhurst": 100000
       },
       "sold": 3
     },
@@ -1480,20 +1499,15 @@
       "itemId": "T6_MEAL_SALAD@1",
       "tier": 6,
       "prices": {
-        "Martlock": 41329,
-        "Fort Sterling": 44795,
-        "Bridgewatch": 44899,
-        "Caerleon": 74989
+        "Bridgewatch": 44899
       },
-      "sold": 62
+      "sold": 60
     },
     {
       "itemId": "T6_MEAL_SALAD@2",
       "tier": 6,
       "prices": {
-        "Martlock": 154978,
-        "Fort Sterling": 109937,
-        "Bridgewatch": 141899
+        "Thetford": 137777
       },
       "sold": 18
     },
@@ -1501,8 +1515,7 @@
       "itemId": "T6_MEAL_SALAD@3",
       "tier": 6,
       "prices": {
-        "Martlock": 333326,
-        "Fort Sterling": 450000
+        "Bridgewatch": 321998
       },
       "sold": 5
     },
@@ -1511,38 +1524,33 @@
       "tier": 6,
       "prices": {
         "Lymhurst": 38399,
-        "Martlock": 37996,
-        "Bridgewatch": 35000,
-        "Caerleon": 79997,
-        "Brecilien": 39634
+        "Martlock": 44961,
+        "Thetford": 38776,
+        "Bridgewatch": 34999,
+        "Caerleon": 79996
       },
-      "sold": 157
+      "sold": 154
     },
     {
       "itemId": "T6_MEAL_STEW_FISH@2",
       "tier": 6,
       "prices": {
-        "Martlock": 113097
+        "Martlock": 113090,
+        "Thetford": 60438,
+        "Bridgewatch": 100447
       },
       "sold": 14
     },
     {
       "itemId": "T6_MEAL_STEW_FISH@3",
       "tier": 6,
-      "prices": {
-        "Lymhurst": 219989,
-        "Martlock": 289000,
-        "Caerleon": 299999
-      },
+      "prices": {},
       "sold": 1
     },
     {
       "itemId": "T6_MEAL_SANDWICH_FISH@1",
       "tier": 6,
-      "prices": {
-        "Martlock": 66000,
-        "Caerleon": 29998
-      },
+      "prices": {},
       "sold": 2
     },
     {
@@ -1560,62 +1568,60 @@
       "itemId": "T7_MEAL_OMELETTE_AVALON@1",
       "tier": 7,
       "prices": {
-        "Lymhurst": 90380,
-        "Martlock": 96873,
-        "Fort Sterling": 100885,
-        "Thetford": 102121,
-        "Bridgewatch": 112696,
-        "Caerleon": 148999
+        "Lymhurst": 90359,
+        "Martlock": 96878,
+        "Fort Sterling": 31389445,
+        "Thetford": 100950,
+        "Bridgewatch": 112680,
+        "Brecilien": 89990
       },
-      "sold": 1123
+      "sold": 1116
     },
     {
       "itemId": "T7_MEAL_OMELETTE_AVALON@2",
       "tier": 7,
       "prices": {
-        "Lymhurst": 141990,
-        "Martlock": 148642,
-        "Fort Sterling": 151354,
-        "Bridgewatch": 151979
+        "Lymhurst": 143928,
+        "Martlock": 148290,
+        "Fort Sterling": 151327,
+        "Thetford": 153380
       },
-      "sold": 1845
+      "sold": 2008
     },
     {
       "itemId": "T7_MEAL_OMELETTE_AVALON@3",
       "tier": 7,
       "prices": {
-        "Martlock": 277576,
-        "Fort Sterling": 33179352,
-        "Caerleon": 438956
+        "Lymhurst": 289998,
+        "Fort Sterling": 331794,
+        "Thetford": 294706
       },
-      "sold": 238
+      "sold": 230
     },
     {
       "itemId": "T7_MEAL_OMELETTE_FISH@1",
       "tier": 7,
       "prices": {
-        "Lymhurst": 93996,
-        "Martlock": 84998,
-        "Fort Sterling": 90997,
-        "Bridgewatch": 87782,
-        "Caerleon": 134975
+        "Thetford": 98165,
+        "Bridgewatch": 87778
       },
-      "sold": 173
+      "sold": 174
     },
     {
       "itemId": "T7_MEAL_OMELETTE_FISH@2",
       "tier": 7,
       "prices": {
-        "Martlock": 242988,
-        "Thetford": 234980
+        "Thetford": 234971,
+        "Bridgewatch": 276789
       },
-      "sold": 16
+      "sold": 15
     },
     {
       "itemId": "T7_MEAL_OMELETTE_FISH@3",
       "tier": 7,
       "prices": {
-        "Martlock": 649933
+        "Lymhurst": 659993,
+        "Thetford": 748980
       },
       "sold": 2
     },
@@ -1623,8 +1629,9 @@
       "itemId": "T7_MEAL_PIE_FISH@1",
       "tier": 7,
       "prices": {
-        "Martlock": 123991,
-        "Caerleon": 99949
+        "Lymhurst": 123978,
+        "Thetford": 92978,
+        "Brecilien": 85092
       },
       "sold": 11
     },
@@ -1632,8 +1639,11 @@
       "itemId": "T7_MEAL_PIE_FISH@2",
       "tier": 7,
       "prices": {
-        "Lymhurst": 389994,
-        "Martlock": 315000
+        "Lymhurst": 349989,
+        "Martlock": 315000,
+        "Thetford": 280000,
+        "Bridgewatch": 294999,
+        "Brecilien": 269950
       },
       "sold": 2
     },
@@ -1647,96 +1657,96 @@
       "itemId": "T7_MEAL_OMELETTE@1",
       "tier": 7,
       "prices": {
-        "Lymhurst": 31956,
-        "Martlock": 33181,
-        "Fort Sterling": 31545,
-        "Bridgewatch": 28899,
-        "Caerleon": 32454,
-        "Brecilien": 33095
+        "Lymhurst": 30961,
+        "Martlock": 33125,
+        "Fort Sterling": 31390,
+        "Thetford": 31394,
+        "Bridgewatch": 28891,
+        "Caerleon": 31000,
+        "Brecilien": 33142
       },
-      "sold": 6640
+      "sold": 6607
     },
     {
       "itemId": "T7_MEAL_OMELETTE@2",
       "tier": 7,
       "prices": {
         "Lymhurst": 85209,
-        "Martlock": 85813,
-        "Fort Sterling": 78969,
-        "Thetford": 80356
+        "Martlock": 85840,
+        "Fort Sterling": 79993,
+        "Thetford": 80272,
+        "Bridgewatch": 70095,
+        "Brecilien": 86998
       },
-      "sold": 2295
+      "sold": 2291
     },
     {
       "itemId": "T7_MEAL_OMELETTE@3",
       "tier": 7,
       "prices": {
-        "Martlock": 238964,
-        "Caerleon": 277979
+        "Lymhurst": 248098,
+        "Fort Sterling": 255896,
+        "Thetford": 239945,
+        "Brecilien": 264915
       },
-      "sold": 163
+      "sold": 160
     },
     {
       "itemId": "T7_MEAL_PIE@1",
       "tier": 7,
       "prices": {
-        "Lymhurst": 34957,
-        "Martlock": 37880,
-        "Fort Sterling": 32380,
-        "Thetford": 32280,
-        "Bridgewatch": 33148,
-        "Caerleon": 29782,
-        "Brecilien": 32438
+        "Martlock": 36787,
+        "Fort Sterling": 30407,
+        "Thetford": 32285,
+        "Bridgewatch": 33112,
+        "Caerleon": 29785
       },
-      "sold": 2482
+      "sold": 2498
     },
     {
       "itemId": "T7_MEAL_PIE@2",
       "tier": 7,
       "prices": {
-        "Lymhurst": 86879,
-        "Martlock": 89940,
-        "Thetford": 92480,
-        "Bridgewatch": 82968,
-        "Brecilien": 85926
+        "Martlock": 88925,
+        "Fort Sterling": 87970,
+        "Thetford": 92455
       },
-      "sold": 693
+      "sold": 700
     },
     {
       "itemId": "T7_MEAL_PIE@3",
       "tier": 7,
       "prices": {
-        "Lymhurst": 215759,
-        "Martlock": 232491,
-        "Brecilien": 270566
+        "Fort Sterling": 28985979,
+        "Thetford": 258780
       },
-      "sold": 114
+      "sold": 113
     },
     {
       "itemId": "T7_MEAL_ROAST@1",
       "tier": 7,
       "prices": {
-        "Martlock": 34999,
-        "Thetford": 32996,
-        "Caerleon": 44435,
-        "Brecilien": 49970
+        "Thetford": 32990,
+        "Caerleon": 44440,
+        "Brecilien": 49942
       },
-      "sold": 550
+      "sold": 541
     },
     {
       "itemId": "T7_MEAL_ROAST@2",
       "tier": 7,
       "prices": {
-        "Martlock": 97724,
-        "Thetford": 91098
+        "Thetford": 91083,
+        "Brecilien": 113867
       },
-      "sold": 49
+      "sold": 50
     },
     {
       "itemId": "T7_MEAL_ROAST@3",
       "tier": 7,
       "prices": {
-        "Martlock": 230993
+        "Thetford": 249995,
+        "Brecilien": 299999
       },
       "sold": 3
     },
@@ -1744,12 +1754,9 @@
       "itemId": "T7_MEAL_ROAST_FISH@1",
       "tier": 7,
       "prices": {
-        "Martlock": 138865,
-        "Fort Sterling": 145549,
-        "Thetford": 129900,
-        "Bridgewatch": 145935,
-        "Caerleon": 158796,
-        "Brecilien": 155444
+        "Fort Sterling": 147930,
+        "Thetford": 129871,
+        "Brecilien": 155398
       },
       "sold": 1062
     },
@@ -1757,197 +1764,216 @@
       "itemId": "T7_MEAL_ROAST_FISH@2",
       "tier": 7,
       "prices": {
-        "Martlock": 269983,
-        "Fort Sterling": 288877,
-        "Thetford": 299898,
-        "Bridgewatch": 299986,
-        "Brecilien": 296869
+        "Fort Sterling": 288875,
+        "Thetford": 299065
       },
-      "sold": 365
+      "sold": 364
     },
     {
       "itemId": "T7_MEAL_ROAST_FISH@3",
       "tier": 7,
       "prices": {
-        "Martlock": 599940
+        "Fort Sterling": 779666,
+        "Thetford": 489988
       },
-      "sold": 11
+      "sold": 14
     },
     {
       "itemId": "T8_MEAL_SANDWICH_AVALON@1",
       "tier": 8,
       "prices": {
-        "Lymhurst": 97975,
-        "Martlock": 100930,
-        "Thetford": 99479,
-        "Bridgewatch": 108883
+        "Lymhurst": 97951,
+        "Fort Sterling": 98952,
+        "Thetford": 99457,
+        "Bridgewatch": 114488,
+        "Caerleon": 184985
       },
-      "sold": 298
+      "sold": 296
     },
     {
       "itemId": "T8_MEAL_SANDWICH_AVALON@2",
       "tier": 8,
       "prices": {
-        "Lymhurst": 141998,
-        "Bridgewatch": 223399
+        "Lymhurst": 139994,
+        "Thetford": 183195
       },
-      "sold": 163
+      "sold": 162
     },
     {
       "itemId": "T8_MEAL_SANDWICH_AVALON@3",
       "tier": 8,
       "prices": {
-        "Lymhurst": 242667
+        "Lymhurst": 248752,
+        "Fort Sterling": 318678,
+        "Thetford": 282991
       },
-      "sold": 37
+      "sold": 36
     },
     {
       "itemId": "T8_MEAL_STEW_AVALON@1",
       "tier": 8,
       "prices": {
-        "Martlock": 99999,
-        "Fort Sterling": 99899,
-        "Thetford": 107799,
-        "Bridgewatch": 112958,
-        "Brecilien": 110063
+        "Lymhurst": 94488,
+        "Martlock": 11056299,
+        "Fort Sterling": 29996467,
+        "Thetford": 107788,
+        "Brecilien": 109973
       },
-      "sold": 784
+      "sold": 793
     },
     {
       "itemId": "T8_MEAL_STEW_AVALON@2",
       "tier": 8,
       "prices": {
-        "Fort Sterling": 169945,
-        "Bridgewatch": 187327,
-        "Brecilien": 173215
+        "Lymhurst": 152992,
+        "Fort Sterling": 41766812,
+        "Thetford": 154981
       },
-      "sold": 122
+      "sold": 127
     },
     {
       "itemId": "T8_MEAL_STEW_AVALON@3",
       "tier": 8,
       "prices": {
-        "Fort Sterling": 368894,
-        "Brecilien": 349998
+        "Lymhurst": 334959,
+        "Martlock": 376900,
+        "Fort Sterling": 36889467,
+        "Thetford": 389554
       },
-      "sold": 17
+      "sold": 16
     },
     {
       "itemId": "T8_MEAL_SANDWICH@1",
       "tier": 8,
       "prices": {
-        "Lymhurst": 30000,
-        "Martlock": 39495,
-        "Bridgewatch": 35447
+        "Lymhurst": 30398,
+        "Martlock": 38475,
+        "Thetford": 35426,
+        "Bridgewatch": 35444,
+        "Caerleon": 44350
       },
-      "sold": 837
+      "sold": 828
     },
     {
       "itemId": "T8_MEAL_SANDWICH@2",
       "tier": 8,
       "prices": {
-        "Lymhurst": 72930,
-        "Martlock": 113929,
-        "Fort Sterling": 93555,
-        "Thetford": 93255,
-        "Bridgewatch": 101628
+        "Lymhurst": 71935,
+        "Martlock": 108991,
+        "Fort Sterling": 93591,
+        "Thetford": 93238
       },
-      "sold": 603
+      "sold": 594
     },
     {
       "itemId": "T8_MEAL_SANDWICH@3",
       "tier": 8,
       "prices": {
-        "Lymhurst": 267540,
-        "Martlock": 240000
+        "Lymhurst": 259999,
+        "Martlock": 240000,
+        "Fort Sterling": 261287,
+        "Thetford": 252427
       },
-      "sold": 109
+      "sold": 102
     },
     {
       "itemId": "T8_MEAL_STEW@1",
       "tier": 8,
       "prices": {
-        "Lymhurst": 30644,
-        "Martlock": 30660,
-        "Fort Sterling": 30815,
-        "Thetford": 31178,
-        "Bridgewatch": 31326,
-        "Caerleon": 38199,
-        "Brecilien": 30000
+        "Lymhurst": 30653,
+        "Martlock": 30644,
+        "Fort Sterling": 30741,
+        "Thetford": 30108,
+        "Caerleon": 38191,
+        "Brecilien": 30359
       },
-      "sold": 17793
+      "sold": 17493
     },
     {
       "itemId": "T8_MEAL_STEW@2",
       "tier": 8,
       "prices": {
-        "Lymhurst": 75448,
-        "Martlock": 82539,
-        "Fort Sterling": 77980,
-        "Thetford": 82719,
-        "Bridgewatch": 83885,
-        "Caerleon": 84934,
-        "Brecilien": 84834
+        "Lymhurst": 77919,
+        "Martlock": 82455,
+        "Fort Sterling": 80297,
+        "Thetford": 80629,
+        "Bridgewatch": 82987,
+        "Brecilien": 84625
       },
-      "sold": 8148
+      "sold": 8304
     },
     {
       "itemId": "T8_MEAL_STEW@3",
       "tier": 8,
       "prices": {
-        "Lymhurst": 209998,
-        "Fort Sterling": 257760,
-        "Brecilien": 269855
+        "Lymhurst": 228754,
+        "Fort Sterling": 240890,
+        "Thetford": 231379
       },
-      "sold": 1729
+      "sold": 1803
     },
     {
       "itemId": "T8_MEAL_STEW_FISH@1",
       "tier": 8,
       "prices": {
-        "Lymhurst": 176000,
-        "Martlock": 153413,
-        "Fort Sterling": 141986,
-        "Bridgewatch": 137988,
-        "Brecilien": 158434
+        "Martlock": 153395,
+        "Thetford": 126991,
+        "Caerleon": 159995,
+        "Brecilien": 158334
       },
-      "sold": 1010
+      "sold": 990
     },
     {
       "itemId": "T8_MEAL_STEW_FISH@2",
       "tier": 8,
       "prices": {
-        "Lymhurst": 279997,
-        "Martlock": 279993,
-        "Fort Sterling": 279984,
-        "Thetford": 289949
+        "Lymhurst": 256000,
+        "Martlock": 268598,
+        "Fort Sterling": 274999,
+        "Thetford": 230997,
+        "Bridgewatch": 299997,
+        "Brecilien": 296434
       },
-      "sold": 468
+      "sold": 459
     },
     {
       "itemId": "T8_MEAL_STEW_FISH@3",
       "tier": 8,
       "prices": {
-        "Fort Sterling": 699993
+        "Lymhurst": 777890,
+        "Martlock": 589999,
+        "Thetford": 678821
       },
-      "sold": 17
+      "sold": 16
     },
     {
       "itemId": "T8_MEAL_SANDWICH_FISH@1",
       "tier": 8,
-      "prices": {},
-      "sold": 55
+      "prices": {
+        "Lymhurst": 95997,
+        "Thetford": 77998,
+        "Bridgewatch": 99950,
+        "Caerleon": 139986
+      },
+      "sold": 74
     },
     {
       "itemId": "T8_MEAL_SANDWICH_FISH@2",
       "tier": 8,
-      "prices": {},
-      "sold": 19
+      "prices": {
+        "Thetford": 275982,
+        "Bridgewatch": 299996,
+        "Caerleon": 277744
+      },
+      "sold": 18
     },
     {
       "itemId": "T8_MEAL_SANDWICH_FISH@3",
       "tier": 8,
-      "prices": {},
+      "prices": {
+        "Bridgewatch": 549995,
+        "Caerleon": 649995
+      },
       "sold": 5
     }
   ]
