@@ -150,8 +150,8 @@ describe("fights for attendance", () => {
     // 7 days = 168 hours: fights 1..169 (the 169th is exactly 7 days old)
     expect(res.body.fights).toHaveLength(169);
     expect(res.body.fights[0].id).toBe(1);
-    // 4 pages cover 200 hours: no more asked
-    expect(deps.gameinfo.getBattles.mock.calls.map((c) => c[2])).toEqual([0, 50, 100, 150]);
+    // the first page alone (50 hours), then four at once: 250 hours cover the week, no more asked
+    expect(deps.gameinfo.getBattles.mock.calls.map((c) => c[2])).toEqual([0, 50, 100, 150, 200]);
   });
 
   it("stops at the end of a short list and drops fights without us", async () => {

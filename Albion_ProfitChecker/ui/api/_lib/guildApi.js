@@ -24,6 +24,7 @@
 //   POST mark {region, id}               mark a guild (it is tracked while anyone has it marked)
 //   POST unmark {region, id?}            remove the mark of that guild (without id: the main one on that server)
 //   GET  pro-fights                      GitHub Actions, every 30 min: keep the fights of Guild Pro guilds
+//   GET  sync-retry                      GitHub Actions, every 30 min from 05:00 UTC: the daily sync of guilds it missed
 //   GET  fights-history?region&id&days   Guild Pro: the kept fights of 30 or 90 days, for attendance
 //   GET  sync                            Vercel Cron: snapshot every marked guild once a day, then post its Discord reports
 //   GET  zvz                             GitHub Actions, every 30 min: post the new big fights to the ZvZ webhooks
@@ -190,7 +191,11 @@ export async function syncGuild({ store, gameinfo, guild, now }) {
   const today = dayOf(now);
   const [info, battles, players, recent] = await Promise.all([
     gameinfo.getGuild(guild.region, guild.id),
-    gameinfo.getBattles(guild.region, guild.id).catch(() => []),
+    gameinfo.getBattles(guild.region, guild.id).catch((error) => {
+      // the snapshot still counts; only the last fight date does not move today
+      console.warn("guild sync: fights did not load", guild.id, error instanceof Error ? error.message : error);
+      return [];
+    }),
     store.getPlayers(guild.id),
     store.getSnapshots(guild.id, addDays(today, -7))
   ]);
@@ -528,14 +533,16 @@ async function getFights({ gameinfo, now }, { region, id }) {
   let complete = false;
   let failed = false;
   const started = Date.now();
-  for (let first = 0; first < ATTENDANCE_PAGES && !complete && !failed; first += ATTENDANCE_AT_ONCE) {
+  // the first page alone: for most guilds it already reaches back far enough (a slow killboard,
+  // like the Americas one, then gets one request instead of four)
+  for (let first = 0; first < ATTENDANCE_PAGES && !complete && !failed; first += first === 0 ? 1 : ATTENDANCE_AT_ONCE) {
     // a slow killboard: what has loaded so far, not the function's time limit
     if (first > 0 && Date.now() - started > PAGES_BUDGET_MS) {
       failed = true;
       break;
     }
     const pages = await Promise.all(
-      Array.from({ length: Math.min(ATTENDANCE_AT_ONCE, ATTENDANCE_PAGES - first) }, (_, i) => {
+      Array.from({ length: first === 0 ? 1 : Math.min(ATTENDANCE_AT_ONCE, ATTENDANCE_PAGES - first) }, (_, i) => {
         const page = gameinfo.getBattles(region, id, (first + i) * FIGHTS_PAGE);
         // the first page must load; a later one missing leaves the older fights out
         return first + i === 0
@@ -732,6 +739,18 @@ async function syncDue(deps) {
   return ok(result);
 }
 
+/**
+ * The daily sync once more for the guilds it missed today (GitHub Actions, every 30 minutes): the
+ * Americas killboard is slow at the cron's hour (its evening) and a failed sync waited a whole day.
+ * Only after 05:00 UTC, so the daily run at 03:30 stays the first; a guild synced today is skipped,
+ * and its report goes out once its sync worked.
+ */
+const SYNC_RETRY_FROM_HOUR = 5;
+async function syncRetry(deps) {
+  if (deps.now().getUTCHours() < SYNC_RETRY_FROM_HOUR) return ok({ skipped: "before 05:00 UTC" });
+  return syncDue(deps);
+}
+
 /** Later than any sync: dueGuilds(FAR_FUTURE) lists every marked guild. */
 const FAR_FUTURE = "9999-12-31T00:00:00.000Z";
 
@@ -888,7 +907,7 @@ async function getStatus({ gameinfo, store, now }) {
   return ok({ killboard: { eu, us }, lateSyncs }, STATUS_CACHE_S);
 }
 
-const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "zvz", "pro-fights", "fights-history", "status", "regear-paid", "regear-fights", "bank", "splits"]);
+const GET_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights", "mine", "hook", "sync", "sync-retry", "zvz", "pro-fights", "fights-history", "status", "regear-paid", "regear-fights", "bank", "splits"]);
 const POST_ACTIONS = new Set(["mark", "unmark", "hook-save", "hook-remove", "hook-zvz", "regear-pay", "regear-mark", "bank-save", "split-save", "split-remove"]);
 const PUBLIC_ACTIONS = new Set(["search", "top", "guild", "killboard", "battle", "fights"]);
 /** The player's own data: only the database, never the killboard. */
@@ -911,7 +930,7 @@ export async function handleGuild(action, request, deps) {
   const region = String(query.region ?? "").toLowerCase();
   // every action that can reach Albion's killboard is limited per visitor (ticking paid in a big
   // regear is many quick clicks, and reaches the database only)
-  if (action !== "sync" && action !== "zvz" && action !== "pro-fights" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
+  if (action !== "sync" && action !== "sync-retry" && action !== "zvz" && action !== "pro-fights" && !PRIVATE_ACTIONS.has(action) && deps.limiter && !deps.limiter.take(client)) return fail(429, "Too many requests. Wait a minute and try again.");
   try {
     if (action === "sync") {
       if (!deps.cronSecret || authorization !== `Bearer ${deps.cronSecret}`) return fail(401, "Unauthorized");
@@ -922,6 +941,11 @@ export async function handleGuild(action, request, deps) {
       if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");
       if (!deps.store) return fail(503, "Guild tracking is not set up.");
       return await zvzDue(deps);
+    }
+    if (action === "sync-retry") {
+      if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");
+      if (!deps.store) return fail(503, "Guild tracking is not set up.");
+      return await syncRetry(deps);
     }
     if (action === "pro-fights") {
       if (!deps.actionsSecret || authorization !== `Bearer ${deps.actionsSecret}`) return fail(401, "Unauthorized");

@@ -100,3 +100,18 @@ describe("attendance over 90 days (Guild Pro)", () => {
     expect(thirty.body.fights.map((f) => f.id)).toEqual([3]);
   });
 });
+
+describe("missed syncs", () => {
+  it("sync-retry needs the Actions secret, waits until 05:00 UTC, then syncs what the daily run missed", async () => {
+    const { markAs, call, store, deps } = pro();
+    await markAs("tok-ann");
+    expect((await call("sync-retry", {})).status).toBe(401);
+    // the daily run failed: the guild's last sync is from yesterday
+    store.guilds.set(GID, { ...store.guilds.get(GID), last_synced_at: ago(DAY) });
+    deps.now = () => new Date("2026-11-14T03:45:00Z");
+    expect((await call("sync-retry", { authorization: "Bearer actions-123" })).body).toEqual({ skipped: "before 05:00 UTC" });
+    deps.now = () => new Date("2026-11-14T12:00:00Z");
+    expect((await call("sync-retry", { authorization: "Bearer actions-123" })).body).toMatchObject({ synced: 1, failed: 0 });
+    expect((await call("sync-retry", { authorization: "Bearer actions-123" })).body).toMatchObject({ synced: 0 });
+  });
+});

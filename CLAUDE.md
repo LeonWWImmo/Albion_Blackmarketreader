@@ -46,7 +46,8 @@ Crons (`ui/vercel.json`, production only, Hobby = once a day each): Discord dail
 guild sync + Discord reports (03:30 UTC).
 GitHub Actions `guild-zvz.yml` (every 30 min, from `main`): `/api/guild/zvz` posts the ZvZ reports
 of Guild Pro (premium), `/api/guild/pro-fights` keeps the fights of guilds Guild Pro players marked
-(table `guild_fights`, 95 days, for attendance over 30/90 days); authorized with `ACTIONS_CRON_SECRET`
+(table `guild_fights`, 95 days, for attendance over 30/90 days), and from 05:00 UTC `/api/guild/sync-retry`
+re-runs the daily sync for guilds it missed (the Americas killboard is slow at 03:30 UTC); authorized with `ACTIONS_CRON_SECRET`
 (same value in Vercel and GitHub). Guild Pro also marks up to 5 guilds per server; the oldest mark is
 the main one (Discord and ZvZ report).
 GitHub Actions `market-live.yml` (:07 and :37, from `main`): the live market snapshot, same secret;
@@ -83,6 +84,8 @@ The same job then runs `/api/market/alerts-run`: price alerts (premium, `api/_li
   hook warns before a commit that rewrites whole files.
 - `CHANGELOG.md`: player-friendly bullets under `## Unreleased`, no emoji.
 - Guild data is private per account for now (shared guild-wide data is a later step).
+- Albion's cache in front of the killboard sometimes serves pages that are days old (`Age` header):
+  `api/_lib/gameinfo.js` asks such a page once more past it. The Americas host gets a 16 s timeout.
 - Albion's killboard (gameinfo API) is unofficial and goes down at times (502, timeouts, a whole
   server for hours): the public guild pages say "Albion's API for <server> is down" and offer the
   other server (`down` in the error answer); it is not our bug.

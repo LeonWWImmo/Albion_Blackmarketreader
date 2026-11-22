@@ -120,6 +120,20 @@ describe("requests", () => {
   beforeEach(() => clearGameinfoMemory());
   afterEach(() => vi.unstubAllGlobals());
 
+  it("asks once more past Albion's cache when its page is stale, and keeps the old one if that fails", async () => {
+    const stale = () => new Response(JSON.stringify([rawMember]), { status: 200, headers: { age: "505695" } });
+    const fetchMock = vi.fn(async (url) => (String(url).includes("_=") ? new Response(JSON.stringify([]), { status: 200 }) : stale()));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await getMembers("eu", GID)).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/\/members\?_=\d+$/);
+
+    clearGameinfoMemory();
+    const fails = vi.fn(async (url) => (String(url).includes("_=") ? new Response("down", { status: 500 }) : stale()));
+    vi.stubGlobal("fetch", fails);
+    expect(await getMembers("eu", GID)).toHaveLength(1);
+  });
+
   it("asks Albion once and remembers the answer", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify([rawMember]), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);

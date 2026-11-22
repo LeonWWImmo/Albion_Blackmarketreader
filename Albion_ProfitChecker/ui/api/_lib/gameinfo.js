@@ -4,9 +4,18 @@
 
 const HOSTS = { eu: "https://gameinfo-ams.albiononline.com/api/gameinfo", us: "https://gameinfo.albiononline.com/api/gameinfo" };
 const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
-const REQUEST_TIMEOUT_MS = 8000;
+/**
+ * How long one request may take. The Americas killboard often needs several seconds and now and
+ * then over 8 (measured 2026-11-22: about 3 in 10 uncached requests), so it gets longer.
+ */
+const REQUEST_TIMEOUT_MS = { eu: 8000, us: 16_000 };
 const ATTEMPTS = 2;
-const RETRY_PAUSE_MS = 700;
+const RETRY_PAUSE_MS = 1500;
+/**
+ * Albion's own cache in front of the killboard sometimes hands out a page that is hours or days
+ * old (its Age header says so). Such an answer is asked for once more, past that cache.
+ */
+const STALE_AGE_S = 900;
 const CACHE_MS = 10 * 60 * 1000;
 const CACHE_MAX = 200;
 const GUILD_ID = /^[A-Za-z0-9_-]{10,40}$/;
@@ -60,7 +69,24 @@ async function inLane(lane, task) {
 
 const blocked = () => new GameinfoError("Albion's killboard blocks this server (403), not asking for a few minutes", 502);
 
+const timeoutFor = (url) => (url.startsWith(HOSTS.us) ? REQUEST_TIMEOUT_MS.us : REQUEST_TIMEOUT_MS.eu);
+
+/** The same address past Albion's cache: a parameter it does not know, the same for 5 minutes. */
+const pastCache = (url) => `${url}${url.includes("?") ? "&" : "?"}_=${Math.floor(Date.now() / 300_000)}`;
+
+/** A killboard answer as JSON; a stale one from Albion's cache is asked for once more past it. */
 async function fetchJson(url) {
+  const first = await fetchFresh(url);
+  if (first.age <= STALE_AGE_S) return first.body;
+  try {
+    return (await fetchFresh(pastCache(url))).body;
+  } catch {
+    // the old page is still better than none
+    return first.body;
+  }
+}
+
+async function fetchFresh(url) {
   const lane = laneOf(url);
   let last = null;
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
@@ -69,11 +95,11 @@ async function fetchJson(url) {
       const res = await inLane(lane, async () => {
         // blocked while this one waited for its turn
         if (lane.blockedUntil > Date.now()) throw blocked();
-        const answer = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-        return { status: answer.status, body: answer.ok ? await answer.json() : null };
+        const answer = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(timeoutFor(url)) });
+        return { status: answer.status, body: answer.ok ? await answer.json() : null, age: Number(answer.headers?.get?.("age")) || 0 };
       });
       if (res.status === 404) throw new GameinfoError("not found", 404);
-      if (res.body !== null) return res.body;
+      if (res.body !== null) return { body: res.body, age: res.age };
       last = new GameinfoError(`Albion's killboard answered ${res.status}`, 502);
       // Cloudflare in front of the killboard blocks this server's address: asking again only makes it worse
       if (res.status === 403) {
@@ -100,7 +126,7 @@ export async function probeKillboard(region) {
   const started = Date.now();
   try {
     const code = await inLane(lane, async () => {
-      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(timeoutFor(url)) });
       await res.body?.cancel();
       return res.status;
     });
