@@ -117,20 +117,40 @@
 .pa-list { list-style: none; margin: 14px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pa-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--pc-line);
   background: rgba(255, 255, 255, 0.025);
   font-size: 14px;
 }
-.pa-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.pa-item-main a { color: var(--pc-text); font-weight: 800; text-decoration: none; }
-.pa-item-main a small { margin-left: 4px; color: var(--pc-muted); font-weight: 700; }
-.pa-item-main > span { color: var(--pc-muted); }
-.pa-status { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.pa-item.is-fired { border-color: rgba(var(--pc-gold-rgb), 0.35); }
+.pa-icon { width: 44px; height: 44px; object-fit: contain; }
+.pa-item-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pa-item-name { color: var(--pc-text); font-weight: 800; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.pa-item-name:hover { text-decoration: underline; }
+.pa-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pa-chip {
+  --chip: var(--pc-muted);
+  padding: 1px 7px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--chip) 45%, transparent);
+  background: color-mix(in srgb, var(--chip) 12%, transparent);
+  color: var(--chip);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pa-chip.is-tier { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.pa-chip.is-plain { --chip: #94a3b8; }
+.pa-chip.is-buy { --chip: rgb(var(--pc-accent-rgb)); }
+.pa-chip.is-sell { --chip: rgb(var(--pc-gold-rgb)); }
+.pa-rule { color: var(--pc-muted); font-size: 13px; }
+.pa-rule b { color: var(--pc-text); }
+.pa-status { display: flex; flex-direction: column; align-items: flex-end; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.pa-status small { font-weight: 600; opacity: 0.75; }
 .pa-status.is-armed { color: var(--pc-accent); background: rgba(var(--pc-accent-rgb), 0.12); }
 .pa-status.is-fired { color: var(--pc-gold); background: rgba(var(--pc-gold-rgb), 0.12); }
 .pa-del {
@@ -149,8 +169,10 @@
 
 @media (max-width: 640px) {
   .pa-seg { grid-template-columns: 1fr; }
-  .pa-item { grid-template-columns: minmax(0, 1fr) auto; }
-  .pa-item .pa-del { grid-column: 1 / -1; justify-self: start; }
+  .pa-item { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .pa-icon { width: 40px; height: 40px; }
+  .pa-item-name { white-space: normal; }
+  .pa-item .pa-del { grid-column: 2 / -1; justify-self: start; }
   .pa-row > .pa-cta { width: 100%; }
 }
 

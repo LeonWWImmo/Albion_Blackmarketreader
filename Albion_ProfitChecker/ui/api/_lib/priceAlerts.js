@@ -65,17 +65,28 @@ export function alertPrice(alert, rows, now) {
 
 export const alertHits = (alert, best) => Boolean(best) && (alert.side === "below" ? best.price <= alert.price : best.price >= alert.price);
 
+/** "T6_BAG@2" → "T6.2" (empty for an id without a tier). */
+export function tierLabel(itemId) {
+  const m = /^T(\d)_.*?(?:@(\d))?$/.exec(itemId);
+  return m ? `T${m[1]}.${m[2] ?? 0}` : "";
+}
+
 /** The Discord message of a fired alert. */
 export function alertMessage(alert, best) {
   const quality = alert.quality > 1 ? ` · ${QUALITY[alert.quality - 1]}` : "";
   const below = alert.side === "below";
+  const name = alert.item_name.replace(/ \.\d$/, "");
+  const item = [tierLabel(alert.item_id), QUALITY[alert.quality - 1] ?? QUALITY[0], REGION[alert.region]].filter(Boolean).join(" · ");
+  // how far past the alert's price the market went: the part the player gains
+  const margin = Math.abs(best.price - alert.price);
+  const where = alert.market === "ANY" ? (below ? "any city" : "any market") : alert.market;
   return {
     username: "Blackmarket Reader",
     avatar_url: ICON,
     embeds: [
       {
         author: { name: `Price alert · ${below ? "Instant buy" : "Instant sell"}`, icon_url: ICON },
-        title: `🔔 ${below ? "Buy now" : "Sell now"}: ${alert.item_name}${quality} at ${silver(best.price)}`,
+        title: `🔔 ${below ? "Buy now" : "Sell now"}: ${name} ${tierLabel(alert.item_id)}${quality} at ${silver(best.price)}`.replace("  ", " "),
         url: `${SITE}${alert.path}`,
         color: below ? 0x5fe0a0 : 0xf5c96a,
         description: below
@@ -83,9 +94,12 @@ export function alertMessage(alert, best) {
           : `A buy order in **${best.market}** pays your price or more: sell to it instantly. · ${REGION[alert.region]}`,
         thumbnail: { url: `https://render.albiononline.com/v1/item/${encodeURIComponent(alert.item_id)}.png?quality=${alert.quality}` },
         fields: [
-          { name: below ? "🛒 Sell order" : "💰 Buy order", value: `${silver(best.price)} silver`, inline: true },
-          { name: "🎯 Your alert", value: `${below ? "Sell order ≤" : "Buy order ≥"} ${silver(alert.price)}`, inline: true },
-          { name: "🕒 Seen", value: `<t:${Math.floor(best.at / 1000)}:R>`, inline: true }
+          { name: "📦 Item", value: item, inline: true },
+          { name: "📍 Market", value: best.market, inline: true },
+          { name: "🕒 Seen", value: `<t:${Math.floor(best.at / 1000)}:R>`, inline: true },
+          { name: below ? "🛒 Sell order" : "💰 Buy order", value: `**${silver(best.price)}** silver`, inline: true },
+          { name: "🎯 Your alert", value: `${below ? "≤" : "≥"} ${silver(alert.price)} in ${where}`, inline: true },
+          { name: below ? "📉 Under your price" : "📈 Over your price", value: margin ? `${silver(margin)} silver` : "exactly at it", inline: true }
         ],
         footer: { text: "Price alert · Premium · blackmarketreader.com · fires again once the price went back" }
       }

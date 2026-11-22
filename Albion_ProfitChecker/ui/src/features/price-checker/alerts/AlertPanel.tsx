@@ -1,9 +1,11 @@
 // The price alert panel on an item's Price Checker page (premium, hidden until the launch), always
 // open: "instant buy" (a sell order at or below the price) or "instant sell" (a buy order at or above
 // it) for this item, see and delete its alerts, connect Discord.
-import { useState, type FormEvent } from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
+import { iconUrl } from "../core/items";
 import { MARKETS } from "../core/quotes";
-import { alertRule, useAlerts, type NewAlert, type PriceAlert } from "./useAlerts";
+import { ENCHANT_COLOR, QUALITIES } from "../ui/badges";
+import { useAlerts, type NewAlert, type PriceAlert } from "./useAlerts";
 import "./alerts.css";
 
 type Props = {
@@ -170,21 +172,59 @@ export function AlertPanel({ base, cheapest, bestSell }: Props) {
   );
 }
 
+/** "T6_BAG@2" → tier 6, enchant 2 (0 without @). */
+export function tierOf(itemId: string): { tier: number; enchant: number } {
+  const m = /^T(\d)_.*?(?:@(\d))?$/.exec(itemId);
+  return { tier: m ? Number(m[1]) : 0, enchant: m?.[2] ? Number(m[2]) : 0 };
+}
+
+const ago = (iso: string | null) => {
+  if (!iso) return "";
+  const min = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
+  if (min < 60) return `${min} min ago`;
+  if (min < 48 * 60) return `${Math.round(min / 60)} h ago`;
+  return `${Math.round(min / 1440)} d ago`;
+};
+
+/** One alert: what item exactly (tier, enchantment, quality, server), what it watches and its state. */
 export function AlertRow({ alert, busy, onDelete, showItem = false }: { alert: PriceAlert; busy: boolean; onDelete: () => void; showItem?: boolean }) {
+  const { tier, enchant } = tierOf(alert.itemId);
+  const quality = QUALITIES[alert.quality - 1] ?? QUALITIES[0];
+  const buy = alert.side === "below";
+  const name = alert.itemName.replace(/ \.\d$/, "");
+  const where = alert.market === "ANY" ? (buy ? "any city" : "any market") : alert.market;
   return (
     <li className={`pa-item ${alert.armed ? "" : "is-fired"}`}>
+      <img className="pa-icon" src={iconUrl(alert.itemId, alert.quality)} alt="" width={44} height={44} loading="lazy" />
       <span className="pa-item-main">
         {showItem ? (
-          <a href={alert.path}>
-            {alert.itemName} <small>{alert.region.toUpperCase()}</small>
+          <a href={alert.path} className="pa-item-name">
+            {name}
           </a>
-        ) : null}
-        <span>{alertRule(alert)}</span>
+        ) : (
+          <b className="pa-item-name">{name}</b>
+        )}
+        <span className="pa-chips">
+          {tier ? (
+            <span className="pa-chip is-tier" style={{ "--chip": ENCHANT_COLOR[enchant] } as CSSProperties} title={`Tier ${tier}, enchantment ${enchant}`}>
+              T{tier}.{enchant}
+            </span>
+          ) : null}
+          <span className="pa-chip" style={{ "--chip": quality.color } as CSSProperties} title="Quality">
+            {quality.label}
+          </span>
+          <span className="pa-chip is-plain">{alert.region === "eu" ? "Europe" : "America"}</span>
+          <span className={`pa-chip ${buy ? "is-buy" : "is-sell"}`}>{buy ? "Instant buy" : "Instant sell"}</span>
+        </span>
+        <span className="pa-rule">
+          {buy ? "Sell order" : "Buy order"} <b>{buy ? "≤" : "≥"} {alert.price.toLocaleString("de-DE")}</b> in {where}
+        </span>
       </span>
       <span className={`pa-status ${alert.armed ? "is-armed" : "is-fired"}`}>
         {alert.armed ? "Watching" : `Fired at ${alert.firedPrice?.toLocaleString("de-DE") ?? "?"}`}
+        {!alert.armed && alert.firedAt ? <small>{ago(alert.firedAt)}</small> : null}
       </span>
-      <button type="button" className="pa-del" onClick={onDelete} disabled={busy} aria-label="Delete alert">
+      <button type="button" className="pa-del" onClick={onDelete} disabled={busy} aria-label={`Delete alert for ${alert.itemName}`}>
         Delete
       </button>
     </li>

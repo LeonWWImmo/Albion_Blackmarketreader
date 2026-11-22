@@ -61,8 +61,10 @@ describe("alertMessage", () => {
       { price: 19000, market: "Lymhurst", at: Date.parse("2026-11-21T19:30:00Z") }
     );
     const embed = msg.embeds[0];
-    expect(embed.title).toBe("🔔 Buy now: Expert's Bag at 19.000");
+    expect(embed.title).toBe("🔔 Buy now: Expert's Bag T6.0 at 19.000");
     expect(embed.author.name).toBe("Price alert · Instant buy");
+    expect(embed.fields[0].value).toBe("T6.0 · Normal · Europe");
+    expect(embed.fields[5].value).toBe("1.000 silver");
     expect(embed.url).toBe("https://blackmarketreader.com/prices/expert-s-bag");
     expect(embed.description).toContain("Lymhurst");
     expect(embed.fields[2].value).toBe(`<t:${Date.parse("2026-11-21T19:30:00Z") / 1000}:R>`);

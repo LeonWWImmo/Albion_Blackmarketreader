@@ -63,6 +63,8 @@ body.premium-page-body {
   cursor: pointer;
 }
 .ob-bar .bm-pill:hover { background: rgba(var(--ob-gold-rgb), 0.18); }
+/* the tools' phone rules stretch .bm-meta over the row (bmCrafter.css): here it stays on the right */
+.ob-bar .bm-meta { width: auto; margin-left: auto; flex-direction: row; align-items: center; justify-content: flex-end; }
 .ob-bar .account-btn { border: 1px solid rgba(var(--ob-gold-rgb), 0.5); box-shadow: 0 0 18px rgba(var(--ob-gold-rgb), 0.18); }
 /* the rail turns gold here */
 .ob .tool-rail {
@@ -489,6 +491,8 @@ h1.ob-foil {
 @media (max-width: 640px) {
   .ob-bar { padding: 10px 12px 10px 64px; }
   .ob-bar .bm-pill { display: none; }
+  .ob-brand { white-space: nowrap; }
+  .ob-bar .account-btn { width: 40px; height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
