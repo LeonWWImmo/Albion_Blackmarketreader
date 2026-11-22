@@ -385,6 +385,17 @@ h1.ob-foil {
 .ov-mvp b { color: var(--ob-ink); }
 .ov-banner { width: 100%; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); }
 
+/* city crafter */
+.ob-card.is-city { --hue: 120, 200, 255; }
+.ov-city { display: grid; gap: 10px; }
+.ov-city-row { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); font-size: 14px; }
+.ov-city-row.is-on { background: rgba(var(--ob-gold-rgb), 0.12); box-shadow: inset 0 0 0 1px rgba(var(--ob-gold-rgb), 0.45); }
+.ov-city-row span { height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.ov-city-row span i { display: block; height: 100%; width: var(--fill); background: linear-gradient(90deg, #b8862f, var(--ob-gold-hi)); }
+.ov-city-row em { font-style: normal; font-family: "JetBrains Mono", monospace; color: var(--ob-gold-hi); }
+.ov-city-best { margin: 4px 0 0; font-size: 13px; color: var(--ob-muted); }
+.ov-city-best b { color: var(--ob-green); }
+
 /* live crafting */
 .ov-craft { display: grid; gap: 10px; }
 .ov-switch {
@@ -480,6 +491,8 @@ h1.ob-foil {
   .ob-field { font-size: 11px; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
   .ov-flip { grid-template-columns: minmax(0, 1fr) auto; }
   .ov-flip span { grid-column: 1 / -1; grid-row: 2; }
+  .ov-city-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .ov-city-row span { grid-column: 1 / -1; grid-row: 2; }
   .ob-cta { gap: 10px; }
   .ob-kicker { gap: 10px; font-size: 11px; letter-spacing: 0.26em; }
   .ob-kicker i { width: 26px; }

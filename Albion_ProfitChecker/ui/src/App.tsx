@@ -20,6 +20,7 @@ const RefiningCalculatorPage = lazy(() =>
 const FoodPotionCrafterPage = lazy(() =>
   import("./features/food-potion-crafter").then((m) => ({ default: m.FoodPotionCrafterPage }))
 );
+const CityCrafterPage = lazy(() => import("./features/city-crafter").then((m) => ({ default: m.CityCrafterPage })));
 const GoldTrackerPage = lazy(() => import("./features/gold-tracker").then((m) => ({ default: m.GoldTrackerPage })));
 const LootSplitPage = lazy(() => import("./features/loot-split").then((m) => ({ default: m.LootSplitPage })));
 const PriceCheckerPage = lazy(() => import("./features/price-checker").then((m) => ({ default: m.PriceCheckerPage })));
@@ -46,6 +47,7 @@ export function App() {
           <Route path="/crafting-calculator" element={<CraftingCalculatorPage />} />
           <Route path="/refining-calculator" element={<RefiningCalculatorPage />} />
           <Route path="/food-potion-crafter" element={<FoodPotionCrafterPage />} />
+          <Route path="/city-crafter" element={<CityCrafterPage />} />
           <Route path="/gold-tracker" element={<GoldTrackerPage />} />
           <Route path="/loot-split" element={<LootSplitPage />} />
           <Route path="/prices" element={<PriceCheckerPage />} />

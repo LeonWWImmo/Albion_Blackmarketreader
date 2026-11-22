@@ -72,7 +72,8 @@ const PREMIUM_TEASER: Array<[string, string]> = [
   ["Live market", "Every city and the Black Market, fresh every 30 minutes"],
   ["Price alerts", "Discord pings you when an item hits your price"],
   ["Guild Pro", "A ZvZ report after every big fight, 90 day attendance"],
-  ["Live crafting", "All four calculators on live prices"]
+  ["Live crafting", "All four calculators on live prices"],
+  ["City Crafter", "Buy, craft and sell in one city, no transport"]
 ];
 
 export function LandingPage() {

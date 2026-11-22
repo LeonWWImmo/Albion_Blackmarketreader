@@ -61,7 +61,8 @@ export function loadLive(region: string): Promise<LiveStatus> {
 
 const nowMinute = () => Math.round(Date.now() / 60000);
 
-function cellOf(snap: LiveSnapshot, id: string, market: string): LiveCell {
+/** One market's raw cell of an item (0 when the snapshot has nothing there). */
+export function cellOf(snap: LiveSnapshot, id: string, market: string): LiveCell {
   const at = snap.locations.indexOf(market);
   return at < 0 ? 0 : (snap.prices[id]?.[at] ?? 0);
 }

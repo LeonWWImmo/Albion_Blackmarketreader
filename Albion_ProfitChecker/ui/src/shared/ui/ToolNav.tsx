@@ -13,6 +13,7 @@ export const TOOL_TABS: ReadonlyArray<Tab> = [
   { to: "/crafting-calculator", label: "Crafting Calculator", hint: "Cost and profit of any craft", crafting: true },
   { to: "/refining-calculator", label: "Refining Calculator", hint: "Ore, wood, fiber, hide and stone", crafting: true },
   { to: "/food-potion-crafter", label: "Food & Potion Crafter", hint: "Cooking and alchemy profit", crafting: true },
+  { to: "/city-crafter", label: "City Crafter", hint: "Buy, craft and sell in one city · Premium", crafting: true, premium: true },
   { to: "/prices", label: "Price Checker" },
   { to: "/gold-tracker", label: "Gold Tracker" },
   { to: "/loot-split", label: "Loot Split" },
@@ -23,8 +24,6 @@ export const TOOL_TABS: ReadonlyArray<Tab> = [
 /** The tabs to show: Premium only once it is visible (premiumVisible). */
 export const toolTabs = () => (premiumVisible() ? TOOL_TABS : TOOL_TABS.filter((tab) => !tab.premium));
 
-const CRAFTING = TOOL_TABS.filter((tab) => tab.crafting);
-
 /** The tab of the page you are on: its own path, or a page below it (/prices/adepts-bag). */
 export const isActiveTab = (to: string, pathname: string) => pathname === to || (to !== "/" && pathname.startsWith(`${to}/`));
 
@@ -33,7 +32,8 @@ function CraftingMenu({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const menuId = useId();
-  const current = CRAFTING.find((tab) => isActiveTab(tab.to, pathname));
+  const crafting = toolTabs().filter((tab) => tab.crafting);
+  const current = crafting.find((tab) => isActiveTab(tab.to, pathname));
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -80,8 +80,8 @@ function CraftingMenu({ pathname }: { pathname: string }) {
         // mousedown keeps focus where it is, so a click on the panel's heading or padding does not blur and close it
         <div className="tool-nav-panel" id={menuId} onMouseDown={(event) => event.preventDefault()}>
           <p>Crafting tools</p>
-          {CRAFTING.map((tab) => (
-            <Link key={tab.to} to={tab.to} className={isActiveTab(tab.to, pathname) ? "is-on" : ""} aria-current={isActiveTab(tab.to, pathname) ? "page" : undefined}>
+          {crafting.map((tab) => (
+            <Link key={tab.to} to={tab.to} className={`${isActiveTab(tab.to, pathname) ? "is-on" : ""}${tab.premium ? " is-premium" : ""}`} aria-current={isActiveTab(tab.to, pathname) ? "page" : undefined}>
               <b>{tab.label}</b>
               <small>{tab.hint}</small>
             </Link>

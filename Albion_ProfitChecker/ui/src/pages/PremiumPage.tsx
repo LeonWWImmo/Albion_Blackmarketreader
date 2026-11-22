@@ -49,6 +49,14 @@ const FEATURES: Feature[] = [
     points: ["Crafting and BM Crafter", "Refining and Food & Potion", "Live, or live filled with daily"],
     where: "Calculators",
     visual: <CraftVisual />
+  },
+  {
+    key: "city",
+    title: "City Crafter",
+    line: "Buy, craft and sell in one city. No transport, nothing to lose on the road.",
+    points: ["Every craft in every city, live", "Ranked by profit a day", "City bonus and focus counted in"],
+    where: "City Crafter",
+    visual: <CityVisual />
   }
 ];
 
@@ -307,7 +315,7 @@ export function PremiumPage() {
   );
 }
 
-/* ---------- the four pictures ---------- */
+/* ---------- the pictures ---------- */
 
 function MarketVisual() {
   const rows: Array<[string, string, string, string]> = [
@@ -407,6 +415,31 @@ function CraftVisual() {
           </b>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CityVisual() {
+  const cities: Array<[string, string, number]> = [
+    ["Lymhurst", "25.7m", 100],
+    ["Fort Sterling", "11.6m", 45],
+    ["Bridgewatch", "5.8m", 23],
+    ["Thetford", "4.3m", 17]
+  ];
+  return (
+    <div className="ov-city">
+      {cities.map(([city, daily, fill], i) => (
+        <div key={city} className={`ov-city-row${i === 0 ? " is-on" : ""}`} style={{ "--fill": `${fill}%`, "--d": `${i * 0.12}s` } as CSSProperties}>
+          <b>{city}</b>
+          <span>
+            <i />
+          </span>
+          <em>{daily} a day</em>
+        </div>
+      ))}
+      <p className="ov-city-best">
+        ★ Master's Siege Hammer · <b>+18.132</b> a craft · 313 sold a day
+      </p>
     </div>
   );
 }

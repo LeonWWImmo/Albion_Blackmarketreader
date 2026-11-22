@@ -17,6 +17,12 @@ const RAIL: ReadonlyArray<RailLink> = [
   { to: "/refining-calculator", label: "Refining Calculator", icon: "M7 3h10v2H7V3Zm2 4h6l4 6-7 8-7-8 4-6Zm.96 2-2.23 3.35L12 17.2l4.27-4.85L14.04 9H9.96Z" },
   { to: "/food-potion-crafter", label: "Food & Potion Crafter", icon: "M11 2h2v6h-2V2Zm-4 0h2v6a3 3 0 0 1-6 0V2h2v6a1 1 0 0 0 2 0V2Zm10 0h2v20h-2v-8h-2V7a5 5 0 0 1 2-5Z" },
   {
+    to: "/city-crafter",
+    label: "City Crafter",
+    icon: "M3 21V9l5-4 5 4v2h8v10H3Zm2-2h3v-3h2v3h3v-8.03L8 7.55 5 9.97V19Zm10 0h4v-6h-4v6Zm-9-6h4v-2H6v2Z",
+    premium: true
+  },
+  {
     to: "/gold-tracker",
     label: "Gold Tracker",
     icon: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 4V8.5C5.7 9.6 8.7 10 12 10s6.3-.4 8-1.5V10c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V14c0 1.7-3.6 3-8 3s-8-1.3-8-3Zm0 4v-1.5c1.7 1.1 4.7 1.5 8 1.5s6.3-.4 8-1.5V18c0 1.7-3.6 3-8 3s-8-1.3-8-3Z"
