@@ -1,87 +1,140 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useSeo } from "../shared/seo/useSeo";
 import { checkoutUrl, PREMIUM_OPEN, portalUrl, premiumVisible } from "../shared/premium/premium";
 import { premiumDay, usePremium, type PremiumState } from "../shared/premium/usePremium";
-import { AlertMock, AttendanceMock, DiscordZvzMock, ResellMock, TrendMock } from "./PremiumVisuals";
 import "./premium-page.css";
 
-/** One tile of the feature grid. `live`: in Premium today; otherwise shown as coming soon. */
-type Feature = { title: string; text: string; points: string[]; visual: ReactNode; live: boolean; wide?: boolean };
+// /premium: "obsidian and gold". Few words, a few effects: a spotlight that follows the pointer and
+// reveals the market underneath, gold foil type, a magnetic button, a live deal tape, feature cards
+// that stack while scrolling, and the price in a turning gold ring. Hidden until the launch.
+
+type Feature = { key: string; title: string; line: string; points: string[]; where: string; visual: ReactNode };
 
 const FEATURES: Feature[] = [
   {
-    title: "Guild Pro",
-    text: "Run your guild from one place instead of spreadsheets and screenshots.",
-    points: ["Mark several guilds per server", "Attendance over 90 days instead of 7", "Regear and bank shared with your officers"],
-    visual: <AttendanceMock />,
-    live: false,
-    wide: true
+    key: "market",
+    title: "Live market",
+    line: "Every item, every city and the Black Market, fresh every 30 minutes.",
+    points: ["City to city flips", "Black Market deals", "Price age and sales per day"],
+    where: "Dashboard",
+    visual: <MarketVisual />
   },
   {
+    key: "alerts",
     title: "Price alerts",
-    text: "Get a Discord message the moment the market moves, instead of checking it all day.",
-    points: ["Your own rules: item, city, price", "Black Market crafts above your margin"],
-    visual: <AlertMock />,
-    live: false
+    line: "Name your price. Discord pings you when the market hits it.",
+    points: ["Up to 25 items", "Drops below or buy order above", "Straight to your own channel"],
+    where: "Price Checker",
+    visual: <AlertVisual />
   },
   {
-    title: "Black Market resell",
-    text: "What the Black Market buys right now, and what is worth carrying there.",
-    points: ["Black Market price and daily sales in one view", "The best flips from every city"],
-    visual: <ResellMock />,
-    live: false
+    key: "guild",
+    title: "Guild Pro",
+    line: "A report in Discord after every big fight. Attendance over 90 days.",
+    points: ["ZvZ report with MVP and regear", "Up to 5 guilds per server", "30 and 90 day attendance"],
+    where: "Guild",
+    visual: <GuildVisual />
   },
   {
-    title: "Price trends",
-    text: "See if a price is climbing or falling before you buy or sell.",
-    points: ["Trend charts for your watchlist", "Spot drops and spikes early"],
-    visual: <TrendMock />,
-    live: false,
-    wide: true
+    key: "craft",
+    title: "Live crafting",
+    line: "All four calculators on live prices, each price marked live or daily.",
+    points: ["Crafting and BM Crafter", "Refining and Food & Potion", "Live, or live filled with daily"],
+    where: "Calculators",
+    visual: <CraftVisual />
   }
 ];
 
-/** Free vs Premium: true = included, a string = how much. */
-const COMPARE: Array<[string, boolean | string, boolean | string]> = [
-  ["Every tool: crafters, calculators, price checker, guild pages", true, true],
-  ["All market data for every city", true, true],
-  ["Daily guild report in Discord", true, true],
-  ["Report after every ZvZ", false, true],
-  ["Marked guilds per server", "1", "Several"],
-  ["Guild attendance history", "7 days", "90 days"],
-  ["Price alerts", false, true],
-  ["Black Market resell tool", false, true],
-  ["Price trends", false, true]
+/** The tape: example deals as the live market finds them. */
+const TAPE: Array<[string, string, string]> = [
+  ["Grandmaster's Bow", "Martlock → Black Market", "+68.900"],
+  ["Adept's Plate Helmet", "Thetford → Caerleon", "+14.200"],
+  ["Expert's Fire Staff", "Lymhurst → Black Market", "+24.700"],
+  ["Master's Cowl", "Bridgewatch → Fort Sterling", "+9.800"],
+  ["Elder's Bloodletter", "Fort Sterling → Black Market", "+312.000"],
+  ["Adept's Bag", "Lymhurst → Thetford", "+3.100"],
+  ["Expert's Mercenary Jacket", "Brecilien → Black Market", "+41.500"],
+  ["Master's Hunter Hood", "Caerleon → Martlock", "+12.700"]
 ];
 
-const FAQ: Array<[string, string]> = [
-  ["Will a free tool become paid?", "No. Every tool and all the market data you use today stay free for everyone. Premium only adds extras on top."],
-  [
-    "How do I cancel?",
-    "Open Manage subscription on this page or in the account panel of any tool. You keep Premium until the end of the month you paid for, and nothing renews after that."
-  ],
-  [
-    "Who handles the payment?",
-    "Stripe sells Premium for us and works out the tax of your country, so the price at checkout can include tax. We never see your card."
-  ],
-  ["Do I need an account?", "Yes. Premium belongs to your Blackmarket Reader account, so sign in with the same account on every device."],
-  ["Why pay at all?", "Servers, the database and the Discord bot cost money every month. Premium keeps the free tools running and pays for new ones."]
-];
-
-const PERKS = [
-  { icon: "⚔️", title: "Works while you play", text: "Reports and alerts come to Discord by themselves." },
-  { icon: "🛡️", title: "Built for guilds", text: "One subscription, your whole guild sees the reports." },
-  { icon: "🔓", title: "Nothing taken away", text: "Every free tool and all the data stay free." }
-];
+/** What the spotlight reveals: a field of market numbers. Fixed, so it is the same on every visit. */
+const FIELD = Array.from({ length: 160 }, (_, i) => {
+  const n = ((i * 7919) % 9973) * 37 + 1200;
+  const up = (i * 31) % 3 !== 0;
+  return `${up ? "▲" : "▼"} ${n.toLocaleString("de-DE")}`;
+});
 
 const welcomeBack = () => new URLSearchParams(window.location.search).get("premium") === "welcome";
+const calm = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Adds "is-in" to the page's [data-reveal] blocks as they scroll into view (once). */
+/** The spotlight and the magnetic button follow the pointer (CSS variables, no re-render). */
+function usePointerLight(hero: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = hero.current;
+    if (!el || calm() || !window.matchMedia("(pointer: fine)").matches) return;
+    let frame = 0;
+    const move = (e: PointerEvent) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--x", `${e.clientX - r.left}px`);
+        el.style.setProperty("--y", `${e.clientY - r.top}px`);
+        el.classList.add("is-pointing");
+        const cta = el.querySelector<HTMLElement>(".ob-magnet");
+        if (cta) {
+          const c = cta.getBoundingClientRect();
+          const dx = e.clientX - (c.left + c.width / 2);
+          const dy = e.clientY - (c.top + c.height / 2);
+          const near = Math.hypot(dx, dy) < 160;
+          cta.style.setProperty("--mx", `${near ? dx * 0.25 : 0}px`);
+          cta.style.setProperty("--my", `${near ? dy * 0.35 : 0}px`);
+        }
+      });
+    };
+    el.addEventListener("pointermove", move);
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener("pointermove", move);
+    };
+  }, [hero]);
+}
+
+/** While the next feature card slides over one, that one sinks back (--sink 0..1, CSS does the rest). */
+function useStackSink() {
+  useEffect(() => {
+    if (calm()) return;
+    const cards = [...document.querySelectorAll<HTMLElement>(".ob-card")];
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      cards.forEach((card, i) => {
+        const next = cards[i + 1];
+        if (!next) return;
+        const gap = next.getBoundingClientRect().top - card.getBoundingClientRect().top;
+        const sink = Math.min(1, Math.max(0, 1 - gap / (window.innerHeight * 0.7)));
+        card.style.setProperty("--sink", sink.toFixed(3));
+      });
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+}
+
+/** Adds "is-in" to [data-reveal] blocks as they scroll into view (once). */
 function useReveal() {
   useEffect(() => {
-    const blocks = document.querySelectorAll<HTMLElement>(".pp-page [data-reveal]");
-    if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const blocks = document.querySelectorAll<HTMLElement>(".ob [data-reveal]");
+    if (!("IntersectionObserver" in window) || calm()) {
       blocks.forEach((b) => b.classList.add("is-in"));
       return;
     }
@@ -93,7 +146,7 @@ function useReveal() {
           seen.unobserve(e.target);
         }
       },
-      { rootMargin: "0px 0px -8% 0px" }
+      { rootMargin: "0px 0px -10% 0px" }
     );
     blocks.forEach((b) => seen.observe(b));
     return () => seen.disconnect();
@@ -105,10 +158,11 @@ export function PremiumPage() {
   const { state, busy, error, go, reload } = usePremium(visible);
   const welcome = useRef(welcomeBack()).current;
   const tries = useRef(0);
+  const hero = useRef<HTMLElement | null>(null);
 
   useSeo({
     title: "Premium | Blackmarket Reader",
-    description: "Blackmarket Reader Premium: a Discord report after every ZvZ, guild tools, price alerts and new tools for Albion Online. Every free tool stays free.",
+    description: "Blackmarket Reader Premium: the live market every 30 minutes, price alerts in Discord, Guild Pro with ZvZ reports and live prices in every calculator. Every free tool stays free.",
     canonical: "https://blackmarketreader.com/premium",
     noindex: !PREMIUM_OPEN
   });
@@ -122,6 +176,8 @@ export function PremiumPage() {
   }, []);
 
   useReveal();
+  usePointerLight(hero);
+  useStackSink();
 
   // back from Stripe: the webhook can land a few seconds after the player, so ask again for a while
   const waiting = welcome && typeof state === "object" && state !== null && !state.premium && tries.current < 8;
@@ -137,221 +193,216 @@ export function PremiumPage() {
   if (!visible) return <Navigate to="/" replace />;
 
   const hasPremium = typeof state === "object" && state !== null && state.premium;
-  const plan = (
-    <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
-  );
 
   return (
-    <div className="pp-page">
-      <div className="pp-glow" aria-hidden="true" />
-      <header className="pp-top">
-        <a className="pp-brand" href="/">
-          Blackmarket <span>Reader</span>
+    <div className="ob">
+      <header className="ob-bar">
+        <a className="ob-brand" href="/">
+          <img src="/apple-touch-icon.png" alt="" width={28} height={28} />
+          Blackmarket Reader
         </a>
-        <a className="pp-top-link" href="/dashboard">
-          Open Dashboard
+        <a className="ob-bar-link" href="/dashboard">
+          Back to the tools
         </a>
       </header>
 
-      <main className="pp-shell">
-        {welcome && hasPremium ? (
-          <div className="pp-welcome" role="status">
-            <strong>Welcome to Premium.</strong> Thanks for supporting the tools, everything is unlocked on your account.
-          </div>
-        ) : null}
-
-        <section className="pp-hero">
-          <div className="pp-hero-copy">
-            <span className="pp-kicker">
-              <span className="pp-kicker-dot" /> Blackmarket Reader Premium
+      {/* 1. the spotlight */}
+      <section className="ob-hero" ref={hero} aria-labelledby="ob-title">
+        <div className="ob-field" aria-hidden="true">
+          {FIELD.map((n, i) => (
+            <span key={i} className={n.startsWith("▲") ? "is-up" : "is-down"}>
+              {n}
             </span>
-            <h1>
-              Every fight.
-              <span>Reported for you.</span>
-            </h1>
-            <p className="pp-lead">
-              After every ZvZ your guild's Discord gets the full story: won or lost, K/D, regear cost and who carried. Plus guild tools,
-              price alerts and new tools that work while you play.
-            </p>
-            <div className="pp-hero-cta">
-              {hasPremium ? (
-                <a className="pp-cta pp-cta-inline" href="#plan">
-                  Your Premium
-                </a>
-              ) : (
-                <a className="pp-cta pp-cta-inline" href="#plan">
-                  Get Premium · 4.99 CHF
-                </a>
-              )}
-              <a className="pp-ghost" href="#features">
-                See everything
-              </a>
-            </div>
-            <p className="pp-hero-note">Per month · cancel any time · every free tool stays free</p>
-          </div>
-
-          <div className="pp-hero-visual">
-            <span className="pp-example">Example</span>
-            <DiscordZvzMock />
-          </div>
-        </section>
-
-        <section className="pp-perks" data-reveal>
-          {PERKS.map((p) => (
-            <div className="pp-perk" key={p.title}>
-              <span className="pp-perk-icon" aria-hidden="true">
-                {p.icon}
-              </span>
-              <div>
-                <b>{p.title}</b>
-                <p>{p.text}</p>
-              </div>
-            </div>
           ))}
-        </section>
-
-        <section className="pp-section" id="features" aria-labelledby="pp-features">
-          <div className="pp-section-head" data-reveal>
-            <span className="pp-eyebrow">What you get</span>
-            <h2 id="pp-features">More than a report.</h2>
-            <p>The ZvZ report is the start. More tools for guilds and traders join Premium over time, at the same price.</p>
-          </div>
-          <div className="pp-bento">
-            {FEATURES.map((f) => (
-              <article className={`pp-tile${f.wide ? " is-wide" : ""}`} key={f.title} data-reveal>
-                <div className="pp-tile-copy">
-                  <div className="pp-tile-head">
-                    <h3>{f.title}</h3>
-                    <span className={f.live ? "pp-live" : "pp-soon"}>{f.live ? "Live" : "Coming soon"}</span>
-                  </div>
-                  <p>{f.text}</p>
-                  <ul>
-                    {f.points.map((p) => (
-                      <li key={p}>{p}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="pp-tile-visual">{f.visual}</div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="pp-section" aria-labelledby="pp-compare">
-          <div className="pp-section-head" data-reveal>
-            <span className="pp-eyebrow">Free and Premium</span>
-            <h2 id="pp-compare">Free stays free.</h2>
-            <p>Premium only adds. Nothing you use today moves behind a paywall.</p>
-          </div>
-          <div className="pp-table-wrap" data-reveal>
-            <table className="pp-table">
-              <thead>
-                <tr>
-                  <th scope="col">
-                    <span className="pp-sr">Feature</span>
-                  </th>
-                  <th scope="col">Free</th>
-                  <th scope="col" className="pp-col-prem">
-                    Premium
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE.map(([name, free, prem]) => (
-                  <tr key={name}>
-                    <th scope="row">{name}</th>
-                    <td>
-                      <Cell value={free} />
-                    </td>
-                    <td className="pp-col-prem">
-                      <Cell value={prem} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="pp-section pp-pricing" id="plan" aria-labelledby="pp-plan">
-          <div className="pp-plan" data-reveal>
-            <span className="pp-plan-name" id="pp-plan">
-              Premium
-            </span>
-            <div className="pp-price">
-              <strong>4.99</strong>
-              <span>
-                CHF
-                <br />
-                per month
-              </span>
-            </div>
-            <ul className="pp-plan-list">
-              <li>ZvZ report after every fight</li>
-              <li>Guild Pro, price alerts and every new Premium tool</li>
-              <li>Cancel any time, in one click</li>
-            </ul>
-            {plan}
-            {error ? (
-              <p className="pp-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <p className="pp-plan-note">Tax for your country is worked out at checkout. Secure payment by Stripe.</p>
-          </div>
-        </section>
-
-        <section className="pp-section" aria-labelledby="pp-faq">
-          <div className="pp-section-head" data-reveal>
-            <span className="pp-eyebrow">Questions</span>
-            <h2 id="pp-faq">Good to know.</h2>
-          </div>
-          <div className="pp-faq" data-reveal>
-            {FAQ.map(([q, a]) => (
-              <details key={q}>
-                <summary>{q}</summary>
-                <p>{a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        <section className="pp-final" data-reveal>
-          <h2>
-            Your next ZvZ, <span>in Discord.</span>
-          </h2>
-          <p>Turn it on once. Every big fight after that reports itself.</p>
-          <a className="pp-cta pp-cta-inline" href="#plan">
-            {hasPremium ? "Your Premium" : "Get Premium"}
+        </div>
+        <div className="ob-light" aria-hidden="true" />
+        <div className="ob-hero-in">
+          <p className="ob-kicker">
+            <i />
+            {hasPremium ? "Welcome back" : "Blackmarket Reader"}
+            <i />
+          </p>
+          <h1 id="ob-title" className="ob-foil">
+            Premium
+          </h1>
+          <p className="ob-sub">See the market before everyone else.</p>
+          <a className="ob-cta ob-magnet" href="#price">
+            <span>{hasPremium ? "Your Premium" : "Get Premium"}</span>
+            <b>4.99 CHF / month</b>
           </a>
-        </section>
+        </div>
+        <span className="ob-scroll" aria-hidden="true" />
+      </section>
 
-        <footer className="pp-footer">
-          <nav aria-label="More">
-            <a href="/legal#terms">Terms</a>
-            <a href="/legal#privacy">Privacy</a>
-            <a href="/community">Discord</a>
-            <a href="mailto:blackmarketreader@gmail.com">Contact</a>
-          </nav>
-          <p>A fan-made tool, not affiliated with, endorsed by or sponsored by Sandbox Interactive GmbH or Albion Online.</p>
-        </footer>
-      </main>
+      {/* 2. the tape */}
+      <div className="ob-tape" aria-hidden="true">
+        {[0, 1].map((row) => (
+          <div key={row} className={`ob-tape-row${row ? " is-back" : ""}`}>
+            {[...TAPE, ...TAPE].map(([item, route, profit], i) => (
+              <span key={i}>
+                <b>{item}</b> {route} <em>{profit}</em>
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* 3. the stack */}
+      <section className="ob-stack" aria-label="What Premium adds">
+        {FEATURES.map((f, i) => (
+          <article key={f.key} className={`ob-card is-${f.key}`} style={{ "--i": i } as CSSProperties}>
+            <div className="ob-card-text">
+              <span className="ob-num">0{i + 1}</span>
+              <h2>{f.title}</h2>
+              <p>{f.line}</p>
+              <ul>
+                {f.points.map((p) => (
+                  <li key={p}>{p}</li>
+                ))}
+              </ul>
+              <span className="ob-where">In: {f.where}</span>
+            </div>
+            <div className="ob-card-visual" aria-hidden="true">
+              {f.visual}
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {/* 4. the price */}
+      <section className="ob-price" id="price" aria-labelledby="ob-price-title" data-reveal>
+        <div className="ob-ring" aria-hidden="true" />
+        <div className="ob-price-in">
+          <p className="ob-kicker">
+            <i />
+            One plan. Everything.
+            <i />
+          </p>
+          <h2 id="ob-price-title" className="ob-amount">
+            <span className="ob-foil">4.99</span>
+            <small>CHF / month</small>
+          </h2>
+          <div className="ob-action">
+            <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
+            {error ? <p className="ob-error">{error}</p> : null}
+          </div>
+          <p className="ob-fine">Cancel any time · Paid through Stripe · Every free tool stays free</p>
+        </div>
+      </section>
+
+      <footer className="ob-foot">
+        <a href="/">blackmarketreader.com</a>
+        <span>Data from the Albion Online Data Project and Albion's killboard.</span>
+      </footer>
     </div>
   );
 }
 
-function Cell({ value }: { value: boolean | string }) {
-  if (typeof value === "string") return <span className="pp-amount">{value}</span>;
-  return value ? (
-    <svg className="pp-yes" viewBox="0 0 24 24" role="img" aria-label="Included">
-      <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2Z" />
-    </svg>
-  ) : (
-    <span className="pp-no" aria-label="Not included">
-      –
-    </span>
+/* ---------- the four pictures ---------- */
+
+function MarketVisual() {
+  const rows: Array<[string, string, string, string]> = [
+    ["Grandmaster's Bow", "Martlock", "Black Market", "+38%"],
+    ["Adept's Plate Helmet", "Thetford", "Caerleon", "+34%"],
+    ["Expert's Fire Staff", "Lymhurst", "Black Market", "+26%"],
+    ["Master's Cowl", "Bridgewatch", "Fort Sterling", "+21%"]
+  ];
+  return (
+    <div className="ov-market">
+      <span className="ov-live">
+        <i /> Live · 12 min ago
+      </span>
+      {rows.map(([item, from, to, pct], i) => (
+        <div key={item} className="ov-flip" style={{ "--d": `${i * 0.12}s` } as CSSProperties}>
+          <b>{item}</b>
+          <span>
+            {from} <em>→</em> <strong className={to === "Black Market" ? "is-bm" : ""}>{to}</strong>
+          </span>
+          <ins>{pct}</ins>
+        </div>
+      ))}
+    </div>
   );
 }
+
+function AlertVisual() {
+  return (
+    <div className="ov-alert">
+      <div className="ov-ping">
+        <img src="/apple-touch-icon.png" alt="" width={34} height={34} />
+        <div>
+          <span className="ov-ping-head">
+            Blackmarket Reader <em>APP</em> <small>now</small>
+          </span>
+          <b>🔔 Adept's Bag dropped to 2.140</b>
+          <span>Cheapest listing in Martlock · your alert ≤ 2.200</span>
+        </div>
+      </div>
+      <div className="ov-ping is-second">
+        <img src="/apple-touch-icon.png" alt="" width={34} height={34} />
+        <div>
+          <span className="ov-ping-head">
+            Blackmarket Reader <em>APP</em> <small>4 min</small>
+          </span>
+          <b>🔔 Elder's Bloodletter buy order at 1.31m</b>
+          <span>Best buy order in Black Market · your alert ≥ 1.3m</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuildVisual() {
+  return (
+    <div className="ov-guild">
+      <div className="ov-score">
+        <b>48</b>
+        <span>⚔️</span>
+        <b>19</b>
+      </div>
+      <div className="ov-bar">
+        {Array.from({ length: 10 }, (_, i) => (
+          <i key={i} className={i < 7 ? "is-k" : "is-d"} />
+        ))}
+      </div>
+      <p className="ov-mvp">
+        👑 <b>Moonveil</b> · 9 kills · 6.1m fame
+      </p>
+      <img className="ov-banner" src="/picture/zvz-won.jpg" alt="" loading="lazy" />
+    </div>
+  );
+}
+
+function CraftVisual() {
+  const prices: Array<[string, string, boolean]> = [
+    ["Planks", "1.218", true],
+    ["Metal Bar", "2.480", true],
+    ["Artefact", "9.900", false],
+    ["Sells for", "64.200", true]
+  ];
+  return (
+    <div className="ov-craft">
+      <div className="ov-switch">
+        <span>✦ Live prices</span>
+        <div>
+          <i>Daily</i>
+          <i>Live</i>
+          <i className="is-on">Live + fill</i>
+        </div>
+      </div>
+      {prices.map(([name, value, live]) => (
+        <div key={name} className="ov-price">
+          <span>{name}</span>
+          <b>
+            {value} <i className={live ? "is-live" : "is-daily"} />
+          </b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- the buy button ---------- */
 
 type PlanActionProps = {
   state: PremiumState;
@@ -362,32 +413,32 @@ type PlanActionProps = {
   onRetry: () => void;
 };
 
-/** The plan card's button: sign in, buy, manage, or why it can't be bought yet. */
+/** The price block's button: sign in, buy, manage, or why it can't be bought yet. */
 function PlanAction({ state, busy, waiting, onBuy, onManage, onRetry }: PlanActionProps) {
   if (state === null) {
     return (
-      <button type="button" className="pp-cta" disabled>
-        Loading…
+      <button type="button" className="ob-cta" disabled>
+        <span>Loading…</span>
       </button>
     );
   }
   if (state === "failed") {
     return (
       <>
-        <button type="button" className="pp-cta pp-cta-quiet" onClick={onRetry}>
-          Try again
+        <button type="button" className="ob-cta is-quiet" onClick={onRetry}>
+          <span>Try again</span>
         </button>
-        <p className="pp-plan-sub">Could not load your premium right now.</p>
+        <p className="ob-note">Could not load your premium right now.</p>
       </>
     );
   }
   if (state === "guest") {
     return (
       <>
-        <a className="pp-cta" href={`/login?next=${encodeURIComponent("/premium")}`}>
-          Sign in to get Premium
+        <a className="ob-cta" href={`/login?next=${encodeURIComponent("/premium")}`}>
+          <span>Sign in to get Premium</span>
         </a>
-        <p className="pp-plan-sub">Premium belongs to your account.</p>
+        <p className="ob-note">Premium belongs to your account.</p>
       </>
     );
   }
@@ -396,14 +447,14 @@ function PlanAction({ state, busy, waiting, onBuy, onManage, onRetry }: PlanActi
       state.status === "cancelled" && state.endsAt ? `Ends on ${premiumDay(state.endsAt)}` : state.renewsAt ? `Renews on ${premiumDay(state.renewsAt)}` : "Active";
     return (
       <>
-        <p className="pp-active">
-          <span className="pp-badge">Premium</span>
+        <p className="ob-active">
+          <span className="ob-badge">Premium</span>
           {until}
         </p>
-        {state.status === "past_due" ? <p className="pp-plan-sub pp-warn">Your last payment did not go through: update your card to keep Premium.</p> : null}
+        {state.status === "past_due" ? <p className="ob-note ob-warn">Your last payment did not go through: update your card to keep Premium.</p> : null}
         {state.manage ? (
-          <button type="button" className="pp-cta pp-cta-quiet" onClick={onManage} disabled={busy}>
-            {busy ? "Opening…" : "Manage subscription"}
+          <button type="button" className="ob-cta is-quiet" onClick={onManage} disabled={busy}>
+            <span>{busy ? "Opening…" : "Manage subscription"}</span>
           </button>
         ) : null}
       </>
@@ -411,24 +462,24 @@ function PlanAction({ state, busy, waiting, onBuy, onManage, onRetry }: PlanActi
   }
   if (waiting) {
     return (
-      <button type="button" className="pp-cta" disabled>
-        Activating your Premium…
+      <button type="button" className="ob-cta" disabled>
+        <span>Activating your Premium…</span>
       </button>
     );
   }
   if (state.open) {
     return (
-      <button type="button" className="pp-cta" onClick={onBuy} disabled={busy}>
-        {busy ? "Opening checkout…" : "Get Premium"}
+      <button type="button" className="ob-cta" onClick={onBuy} disabled={busy}>
+        <span>{busy ? "Opening checkout…" : "Get Premium"}</span>
       </button>
     );
   }
   return (
     <>
-      <button type="button" className="pp-cta" disabled>
-        Coming soon
+      <button type="button" className="ob-cta" disabled>
+        <span>Coming soon</span>
       </button>
-      <p className="pp-plan-sub">Premium opens soon. Every tool stays free until then and after.</p>
+      <p className="ob-note">Premium opens soon. Every tool stays free until then and after.</p>
     </>
   );
 }
