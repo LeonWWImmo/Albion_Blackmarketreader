@@ -1,6 +1,6 @@
 // Guild Pro: the ZvZ report (api/_lib/guildApi.js zvz + hook-zvz, api/_lib/guildDiscord.js zvzReport).
 import { describe, expect, it } from "vitest";
-import { zvzReport } from "../_lib/guildDiscord.js";
+import { killBar, zvzReport } from "../_lib/guildDiscord.js";
 import { GID, setup } from "./guild-kit.js";
 
 const HOOK = "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_-12";
@@ -79,7 +79,8 @@ describe("ZvZ job", () => {
     const [url, payload] = deps.discord.post.mock.calls[0];
     expect(url).toBe(HOOK);
     expect(payload.embeds[0].url).toBe("https://blackmarketreader.com/guild/battle/eu/7");
-    expect(payload.embeds[0].title).toBe("⚔️ Even · [BOSSS] Angry fuzzies");
+    expect(payload.embeds[0].title).toBe("⚖️ Stalemate");
+    expect(payload.embeds[0].author.name).toBe("ZvZ report · [BOSSS] Angry fuzzies");
     expect(store.webhooks.get("user-ann:eu").zvz_after).toBe("2026-11-14T10:00:00Z");
     expect((await runJob()).body.posted).toBe(0);
   });
@@ -131,22 +132,41 @@ describe("zvzReport", () => {
     const [embed] = embeds;
     const field = (name) => embed.fields.find((f) => f.name.includes(name)).value;
     expect(allowed_mentions).toEqual({ parse: [] });
-    expect(embed.title).toBe("⚔️ Won · [FUZ] Angry fuzzies");
+    expect(embed.title).toBe("🏆 Victory");
+    expect(embed.author.name).toBe("ZvZ report · [FUZ] Angry fuzzies");
+    expect(embed.url).toBe("https://blackmarketreader.com/guild/battle/eu/99");
     expect(embed.color).toBe(0x4ade80);
-    expect(embed.description).toContain("<t:1794650400:f> · 23 min · Europe");
-    expect(embed.description).toContain("👥 **2** of ours · 7 players in the fight");
-    // the ally is not an enemy
-    expect(embed.description).toContain("🆚 [B] 3 · Solo 1");
-    expect(field("K/D")).toBe("**2.50**");
+    // the scoreboard: kills against deaths, the bar, then time, length, server and size
+    expect(embed.description).toBe(
+      ["## 5 ⚔️ 2", `${killBar(5, 2)}  **K/D 2.50**`, "-# 🕒 <t:1794650400:f> · ⏱️ 23 min · 🌍 Europe · 👥 2 of 7 players"].join("\n")
+    );
     expect(field("Regear")).toBe("**2m** silver");
-    expect(field("Top damage")).toBe("🥇 **Ann** · 90k\n🥈 **Bo** · 50k");
-    expect(field("Top kill fame")).toBe("🥇 **Bo** · 1.5m\n🥈 **Ann** · 1m");
-    expect(field("Top support")).toBe("🥇 **Bo** · 4 healed");
+    // the MVP: most kill fame
+    expect(field("MVP")).toBe("**Bo** · 0 kills · 1.5m fame · 50k damage");
+    expect(field("Damage")).toBe("🥇 **Ann** · 90k\n🥈 **Bo** · 50k");
+    expect(field("Kill fame").startsWith("**")).toBe(true);
+    expect(embed.fields.find((f) => f.name === "🏆 Kill fame").value).toBe("🥇 **Bo** · 1.5m\n🥈 **Ann** · 1m");
+    expect(field("Support")).toBe("🥇 **Bo** · 4 heals");
+    // the ally is not an enemy: us, then the enemy groups by size
+    const table = field("Who was there").split("\n");
+    expect(table[1]).toMatch(/^Us\s+2 /);
+    expect(table[2]).toMatch(/^\[B\]\s+3 /);
+    expect(table[3]).toMatch(/^Solo\s+1 /);
+    expect(embed.image.url).toBe("https://blackmarketreader.com/picture/zvz-won.jpg");
   });
 
   it("without prices or deaths: a regear link, and no division by zero", () => {
     const [embed] = zvzReport(guild, { ...body, guilds: [{ id: GID, kills: 3, deaths: 0, killFame: 1 }], priced: false }).embeds;
-    expect(embed.fields.find((f) => f.name.includes("K/D")).value).toBe("**∞**");
+    expect(embed.description).toContain("**K/D ∞**");
+    expect(embed.description).toContain("🟩".repeat(10));
     expect(embed.fields.find((f) => f.name.includes("Regear")).value).toContain("/guild/eu/angry-fuzzies/regear");
+  });
+});
+
+describe("killBar", () => {
+  it("shows the kills' share in ten squares", () => {
+    expect(killBar(3, 1)).toBe("🟩".repeat(8) + "🟥".repeat(2));
+    expect(killBar(0, 5)).toBe("🟥".repeat(10));
+    expect(killBar(0, 0)).toBe("⬛".repeat(10));
   });
 });

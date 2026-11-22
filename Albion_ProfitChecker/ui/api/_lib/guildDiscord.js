@@ -143,12 +143,13 @@ export function helloMessage(guild) {
 }
 
 const ZVZ_TOP = 3;
-const ZVZ_ENEMIES = 3;
+const ZVZ_ENEMIES = 4;
 const RESULT = {
-  won: { word: "Won", icon: "🟢", color: 0x4ade80 },
-  lost: { word: "Lost", icon: "🔴", color: 0xf87171 },
-  even: { word: "Even", icon: "🟡", color: 0xf5c451 }
+  won: { word: "Victory", icon: "🏆", color: 0x4ade80 },
+  lost: { word: "Defeat", icon: "💀", color: 0xf87171 },
+  even: { word: "Stalemate", icon: "⚖️", color: 0xf5c451 }
 };
+const BAR_WIDTH = 10;
 
 /** The three best of the guild's players by one number, with medals. */
 function podium(players, value, show) {
@@ -159,7 +160,14 @@ function podium(players, value, show) {
   return best.length ? best.map((p, i) => `${MEDALS[i]} **${p.name}** · ${show(value(p))}`).join("\n") : "–";
 }
 
-/** The biggest enemy groups of a fight: alliances, or guilds without one, by players. */
+/** Kills against deaths as ten squares: green for the kills' share, red for the deaths'. */
+export function killBar(kills, deaths) {
+  if (!kills && !deaths) return "⬛".repeat(BAR_WIDTH);
+  const green = Math.round((kills / (kills + deaths)) * BAR_WIDTH);
+  return "🟩".repeat(green) + "🟥".repeat(BAR_WIDTH - green);
+}
+
+/** The biggest enemy groups of a fight (alliances, or guilds without one), by players. */
 function enemiesOf(players, isFriend) {
   const groups = new Map();
   for (const p of players) {
@@ -170,17 +178,24 @@ function enemiesOf(players, isFriend) {
     g.n++;
     groups.set(key, g);
   }
-  return [...groups.values()]
-    .sort((a, b) => b.n - a.n)
-    .slice(0, ZVZ_ENEMIES)
-    .map((g) => `${g.name} ${g.n}`)
-    .join(" · ");
+  return [...groups.values()].sort((a, b) => b.n - a.n).slice(0, ZVZ_ENEMIES);
+}
+
+/** The enemy groups as a small table in a code block: name, players, a bar against our numbers. */
+function enemyTable(enemies, ours) {
+  if (!enemies.length) return null;
+  const most = Math.max(ours, ...enemies.map((e) => e.n));
+  const width = Math.min(16, Math.max(...enemies.map((e) => e.name.length), 4));
+  const line = (name, n) => `${name.slice(0, width).padEnd(width)} ${String(n).padStart(3)}  ${"█".repeat(Math.max(1, Math.round((n / most) * BAR_WIDTH))).padEnd(BAR_WIDTH, "░")}`;
+  return ["```", line("Us", ours), ...enemies.map((e) => line(e.name, e.n)), "```"].join("\n");
 }
 
 /**
  * Guild Pro: the report of one big fight of the marked guild, from its battle report answer
- * (api/_lib/guildApi.js getBattleReport): the result, kills and deaths, what the deaths cost in gear,
- * the top damage, kill fame and support of the guild, and links to the fight and its regear.
+ * (api/_lib/guildApi.js getBattleReport): a scoreboard (kills against deaths, with a bar), the time,
+ * size and the enemy, fame won and lost, what the deaths cost in gear, the MVP with their weapon,
+ * the top damage, kill fame and support, and a banner for the result
+ * (public/picture/zvz-<won|lost|even>.jpg).
  */
 export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
   const ours = players.filter((p) => p.guildId === guild.id);
@@ -188,7 +203,9 @@ export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
   const k = row?.kills ?? ours.reduce((t, p) => t + p.kills, 0);
   const d = row?.deaths ?? ours.reduce((t, p) => t + p.deaths, 0);
   const fame = row?.killFame ?? ours.reduce((t, p) => t + p.killFame, 0);
-  const result = RESULT[k > d ? "won" : k < d ? "lost" : "even"];
+  const fameLost = row?.deathFame ?? null;
+  const kind = k > d ? "won" : k < d ? "lost" : "even";
+  const result = RESULT[kind];
   // the side the guild fought on: its alliance when it has one
   const alliance = ours.find((p) => p.allianceId)?.allianceId ?? null;
   const enemies = enemiesOf(players, (p) => p.guildId === guild.id || (alliance !== null && p.allianceId === alliance));
@@ -196,34 +213,47 @@ export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
   const start = Math.round(Date.parse(battle.startTime) / 1000);
   const minutes = Math.max(1, Math.round((Date.parse(battle.endTime) - Date.parse(battle.startTime)) / 60_000));
   const battleUrl = `${SITE}/guild/battle/${guild.region}/${battle.id}`;
+  const tag = guild.allianceTag ? `[${guild.allianceTag}] ` : "";
+  // the MVP: most kill fame, then damage
+  const mvp = [...ours].sort((a, b) => b.killFame - a.killFame || b.damage - a.damage).find((p) => p.killFame > 0 || p.damage > 0) ?? null;
+  const kd = d ? (k / d).toFixed(2) : k ? "∞" : "–";
+  const table = enemyTable(enemies, ours.length);
   return {
     username: "Blackmarket Reader",
     avatar_url: ICON,
     allowed_mentions: { parse: [] },
     embeds: [
       {
-        author,
-        title: `⚔️ ${result.word} · ${guild.allianceTag ? `[${guild.allianceTag}] ` : ""}${guild.name}`,
+        author: { name: `ZvZ report · ${tag}${guild.name}`, url: guildUrl(guild, "battles"), icon_url: ICON },
+        title: `${result.icon} ${result.word}`,
         url: battleUrl,
         description: [
-          `🕒 <t:${start}:f> · ${minutes} min · ${REGION[guild.region] ?? guild.region.toUpperCase()}`,
-          `👥 **${ours.length}** of ours · ${battle.players} players in the fight`,
-          ...(enemies ? [`🆚 ${enemies}`] : [])
+          `## ${k} ⚔️ ${d}`,
+          `${killBar(k, d)}  **K/D ${kd}**`,
+          `-# 🕒 <t:${start}:f> · ⏱️ ${minutes} min · 🌍 ${REGION[guild.region] ?? guild.region.toUpperCase()} · 👥 ${ours.length} of ${battle.players} players`
         ].join("\n"),
         color: result.color,
+        ...(mvp?.weapon?.type ? { thumbnail: { url: `https://render.albiononline.com/v1/item/${encodeURIComponent(mvp.weapon.type)}.png?quality=${mvp.weapon.quality ?? 1}` } } : {}),
         fields: [
-          { name: "🗡️ Kills", value: `**${k}**`, inline: true },
-          { name: "💀 Deaths", value: `**${d}**`, inline: true },
-          { name: "⚖️ K/D", value: `**${d ? (k / d).toFixed(2) : k ? "∞" : "–"}**`, inline: true },
           { name: "⭐ Kill fame", value: `**${shortNumber(fame)}**`, inline: true },
+          { name: "🩸 Fame lost", value: fameLost === null ? "–" : `**${shortNumber(fameLost)}**`, inline: true },
           { name: "💰 Regear", value: regear === null ? `[open](${guildUrl(guild, "regear")})` : `**${shortNumber(regear)}** silver`, inline: true },
-          { name: `${result.icon} Result`, value: `**${result.word}**`, inline: true },
-          { name: "🔥 Top damage", value: podium(ours, (p) => p.damage, shortNumber), inline: true },
-          { name: "🏆 Top kill fame", value: podium(ours, (p) => p.killFame, shortNumber), inline: true },
-          { name: "💚 Top support", value: podium(ours, (p) => p.healAssists, (n) => `${n} healed`), inline: true },
-          { name: "🔗 Open", value: `[Battle report](${battleUrl}) · [Regear](${guildUrl(guild, "regear")}) · [Attendance](${guildUrl(guild, "attendance")})` }
+          ...(mvp
+            ? [
+                {
+                  name: "👑 MVP",
+                  value: `**${mvp.name}** · ${mvp.kills} kill${mvp.kills === 1 ? "" : "s"} · ${shortNumber(mvp.killFame)} fame · ${shortNumber(mvp.damage)} damage${mvp.itemPower ? ` · IP ${Math.round(mvp.itemPower)}` : ""}`
+                }
+              ]
+            : []),
+          { name: "🔥 Damage", value: podium(ours, (p) => p.damage, shortNumber), inline: true },
+          { name: "🏆 Kill fame", value: podium(ours, (p) => p.killFame, shortNumber), inline: true },
+          { name: "💚 Support", value: podium(ours, (p) => p.healAssists, (n) => `${n} heals`), inline: true },
+          ...(table ? [{ name: "🆚 Who was there", value: table }] : []),
+          { name: "\u200b", value: `[📜 Battle report](${battleUrl})  ·  [🛡️ Regear](${guildUrl(guild, "regear")})  ·  [📋 Attendance](${guildUrl(guild, "attendance")})` }
         ],
-        footer: { text: "ZvZ report · Guild Pro · blackmarketreader.com", icon_url: ICON },
+        image: { url: `${SITE}/picture/zvz-${kind}.jpg` },
+        footer: { text: "Guild Pro · blackmarketreader.com", icon_url: ICON },
         timestamp: battle.endTime
       }
     ]
