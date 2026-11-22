@@ -62,5 +62,5 @@ export default async function handler(req, res) {
       discord: { check: checkWebhook, post: postWebhook }
     }
   );
-  sendResult(res, result);
+  sendResult(res, result, req);
 }

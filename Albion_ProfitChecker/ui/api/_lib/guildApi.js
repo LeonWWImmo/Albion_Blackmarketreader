@@ -36,6 +36,7 @@
 //   GET  splits?guild=..                 their saved loot splits of a guild
 //   POST split-save {guild, id?, name, data}, split-remove {id}
 // The last ones are private per player (api/_lib/guildPrivate.js) and never reach the killboard.
+import { createHash } from "node:crypto";
 import { GameinfoError, PAGES_BUDGET_MS, TOP_RANGES, isBattleId, isGuildId, isRegion } from "./gameinfo.js";
 import { dailyReport, helloMessage, isWebhookUrl, zvzHello, zvzReport } from "./guildDiscord.js";
 import { handlePrivate } from "./guildPrivate.js";
@@ -663,6 +664,13 @@ async function proFightsDue(deps) {
   return ok({ guilds: guilds.length, read, stored });
 }
 
+/**
+ * The kept fights a function instance read last, per guild and period: 90 days of a busy guild are
+ * megabytes, so they are read out of the database again only when the job stored a newer fight.
+ */
+const historyCache = new Map();
+const HISTORY_CACHE_MAX = 40;
+
 /** Guild Pro: the kept fights of the last 30 or 90 days, in the shape of `fights`, for the attendance. */
 async function getFightHistory(deps, user, query) {
   const region = String(query.region ?? "");
@@ -671,10 +679,24 @@ async function getFightHistory(deps, user, query) {
   if (!isRegion(region) || !isGuildId(id)) return fail(400, "Pick a guild first.");
   if (!PRO_HISTORY_DAYS.includes(days)) return fail(400, "Unknown time range.");
   if (!deps.premium || !(await deps.premium(user.id))) return fail(403, "Attendance over 30 and 90 days is part of Guild Pro.");
-  const since = new Date(deps.now().getTime() - days * 86_400_000).toISOString();
-  const [fights, range] = await Promise.all([deps.store.getStoredFights(id, since), deps.store.storedFightsRange(id)]);
-  // `since`: the oldest kept fight; the history grows from the day a Guild Pro player marked the guild
-  return ok({ fights, days, complete: Boolean(range.oldest && range.oldest <= since), since: range.oldest, kept: Boolean(range.newest) });
+  // the period starts at a whole hour, so the answer stays the same for an hour between new fights
+  const since = new Date(Math.floor((deps.now().getTime() - days * 86_400_000) / 3600_000) * 3600_000).toISOString();
+  const range = await deps.store.storedFightsRange(id);
+  const key = `${range.newest}|${range.oldest}|${since}`;
+  const cacheKey = `${id}:${days}`;
+  let fights = historyCache.get(cacheKey)?.key === key ? historyCache.get(cacheKey).fights : null;
+  if (!fights) {
+    fights = range.newest ? await deps.store.getStoredFights(id, since) : [];
+    historyCache.delete(cacheKey);
+    historyCache.set(cacheKey, { key, fights });
+    while (historyCache.size > HISTORY_CACHE_MAX) historyCache.delete(historyCache.keys().next().value);
+  }
+  // `since`: the oldest kept fight; the history grows from the day a Guild Pro player marked the guild.
+  // The ETag lets the browser keep it (private, gzipped by sendResult).
+  return {
+    ...ok({ fights, days, complete: Boolean(range.oldest && range.oldest <= since), since: range.oldest, kept: Boolean(range.newest) }),
+    etag: `"${createHash("sha1").update(`${id}|${days}|${key}`).digest("base64url").slice(0, 20)}"`
+  };
 }
 
 async function syncDue(deps) {

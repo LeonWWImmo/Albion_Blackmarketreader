@@ -8,5 +8,5 @@ import { handleAodp, sendResult } from "./_lib/aodp.js";
 
 export default async function handler(req, res) {
   const { endpoint, ...query } = req.query ?? {};
-  sendResult(res, await handleAodp(String(endpoint ?? ""), query));
+  sendResult(res, await handleAodp(String(endpoint ?? ""), query), req);
 }

@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { gunzipSync } from "node:zlib";
+import { beforeEach, describe, expect, it } from "vitest";
+import { sendResult } from "../_lib/aodp.js";
 import {
+  clearLiveCache,
   createMemoryMarketStore,
   fetchLive,
   handleMarket,
@@ -159,7 +162,9 @@ describe("handleMarket", () => {
     expect((await ingest({ region: "eu", volume: { T4_BAG: LIVE_LOCATIONS.map(() => [-1, 0]) } })).status).toBe(400);
   });
 
-  it("gives the snapshot to premium players only, never cached", async () => {
+  beforeEach(() => clearLiveCache());
+
+  it("gives the snapshot to premium players only, never on the CDN", async () => {
     const { ingest, live } = setup();
     await ingest({ region: "eu", prices });
     expect((await live(null)).status).toBe(401);
@@ -167,21 +172,82 @@ describe("handleMarket", () => {
     const ok = await live("paid");
     expect(ok.status).toBe(200);
     expect(ok.maxAge).toBe(0);
-    expect(ok.body).toMatchObject({ region: "eu", locations: LIVE_LOCATIONS, pricesAt: NOW.toISOString(), volumeAt: null, prices, volume: {} });
+    expect(ok.etag).toMatch(/^"[\w-]+"$/);
+    expect(JSON.parse(ok.raw)).toMatchObject({ region: "eu", locations: LIVE_LOCATIONS, pricesAt: NOW.toISOString(), volumeAt: null, prices, volume: {} });
+    expect(JSON.parse(gunzipSync(ok.gzip).toString("utf8"))).toEqual(JSON.parse(ok.raw));
   });
 
   it("keeps the volume when a later snapshot has prices only", async () => {
     const { ingest, live } = setup();
     await ingest({ region: "eu", prices, volume });
     await ingest({ region: "eu", prices });
-    const ok = await live("paid");
-    expect(ok.body.volume).toEqual(volume);
-    expect(ok.body.volumeAt).toBe(NOW.toISOString());
+    const ok = JSON.parse((await live("paid")).raw);
+    expect(ok.volume).toEqual(volume);
+    expect(ok.volumeAt).toBe(NOW.toISOString());
+  });
+
+  it("reads the snapshot out of the database only when a newer one was stored", async () => {
+    const { ingest, live, store, deps } = setup();
+    await ingest({ region: "eu", prices });
+    let reads = 0;
+    let stamps = 0;
+    const read = store.read.bind(store);
+    const stamp = store.stamp.bind(store);
+    store.read = async (r) => (reads++, read(r));
+    store.stamp = async (r) => (stamps++, stamp(r));
+    const first = await live("paid");
+    await live("paid");
+    expect([reads, stamps]).toEqual([1, 1]); // the second within a minute: not even the stamp
+    deps.now = () => new Date(NOW.getTime() + 2 * 60_000);
+    const same = await live("paid");
+    expect([reads, stamps]).toEqual([1, 2]); // same snapshot: only the stamp
+    expect(same.etag).toBe(first.etag);
+    await store.write("eu", { prices, pricesAt: new Date(NOW.getTime() + 30 * 60_000).toISOString() });
+    deps.now = () => new Date(NOW.getTime() + 4 * 60_000);
+    const next = await live("paid");
+    expect(reads).toBe(2);
+    expect(next.etag).not.toBe(first.etag);
   });
 
   it("says when there is no snapshot yet", async () => {
     const { live } = setup();
     expect((await live("paid", "us")).status).toBe(404);
     expect((await live("paid", "mars")).status).toBe(400);
+  });
+});
+
+describe("sendResult", () => {
+  const fakeRes = () => {
+    const headers = {};
+    return { headers, statusCode: 0, body: null, setHeader: (k, v) => (headers[k] = v), end(b) { this.body = b ?? null; } };
+  };
+  const big = { status: 200, raw: JSON.stringify({ a: "x".repeat(5000) }), etag: '"abc"', maxAge: 0 };
+
+  it("gzips a private answer for a browser that takes gzip, and answers 304 to a known ETag", () => {
+    const res = fakeRes();
+    sendResult(res, big, { headers: { "accept-encoding": "gzip, br" } });
+    expect(res.headers["Content-Encoding"]).toBe("gzip");
+    expect(res.headers["Cache-Control"]).toBe("private, no-cache");
+    expect(res.headers.ETag).toBe('"abc"');
+    expect(gunzipSync(res.body).toString("utf8")).toBe(big.raw);
+
+    const again = fakeRes();
+    sendResult(again, big, { headers: { "if-none-match": '"abc"', "accept-encoding": "gzip" } });
+    expect(again.statusCode).toBe(304);
+    expect(again.body).toBeNull();
+  });
+
+  it("leaves small, public and gzip-less answers as they are", () => {
+    const plain = fakeRes();
+    sendResult(plain, big, { headers: {} });
+    expect(plain.headers["Content-Encoding"]).toBeUndefined();
+    expect(plain.body).toBe(big.raw);
+    const small = fakeRes();
+    sendResult(small, { status: 200, body: { a: 1 }, maxAge: 0 }, { headers: { "accept-encoding": "gzip" } });
+    expect(small.body).toBe('{"a":1}');
+    expect(small.headers["Cache-Control"]).toBe("no-store");
+    const pub = fakeRes();
+    sendResult(pub, { status: 200, raw: big.raw, maxAge: 300 }, { headers: { "accept-encoding": "gzip" } });
+    expect(pub.headers["Content-Encoding"]).toBeUndefined();
   });
 });

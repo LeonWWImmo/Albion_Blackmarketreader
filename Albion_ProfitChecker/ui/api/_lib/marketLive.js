@@ -12,6 +12,9 @@
 // AODP has no order quantities (no order book), only the best prices and when they were seen;
 // the volume is what the market history says was sold per day.
 
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
+
 /** The markets of a snapshot, in the order every price array uses. */
 export const LIVE_LOCATIONS = ["Black Market", "Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
 
@@ -184,6 +187,38 @@ export async function fetchLive(region, ids, part, { now = new Date(), ...opts }
   return part === "prices" ? parseLivePrices(rows, now) : parseLiveVolume(rows, now);
 }
 
+/**
+ * The snapshots this function instance has: per region the answer as JSON and gzipped, with an
+ * ETag. A visitor's request only asks the database for the two timestamps (and at most once a
+ * minute); the ~1 MB snapshot itself is read again only when a newer one was stored. Without
+ * this, every page view of every premium player read the whole snapshot out of Supabase.
+ */
+const liveCache = new Map();
+const RECHECK_MS = 60_000;
+
+export async function liveAnswer(store, region, nowMs = Date.now()) {
+  const hit = liveCache.get(region);
+  if (hit && nowMs - hit.checkedAt < RECHECK_MS) return hit;
+  const stamp = await store.stamp(region);
+  if (!stamp?.pricesAt) return null;
+  const key = `${stamp.pricesAt}|${stamp.volumeAt ?? ""}`;
+  if (hit && hit.key === key) {
+    hit.checkedAt = nowMs;
+    return hit;
+  }
+  const row = await store.read(region);
+  if (!row?.prices) return null;
+  const raw = JSON.stringify({ region, locations: LIVE_LOCATIONS, pricesAt: row.pricesAt, volumeAt: row.volumeAt ?? null, prices: row.prices, volume: row.volume ?? {} });
+  const entry = { key, raw, gzip: gzipSync(raw), etag: `"${createHash("sha1").update(`${region}|${key}`).digest("base64url").slice(0, 20)}"`, checkedAt: nowMs };
+  liveCache.set(region, entry);
+  return entry;
+}
+
+/** For tests: forget the kept snapshots. */
+export function clearLiveCache() {
+  liveCache.clear();
+}
+
 /** The bounds an ingested snapshot must stay in (a broken job must not store garbage). */
 const MAX_ITEMS = 20000;
 
@@ -234,21 +269,10 @@ export async function handleMarket(action, req, deps) {
     const user = req.token ? await deps.userFromToken(req.token) : null;
     if (!user) return { status: 401, body: { error: "Sign in to see the live market." }, maxAge: 0 };
     if (!deps.premium || !(await deps.premium(user.id))) return { status: 403, body: { error: "The live market is part of premium." }, maxAge: 0 };
-    const row = deps.store ? await deps.store.read(region) : null;
-    if (!row?.prices) return { status: 404, body: { error: "No live snapshot yet, the next one comes within 30 minutes." }, maxAge: 0 };
-    // premium data: never cached by the CDN (sendResult sends no-store for maxAge 0)
-    return {
-      status: 200,
-      body: {
-        region,
-        locations: LIVE_LOCATIONS,
-        pricesAt: row.pricesAt,
-        volumeAt: row.volumeAt ?? null,
-        prices: row.prices,
-        volume: row.volume ?? {}
-      },
-      maxAge: 0
-    };
+    const answer = deps.store ? await liveAnswer(deps.store, region, deps.now().getTime()) : null;
+    if (!answer) return { status: 404, body: { error: "No live snapshot yet, the next one comes within 30 minutes." }, maxAge: 0 };
+    // premium data: private (never on the CDN); the browser keeps it and asks with the ETag
+    return { status: 200, raw: answer.raw, gzip: answer.gzip, etag: answer.etag, maxAge: 0 };
   }
 
   return { status: 404, body: { error: "unknown action" }, maxAge: 0 };
@@ -257,6 +281,12 @@ export async function handleMarket(action, req, deps) {
 /** public.market_live in Supabase (service role only: RLS on, no policies). */
 export function createMarketStore(db) {
   return {
+    /** Only when the region's snapshot parts were stored: a few bytes instead of the snapshot. */
+    async stamp(region) {
+      const { data, error } = await db.from("market_live").select("prices_at, volume_at").eq("region", region).maybeSingle();
+      if (error) throw error;
+      return data ? { pricesAt: data.prices_at, volumeAt: data.volume_at } : null;
+    },
     async read(region) {
       const { data, error } = await db.from("market_live").select("prices, prices_at, volume, volume_at").eq("region", region).maybeSingle();
       if (error) throw error;
@@ -276,6 +306,10 @@ export function createMarketStore(db) {
 export function createMemoryMarketStore() {
   const rows = new Map();
   return {
+    async stamp(region) {
+      const row = rows.get(region);
+      return row ? { pricesAt: row.pricesAt ?? null, volumeAt: row.volumeAt ?? null } : null;
+    },
     async read(region) {
       return rows.get(region) ?? null;
     },

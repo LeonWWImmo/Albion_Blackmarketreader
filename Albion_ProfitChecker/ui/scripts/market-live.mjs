@@ -6,6 +6,7 @@
 // Env: MARKET_SECRET (= ACTIONS_CRON_SECRET), MARKET_SITE (default https://blackmarketreader.com),
 // MARKET_REGIONS (default "eu,us"), MARKET_VOLUME=1 to force the volume, MARKET_DRY=1 to only print.
 import { readFile } from "node:fs/promises";
+import { gzipSync } from "node:zlib";
 import { allLiveIds, fetchLive, LIVE_REGIONS } from "../api/_lib/marketLive.js";
 
 const VOLUME_EVERY_H = 6;
@@ -50,8 +51,9 @@ for (const region of regions) {
     if (dry) continue;
     const res = await fetch(`${site}/api/market/ingest`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: json
+      // gzipped: a quarter of the size (what reaches the function counts as Vercel Origin Transfer)
+      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/gzip" },
+      body: gzipSync(json)
     });
     const answer = await res.text();
     if (!res.ok) throw new Error(`ingest ${res.status}: ${answer.slice(0, 200)}`);

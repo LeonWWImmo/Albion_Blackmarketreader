@@ -8,6 +8,8 @@
 //
 // The leading underscore keeps this folder from becoming a function of its own on Vercel.
 
+import { gzipSync } from "node:zlib";
+
 export const USER_AGENT = "BlackmarketReader/1.0 (+https://blackmarketreader.com)";
 
 /** Our region codes to AODP hosts. Only these two can be requested, nothing user-supplied. */
@@ -383,15 +385,43 @@ export async function handleAodp(endpoint, query) {
   return route(query ?? {});
 }
 
-/** Shared response writer for Node's http.ServerResponse (Vercel and the Vite dev server). */
-export function sendResult(res, result) {
+/** Answers smaller than this are sent as they are: gzip would not pay off. */
+const GZIP_FROM = 2048;
+
+/**
+ * Shared response writer for Node's http.ServerResponse (Vercel and the Vite dev server).
+ * result: { status, body | raw (a JSON string), maxAge, private?, etag?, gzip? (raw, gzipped) }.
+ * - maxAge > 0: public, the CDN keeps it. Otherwise private: never on the CDN.
+ * - etag: the browser keeps a private answer and asks again with If-None-Match; an unchanged one
+ *   is a 304 without a body.
+ * - A private answer is gzipped here, not only by the CDN: what goes from the function to the CDN
+ *   counts as Vercel "Fast Origin Transfer", and JSON shrinks to about a quarter. (Public answers
+ *   are left to the CDN, which caches them per encoding itself.)
+ */
+export function sendResult(res, result, req = null) {
+  const headers = req?.headers ?? {};
   res.statusCode = result.status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  res.setHeader(
-    "Cache-Control",
-    result.maxAge > 0
-      ? `public, max-age=60, s-maxage=${result.maxAge}, stale-while-revalidate=${result.maxAge * 6}`
-      : "no-store"
-  );
-  res.end(JSON.stringify(result.body));
+  if (result.maxAge > 0) {
+    res.setHeader("Cache-Control", `public, max-age=60, s-maxage=${result.maxAge}, stale-while-revalidate=${result.maxAge * 6}`);
+    res.end(result.raw ?? JSON.stringify(result.body));
+    return;
+  }
+  res.setHeader("Cache-Control", result.etag ? "private, no-cache" : "no-store");
+  if (result.etag) {
+    res.setHeader("ETag", result.etag);
+    if (result.status === 200 && String(headers["if-none-match"] ?? "") === result.etag) {
+      res.statusCode = 304;
+      res.end();
+      return;
+    }
+  }
+  const text = result.raw ?? JSON.stringify(result.body);
+  if (/\bgzip\b/.test(String(headers["accept-encoding"] ?? "")) && text.length >= GZIP_FROM) {
+    res.setHeader("Content-Encoding", "gzip");
+    res.setHeader("Vary", "Accept-Encoding");
+    res.end(result.gzip ?? gzipSync(text));
+    return;
+  }
+  res.end(text);
 }

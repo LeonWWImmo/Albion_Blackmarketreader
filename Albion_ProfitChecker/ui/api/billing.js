@@ -67,5 +67,5 @@ export default async function handler(req, res) {
       }
     }
   );
-  sendResult(res, result);
+  sendResult(res, result, req);
 }

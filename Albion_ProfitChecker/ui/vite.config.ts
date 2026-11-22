@@ -26,7 +26,7 @@ function devApi(): Plugin {
         const endpoint = url.pathname.replace(/^\/+/, "");
         const aodp = await import("./api/_lib/aodp.js");
         if (!Object.prototype.hasOwnProperty.call(aodp.AODP_ENDPOINTS, endpoint)) return next();
-        aodp.sendResult(res, await aodp.handleAodp(endpoint, Object.fromEntries(url.searchParams)));
+        aodp.sendResult(res, await aodp.handleAodp(endpoint, Object.fromEntries(url.searchParams)), req);
       });
 
       let guildDeps: Promise<Record<string, unknown>> | null = null;
@@ -79,7 +79,7 @@ function devApi(): Plugin {
           { method: req.method, query: Object.fromEntries(url.searchParams), body, token: authorization.replace(/^Bearer\s+/i, "") || null, authorization },
           await guildDeps
         );
-        sendResult(res, result);
+        sendResult(res, result, req);
       });
 
       // premium: no database or Stripe key locally; with DEV_PREMIUM a signed-in player's status says premium
@@ -110,7 +110,7 @@ function devApi(): Plugin {
         if (DEV_PREMIUM && url.pathname.replace(/^\/+/, "") === "status" && result.status === 200 && result.body && typeof result.body === "object") {
           Object.assign(result.body, { premium: true, status: "active", renewsAt: null, endsAt: null });
         }
-        sendResult(res, result);
+        sendResult(res, result, req);
       });
 
       // live market (premium): production gets its snapshot from the GitHub job. Locally the first
@@ -198,7 +198,7 @@ function devApi(): Plugin {
             now: () => new Date()
           }
         );
-        sendResult(res, result);
+        sendResult(res, result, req);
       });
     }
   };

@@ -11,13 +11,31 @@ import { liveGuildStore, userFromToken } from "./_lib/guildStore.js";
 import { createMarketStore, handleMarket } from "./_lib/marketLive.js";
 import { alertStoreOn, handleAlerts } from "./_lib/priceAlerts.js";
 import { createRateLimiter } from "./_lib/rateLimit.js";
+import { gunzipSync } from "node:zlib";
 
 /** Webhook links tried per player: the Discord check must not become a way to probe links. */
 const hookLimiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
 
+/** The GitHub job sends its snapshot gzipped (a quarter of the size): read and unpack it. */
+function readGzipJson(req) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(gunzipSync(Buffer.concat(chunks)).toString("utf8")));
+      } catch {
+        resolve(null);
+      }
+    });
+    req.on("error", () => resolve(null));
+  });
+}
+
 export default async function handler(req, res) {
   const live = liveGuildStore();
   const action = String(req.query?.action ?? "");
+  const gzipped = req.method === "POST" && /gzip/.test(String(req.headers["content-encoding"] ?? "") + String(req.headers["content-type"] ?? ""));
   const alerts = action.startsWith("alert");
   const result = await (alerts ? handleAlerts : handleMarket)(
     action,
@@ -25,7 +43,7 @@ export default async function handler(req, res) {
       method: req.method,
       query: req.query ?? {},
       token: (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "") || null,
-      body: req.method === "POST" ? req.body : null
+      body: req.method !== "POST" ? null : gzipped ? await readGzipJson(req) : req.body
     },
     {
       store: live ? (alerts ? alertStoreOn(live.db) : createMarketStore(live.db)) : null,
@@ -38,5 +56,5 @@ export default async function handler(req, res) {
       now: () => new Date()
     }
   ).catch(() => ({ status: 500, body: { error: "Something went wrong, try again." }, maxAge: 0 }));
-  sendResult(res, result);
+  sendResult(res, result, req);
 }
