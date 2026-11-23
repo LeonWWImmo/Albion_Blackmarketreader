@@ -12,9 +12,10 @@ import { loadLive, type LiveStatus } from "@shared/live/liveData";
 import { MobileNavBurger, ToolNav, resolveJournalProfit, useFestivities, useJournals, useSessionState } from "../../shared";
 import type { BmRecipe } from "../bm-crafter";
 import { iconUrl } from "../price-checker/core/items";
-import { dailyBook, liveBook, mixBook, type DailyPrices, type PriceBook, type Quote } from "./core/books";
+import { dailyBook, liveBook, mixBook, type DailyPrices, type PriceBook } from "./core/books";
+import { CraftDetail, QuoteAge } from "./CraftDetail";
 import { age, CITY_BONUS, Chips, CREST, ENCHANT_COLOR, ENCHANTS, loadDaily, loadRecipes, nowMinute, NumberField, Seg, short, silver, TIERS, type DataMode } from "./kit";
-import { cityCraftRows, citySummary, worthIt, type BuyMode, type CityCraftOptions, type CityCraftRow, type MatFrom, type SellMode } from "./core/cityCraft";
+import { CRAFT_CITIES, cityCraftRows, citySummary, worthIt, type BuyMode, type CityCraftOptions, type CityCraftRow, type MatFrom, type SellMode } from "./core/cityCraft";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./cityCrafter.css";
 
@@ -29,6 +30,8 @@ export function CityCrafterPage() {
   const { meta, layers } = useToolAccount(pathname, "city-crafter", region, setRegion);
   const festivities = useFestivities(region);
   const journals = useJournals(region);
+  // on by default here (the other tools keep theirs off): crafting fills journals anyway
+  const [fillJournals, setFillJournals] = useSessionState("cc-journals", true);
 
   const [city, setCity] = useSessionState<string>("cc-city", "Lymhurst");
   const [dataMode, setDataMode] = useSessionState<DataMode>("cc-data", "fill");
@@ -100,7 +103,7 @@ export function CityCrafterPage() {
       enchants,
       bonuses: festivities.craftBonuses,
       // filled crafting journals, the same way as in the BM Crafter (journal prices of the crafting city)
-      journal: journals.enabled
+      journal: fillJournals
         ? (recipe: BmRecipe, tier: number, at: string) =>
             resolveJournalProfit(
               {
@@ -117,7 +120,7 @@ export function CityCrafterPage() {
             )?.journalProfit ?? 0
         : undefined
     }),
-    [matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, journals.enabled, journals.owned, journals.data]
+    [matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, fillJournals, journals.owned, journals.data]
   );
   // the prices: live, daily, or live filled with daily (the sales a day always come from the snapshot)
   const book: PriceBook | null = useMemo(() => {
@@ -181,7 +184,7 @@ export function CityCrafterPage() {
         </section>
 
         {live.kind === "guest" || live.kind === "locked" ? (
-          <Teaser region={region} city={city} setCity={setCity} guest={live.kind === "guest"} />
+          <Teaser region={region} guest={live.kind === "guest"} />
         ) : live.kind === "error" ? (
           <Gate status={live} />
         ) : !book || !recipes.length ? (
@@ -220,7 +223,7 @@ export function CityCrafterPage() {
               <Seg label="Materials" value={buy} onChange={setBuy} options={[["instant", "Buy instantly"], ["order", "Buy orders"]]} />
               <Seg label="Sell" value={sell} onChange={setSell} options={[["order", "Sell order"], ["instant", "Instant sell"]]} />
               <Seg label="Focus" value={focus ? "on" : "off"} onChange={(v) => setFocus(v === "on")} options={[["off", "No focus"], ["on", "Focus"]]} />
-              <Seg label="Journals" value={journals.enabled ? "on" : "off"} onChange={(v) => journals.setEnabled(v === "on")} options={[["off", "Off"], ["on", "Fill journals"]]} />
+              <Seg label="Journals" value={fillJournals ? "on" : "off"} onChange={(v) => setFillJournals(v === "on")} options={[["off", "Off"], ["on", "Fill journals"]]} />
               <Seg label="Tax" value={premiumTax ? "4" : "8"} onChange={(v) => setPremiumTax(v === "4")} options={[["4", "4 %"], ["8", "8 %"]]} />
               <Chips label="Tier" all={TIERS} on={tiers} set={setTiers} text={(t) => `T${t}`} />
               <Chips label="Enchant" all={ENCHANTS} on={enchants} set={setEnchants} text={(e) => `.${e}`} />
@@ -259,6 +262,7 @@ export function CityCrafterPage() {
                     city={city}
                     sell={sell}
                     now={now}
+                    usageFee={usageFee}
                     open={open === row.id}
                     onToggle={() => setOpen(open === row.id ? null : row.id)}
                   />
@@ -289,10 +293,9 @@ export function CityCrafterPage() {
   );
 }
 
-type RowProps = { row: CityCraftRow; city: string; sell: SellMode; now: number; open: boolean; onToggle: () => void };
+type RowProps = { row: CityCraftRow; city: string; sell: SellMode; now: number; usageFee: number; open: boolean; onToggle: () => void };
 
-function Row({ row, city, sell, now, open, onToggle }: RowProps) {
-  const calc = `/crafting-calculator?${new URLSearchParams({ item: row.baseId, tier: String(row.tier), enchant: String(row.enchant), craftCity: city, sell: city })}`;
+function Row({ row, city, sell, now, usageFee, open, onToggle }: RowProps) {
   return (
     <div className={`cc-item${open ? " is-open" : ""}`} role="rowgroup">
       <button type="button" className="cc-row" role="row" aria-expanded={open} onClick={onToggle}>
@@ -321,108 +324,9 @@ function Row({ row, city, sell, now, open, onToggle }: RowProps) {
         <span role="cell" data-label="Profit / day" className="cc-daily">+{short(row.dailyProfit)}</span>
       </button>
       {open ? (
-        <div className="cc-detail">
-          <div>
-            <h4>Shopping list · one craft</h4>
-            <div className="cc-shop">
-              <div className="cc-shop-row cc-shop-head">
-                <span>Material</span>
-                <span>Per piece</span>
-                <span>Pieces</span>
-                <span>Total</span>
-              </div>
-              {[...row.materials, ...(row.artefact ? [row.artefact] : [])].map((m) => (
-                <div key={m.id} className="cc-shop-row">
-                  <span>
-                    <b>{m.name}</b>
-                    <small className={m.city !== city ? "is-away" : ""}>
-                      {m.city !== city ? `from ${m.city}` : `in ${city}`} · <QuoteAge quote={m} now={now} />
-                    </small>
-                  </span>
-                  <span>{silver(m.unit)}</span>
-                  <span>× {m.qty}</span>
-                  <b>{silver(m.unit * m.qty)}</b>
-                </div>
-              ))}
-            </div>
-            <ul className="cc-sum">
-              <li>
-                <span>Materials at full price</span>
-                <b>{silver(row.materialCost + (row.artefact?.unit ?? 0))}</b>
-              </li>
-              <li>
-                <span>Back from the return rate ({(row.returnRate * 100).toFixed(1)} %)</span>
-                <b className="cc-plus">−{silver(row.materialCost * row.returnRate)}</b>
-              </li>
-              <li>
-                <span>Station fee</span>
-                <b>{silver(row.stationFee)}</b>
-              </li>
-              <li className="is-total">
-                <span>One craft costs</span>
-                <b>{silver(row.cost)}</b>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4>Selling it in {city}</h4>
-            <ul>
-              <li>
-                <span>{sell === "order" ? "Sell order" : "Buy order"} price</span>
-                <b>{silver(row.sale.unit)}</b>
-              </li>
-              <li>
-                <span>Tax{sell === "order" ? " and setup fee" : ""}</span>
-                <b>−{silver(row.fees)}</b>
-              </li>
-              <li>
-                <span>You get</span>
-                <b>{silver(row.net)}</b>
-              </li>
-              {row.journal ? (
-                <li>
-                  <span>Filled journals (share of one craft)</span>
-                  <b className="cc-plus">+{silver(row.journal)}</b>
-                </li>
-              ) : null}
-              <li className="is-total">
-                <span>Profit per craft</span>
-                <b className="cc-plus">+{silver(row.profit)}</b>
-              </li>
-            </ul>
-            <p className="cc-explain">
-              You put in <b>{silver(row.cost)}</b> and get <b>{silver(row.net + row.journal)}</b> back{row.journal ? " with the journals" : ""}: <b>+{silver(row.profit)}</b>, that is{" "}
-              <b>+{Math.round(row.roi)} %</b> on your silver.
-            </p>
-            <ul>
-              <li>
-                <span>7-day average price</span>
-                <b>{row.avgPrice ? silver(row.avgPrice) : "–"}</b>
-              </li>
-              {row.focusCost ? (
-                <li>
-                  <span>Focus (no spec)</span>
-                  <b>{silver(row.focusCost)}</b>
-                </li>
-              ) : null}
-            </ul>
-            <a className="cc-calc" href={calc}>
-              Open in the Crafting Calculator ↗
-            </a>
-          </div>
-        </div>
+        <CraftDetail row={row} city={city} sell={sell} now={now} usageFee={usageFee} />
       ) : null}
     </div>
-  );
-}
-
-/** A price's age, and "daily" when it comes from the daily data. */
-function QuoteAge({ quote, now }: { quote: Quote; now: number }) {
-  return (
-    <small className={`cc-age${quote.src === "daily" ? " is-daily" : ""}`}>
-      {quote.src === "daily" ? "daily · " : ""}
-      {age(now - quote.at)}
-    </small>
   );
 }
 
@@ -445,10 +349,10 @@ type TeaserRow = {
 type TeaserCity = { city: string; count: number; topDaily: number; top: TeaserRow[] };
 
 /**
- * Without premium: what each city earns and its best three crafts, worked out on the server. The
- * rest never reaches the browser, so there is nothing to unlock here.
+ * Without premium: Lymhurst's best three crafts, worked out on the server. The rest never reaches
+ * the browser, so there is nothing to unlock here; the other cities are shown locked.
  */
-function Teaser({ region, city, setCity, guest }: { region: string; city: string; setCity: (c: string) => void; guest: boolean }) {
+function Teaser({ region, guest }: { region: string; guest: boolean }) {
   const [cities, setCities] = useState<TeaserCity[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -467,42 +371,46 @@ function Teaser({ region, city, setCity, guest }: { region: string; city: string
 
   if (failed) return <Gate status={{ kind: guest ? "guest" : "locked" }} />;
   if (!cities) return <p className="cc-note">Loading the market…</p>;
-  const best = Math.max(0, ...cities.map((c) => c.topDaily));
-  const here = cities.find((c) => c.city === city) ?? cities[0];
+  const here = cities[0];
+  const city = here?.city ?? "Lymhurst";
   const more = Math.max(0, (here?.count ?? 0) - (here?.top.length ?? 0));
 
   return (
     <>
-      <section className="cc-cities" aria-label="Pick a city">
-        {cities.map((c) => (
-          <button
-            key={c.city}
-            type="button"
-            className={`cc-city${c.city === here?.city ? " is-on" : ""}`}
-            aria-pressed={c.city === here?.city}
-            onClick={() => setCity(c.city)}
-            style={{ "--fill": best > 0 ? `${Math.round((c.topDaily / best) * 100)}%` : "0%" } as CSSProperties}
-          >
-            <span className="cc-city-head">
-              {CREST[c.city] ? <img src={assetUrl(CREST[c.city])} alt="" width={30} height={30} /> : <span className="cc-crest">B</span>}
-              <b>{c.city}</b>
-            </span>
-            <span className="cc-city-sum">
-              <strong>{short(c.topDaily)}</strong> a day
-            </span>
-            <span className="cc-city-meta">{c.count} good crafts</span>
-            <span className="cc-city-bar" aria-hidden="true">
-              <i />
-            </span>
-            <small>{CITY_BONUS[c.city]}</small>
-          </button>
-        ))}
+      <section className="cc-cities" aria-label="Cities">
+        {CRAFT_CITIES.map((name) =>
+          name === city ? (
+            <div key={name} className="cc-city is-on" style={{ "--fill": "100%" } as CSSProperties}>
+              <span className="cc-city-head">
+                {CREST[name] ? <img src={assetUrl(CREST[name])} alt="" width={30} height={30} /> : <span className="cc-crest">B</span>}
+                <b>{name}</b>
+              </span>
+              <span className="cc-city-sum">
+                <strong>{short(here?.topDaily ?? 0)}</strong> a day
+              </span>
+              <span className="cc-city-meta">{here?.count ?? 0} good crafts</span>
+              <span className="cc-city-bar" aria-hidden="true">
+                <i />
+              </span>
+              <small>{CITY_BONUS[name]}</small>
+            </div>
+          ) : (
+            <a key={name} className="cc-city is-locked" href={guest ? `/login?next=${encodeURIComponent("/city-crafter")}` : "/premium"}>
+              <span className="cc-city-head">
+                {CREST[name] ? <img src={assetUrl(CREST[name])} alt="" width={30} height={30} /> : <span className="cc-crest">B</span>}
+                <b>{name}</b>
+              </span>
+              <span className="cc-city-lock">✦ Premium</span>
+              <small>{CITY_BONUS[name]}</small>
+            </a>
+          )
+        )}
       </section>
 
-      <section className="cc-results" aria-label={`Best crafts in ${here?.city ?? city}`}>
+      <section className="cc-results" aria-label={`Best crafts in ${city}`}>
         <div className="cc-results-head">
           <h3>
-            Free preview: the best 3 of {here?.count ?? 0} crafts in <b>{here?.city ?? city}</b>
+            Free preview: the best 3 of {here?.count ?? 0} crafts in <b>{city}</b>
           </h3>
         </div>
         <div className="cc-table" role="table">
@@ -516,7 +424,7 @@ function Teaser({ region, city, setCity, guest }: { region: string; city: string
             <span role="columnheader">Profit / day</span>
           </div>
           {(here?.top ?? []).map((row) => {
-            const away = [...new Set([...row.materials, ...(row.artefact ? [row.artefact] : [])].map((p) => p.city).filter((c) => c !== here?.city))];
+            const away = [...new Set([...row.materials, ...(row.artefact ? [row.artefact] : [])].map((p) => p.city).filter((c) => c !== city))];
             return (
               <div key={row.id} className="cc-item" role="rowgroup">
                 <div className="cc-row" role="row">
@@ -545,7 +453,7 @@ function Teaser({ region, city, setCity, guest }: { region: string; city: string
             );
           })}
         </div>
-        {!here?.top.length ? <p className="cc-note">Nothing pays in {here?.city ?? city} right now with the standard settings.</p> : null}
+        {!here?.top.length ? <p className="cc-note">Nothing pays in {city} right now with the standard settings.</p> : null}
         <div className="cc-lock">
           <div className="cc-lock-rows" aria-hidden="true">
             {[0, 1, 2].map((i) => (
@@ -553,7 +461,7 @@ function Teaser({ region, city, setCity, guest }: { region: string; city: string
             ))}
           </div>
           <div className="cc-lock-card">
-            <b>{more > 0 ? `${more} more crafts pay in ${here?.city ?? city}` : "Every craft in every city"}</b>
+            <b>{more > 0 ? `${more} more crafts pay in ${city}, and 6 more cities` : "Every craft in every city"}</b>
             <p>
               Premium shows all of them with the shopping list, your own settings (focus, journals, buy orders, instant sell) and
               live or daily prices.

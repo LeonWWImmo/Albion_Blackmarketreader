@@ -35,7 +35,9 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `api/_lib/guildStore.js` / `guildMemoryStore.js` | Supabase store / in-memory store (tests, `npm run dev`) |
 | `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`); before the launch only `PREMIUM_TESTERS` (user ids) can buy or use it, `PREMIUM_LAUNCHED=1` opens it; premium features check `hasPremium()` |
 | `api/market.js` → `api/_lib/marketLive.js`, `src/features/dashboard/live/` | live market (premium): snapshot of all dashboard items in 8 markets every 30 min (GitHub job `scripts/market-live.mjs` → `/api/market/ingest` → table `market_live`), `/api/market/live` for premium players only; the dashboard panel computes the flips (`flips.ts`). AODP has no order quantities |
-| `src/features/city-crafter/` | City Crafter (premium, `/city-crafter`): craft and sell in one city, materials from there or the cheapest city; prices Live / Live + daily / Daily (`core/books.ts`), ranked by profit a day |
+| `src/features/city-crafter/` | City Crafter (premium, `/city-crafter`): craft and sell in one city, materials from there or the cheapest city; prices Live / Live + daily / Daily (`core/books.ts`), journals on by default, ranked by profit a day. Without premium: `/api/market/teaser` (public, CDN cached) = Lymhurst's top 3 worked out on the server (`api/_lib/cityTeaser.js`, a JS copy of `core/cityCraft.ts` kept equal by `api/_tests/city-teaser.test.js`), nothing more reaches the browser |
+| `src/features/focus-planner/` | Focus Planner (premium, `/focus-planner`): crafts with focus ranked by silver per focus point, a day's plan for the player's focus, specs shared with the Crafting Calculator (`useCraftingSpecs`), competition from the market depth |
+| `api/_lib/marketDepth.js`, `scripts/market-depth.mjs`, `src/shared/live/depthData.ts` | market depth (premium, the Focus Planner's competition check): pieces listed / wanted per price for the craftable items, from the AODP live order stream (public NATS `marketorders.deduped`, has `Amount`); stored in `market_live.depth`, `/api/market/depth` premium only |
 | `src/shared/live/` | live prices in the four calculators (premium; crafting, BM crafter, refining, food / potion): Daily / Live / Live + fill from the same snapshot (it also covers the crafting items, materials, artefacts, journals); every merged price keeps its source, marked with `data-src="live"\|"daily"` (dot drawn by CSS) |
 | `src/shared/premium/`, `src/pages/PremiumPage.tsx` | premium status, account-panel section, `/premium` page; all hidden until launch (`PREMIUM_OPEN`, preview: `localStorage["bmr-premium-preview"]="1"`). New premium UI goes behind `premiumVisible()`; keep `/premium` out of the sitemap until launch |
 | `scripts/` | data refresh jobs, prerender, health check; `scripts/e2e/` browser checks |
@@ -54,6 +56,10 @@ the main one (Discord and ZvZ report).
 GitHub Actions `market-live.yml` (:07 and :37, from `main`): the live market snapshot, same secret;
 the volume only every 6 hours. AODP throttles requests without gzip.
 The same job then runs `/api/market/alerts-run`: price alerts (premium, `api/_lib/priceAlerts.js`).
+GitHub Actions `market-depth.yml` (19:10 and 01:10 UTC, the regions' evenings, from `main`): listens 25 min
+to the AODP order stream and sends the market depth of the craftable items (~55 runner minutes a day).
+Local: `DEPTH_SECONDS=300 DEPTH_OUT=node_modules/.cache/bmr-depth node scripts/market-depth.mjs`; the dev
+server serves that file (restart it: it keeps API modules in memory).
 
 ## Commands (in `Albion_ProfitChecker/ui`)
 

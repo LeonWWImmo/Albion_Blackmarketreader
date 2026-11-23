@@ -1,6 +1,7 @@
-// The City Crafter's free preview: the top 3 crafts of every city, worked out on the server from the
-// live snapshot with the standard settings. Only those rows leave the server, so a visitor without
-// premium has nothing more in the browser to unlock. A plain-JS copy of
+// The City Crafter's free preview: the top 3 crafts of Lymhurst only, worked out on the server from
+// the live snapshot with the standard settings (materials from the cheapest city). Only those rows
+// leave the server, so a visitor without premium has nothing more in the browser to unlock, and
+// one city's three crafts are not enough to flood the markets premium players craft for. A plain-JS copy of
 // src/features/city-crafter/core/cityCraft.ts (the functions cannot load the TypeScript in src/);
 // api/_tests/city-teaser.test.js checks both give the same rows.
 import { createRequire } from "node:module";
@@ -9,6 +10,8 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const recipesFile = require("../../public/items-categorized-crafting.json");
 
+/** The one city the preview shows. */
+export const TEASER_CITY = "Lymhurst";
 export const TEASER_CITIES = ["Bridgewatch", "Caerleon", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
 export const TEASER_ROWS = 3;
 /** The standard settings of the City Crafter (CityCrafterPage.tsx defaults). */
@@ -138,10 +141,10 @@ export function teaserCraft(snap, recipe, tier, enchant, city, now) {
   };
 }
 
-/** Per city: how many crafts pay, what the best ten earn a day, and the best three. */
+/** For the preview city: how many crafts pay, what the best ten earn a day, and the best three. */
 export function cityTeaser(snap, recipes = teaserRecipes(), now = Math.round(Date.now() / 60000)) {
   const { tiers, enchants, minSold, minRoi } = TEASER_SETTINGS;
-  return TEASER_CITIES.map((city) => {
+  return [TEASER_CITY].map((city) => {
     const good = [];
     for (const recipe of recipes) {
       if (/_ROYAL(\b|_)|SHAPESHIFTER/i.test(recipe.itemId)) continue;

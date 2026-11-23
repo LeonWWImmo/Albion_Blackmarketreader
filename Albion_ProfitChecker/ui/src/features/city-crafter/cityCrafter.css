@@ -135,6 +135,18 @@
   font-size: 12px;
   color: var(--cc-muted);
 }
+.cc-city.is-locked {
+  text-decoration: none;
+  opacity: 0.55;
+}
+.cc-city.is-locked:hover {
+  opacity: 0.85;
+}
+.cc-city-lock {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--cc-gold);
+}
 .cc-city-bar {
   height: 4px;
   border-radius: 4px;
@@ -376,6 +388,11 @@
 }
 .cc-plus {
   color: var(--cc-green);
+}
+.cc-hint {
+  margin-left: 6px;
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.75);
 }
 .cc-explain {
   margin: 10px 0;

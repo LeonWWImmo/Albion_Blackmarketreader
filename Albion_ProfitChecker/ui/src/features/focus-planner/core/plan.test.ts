@@ -33,7 +33,6 @@ const opt = (over: Partial<FocusOptions> = {}): FocusOptions => ({
   usageFee: 1000,
   tiers: [4],
   enchants: [0],
-  reduction: 0,
   minRoi: 0,
   minSold: 0,
   ...over
@@ -49,8 +48,10 @@ describe("focusCandidates", () => {
     expect(lym.perFocus).toBeCloseTo(lym.row.profit / lym.focus, 9);
   });
 
-  it("the specs' reduction lowers the focus per craft", () => {
-    expect(focusCandidates(book, [BOW], opt({ reduction: 0.25 }))[0].focus).toBeCloseTo(32 * 54 * 0.75, 6);
+  it("the player's specs lower the focus per craft (half per 10.000 efficiency)", () => {
+    const [c] = focusCandidates(book, [BOW], opt({ efficiencyOf: (baseId) => (baseId === "2H_BOW" ? 10000 : 0) }));
+    expect(c.efficiency).toBe(10000);
+    expect(c.focus).toBeCloseTo((32 * 54) / 2, 6);
   });
 });
 
@@ -68,7 +69,7 @@ describe("planFocus", () => {
   });
 
   it("nothing fits in too little focus", () => {
-    const one = { row: { sold: 5, profit: 100 }, city: "X", focus: 500, perFocus: 0.2 } as unknown as FocusCandidate;
+    const one = { row: { sold: 5, profit: 100 }, city: "X", focus: 500, efficiency: 0, perFocus: 0.2 } as unknown as FocusCandidate;
     expect(planFocus([one], 400)).toMatchObject({ lines: [], used: 0, total: 0 });
   });
 });

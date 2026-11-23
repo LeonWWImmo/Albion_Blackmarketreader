@@ -2,7 +2,7 @@
 // (src/features/city-crafter/core/cityCraft.ts with the standard settings), and only hand out the
 // top 3 per city.
 import { describe, expect, it } from "vitest";
-import { cityTeaser, teaserCraft, teaserRecipes, TEASER_CITIES, TEASER_SETTINGS } from "../_lib/cityTeaser.js";
+import { cityTeaser, teaserCraft, teaserRecipes, TEASER_CITY, TEASER_SETTINGS } from "../_lib/cityTeaser.js";
 import { clearLiveCache, createMemoryMarketStore, handleMarket, LIVE_LOCATIONS } from "../_lib/marketLive.js";
 import { liveBook } from "../../src/features/city-crafter/core/books";
 import { priceCraft } from "../../src/features/city-crafter/core/cityCraft";
@@ -58,14 +58,13 @@ describe("cityTeaser", () => {
     }
   });
 
-  it("hands out at most three rows per city, best profit a day first", () => {
+  it("hands out Lymhurst only, at most three rows, best profit a day first", () => {
     const cities = cityTeaser(snap, RECIPES, NOW);
-    expect(cities.map((c) => c.city)).toEqual(TEASER_CITIES);
+    expect(cities.map((c) => c.city)).toEqual([TEASER_CITY]);
     const lym = cities.find((c) => c.city === "Lymhurst");
     expect(lym.top.length).toBeLessThanOrEqual(3);
     expect(lym.top.map((r) => r.id).sort()).toEqual(["T4_2H_BOW", "T4_2H_BOW@1", "T4_2H_CLEAVER_HELL"]);
     for (let i = 1; i < lym.top.length; i++) expect(lym.top[i - 1].dailyProfit).toBeGreaterThanOrEqual(lym.top[i].dailyProfit);
-    expect(cities.find((c) => c.city === "Thetford")).toMatchObject({ count: 0, top: [] });
   });
 });
 

@@ -4,12 +4,13 @@
 import type { BmRecipe } from "../../bm-crafter/domain";
 import type { PriceBook } from "../../city-crafter/core/books";
 import { cityCraftRows, worthIt, type CityCraftOptions, type CityCraftRow } from "../../city-crafter/core/cityCraft";
+import { applyFocusEfficiency } from "../../crafting-calculator/specs/data";
 
 export type FocusOptions = Omit<CityCraftOptions, "city" | "focus"> & {
   /** the cities to craft in (each craft is sold where it is made) */
   cities: readonly string[];
-  /** share of the focus cost the player's specs save, 0..0.9 */
-  reduction: number;
+  /** the player's focus cost efficiency for a recipe (its specs and masteries, as in the Crafting Calculator) */
+  efficiencyOf?: (baseId: string, categoryKey: string) => number;
   minRoi: number;
   minSold: number;
 };
@@ -17,8 +18,10 @@ export type FocusOptions = Omit<CityCraftOptions, "city" | "focus"> & {
 export type FocusCandidate = {
   row: CityCraftRow;
   city: string;
-  /** focus one craft costs after the reduction */
+  /** focus one craft costs with the player's specs */
   focus: number;
+  /** the focus cost efficiency used (0 without specs) */
+  efficiency: number;
   /** profit per focus point */
   perFocus: number;
 };
@@ -27,13 +30,14 @@ export type FocusLine = FocusCandidate & { crafts: number; focusUsed: number; to
 
 /** Every craft that pays with focus, best silver per focus point first. */
 export function focusCandidates(book: PriceBook, recipes: readonly BmRecipe[], opt: FocusOptions): FocusCandidate[] {
-  const reduction = Math.min(0.9, Math.max(0, opt.reduction));
   const out: FocusCandidate[] = [];
   for (const city of opt.cities) {
     for (const row of cityCraftRows(book, recipes, { ...opt, city, focus: true })) {
       if (!worthIt(row, opt.minRoi, opt.minSold) || !row.focusCost) continue;
-      const focus = row.focusCost * (1 - reduction);
-      out.push({ row, city, focus, perFocus: row.profit / focus });
+      const efficiency = opt.efficiencyOf?.(row.baseId, row.categoryKey) ?? 0;
+      const focus = applyFocusEfficiency(row.focusCost, efficiency);
+      if (!(focus > 0)) continue;
+      out.push({ row, city, focus, efficiency, perFocus: row.profit / focus });
     }
   }
   return out.sort((a, b) => b.perFocus - a.perFocus);
@@ -43,9 +47,9 @@ export function focusCandidates(book: PriceBook, recipes: readonly BmRecipe[], o
  * The day's plan: the best crafts first, each as often as the focus left allows but no more than
  * the city sells of it a day (more would only wait on the market).
  */
-export function planFocus(candidates: readonly FocusCandidate[], budget: number, maxLines = 12) {
+export function planFocus<T extends FocusCandidate>(candidates: readonly T[], budget: number, maxLines = 12) {
   let left = Math.max(0, budget);
-  const lines: FocusLine[] = [];
+  const lines: Array<T & Omit<FocusLine, keyof FocusCandidate>> = [];
   for (const c of candidates) {
     if (lines.length >= maxLines) break;
     const bySales = Math.max(1, Math.floor(c.row.sold));

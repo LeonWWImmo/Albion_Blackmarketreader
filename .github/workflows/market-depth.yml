@@ -1,0 +1,46 @@
+name: Market Depth
+
+# Premium competition check for the Focus Planner: twice a day, at the busy evening hours of each
+# region, listens 25 minutes to the Albion Data Project's live order stream and sends how much of
+# every craftable item is listed and wanted per market to /api/market/ingest. About 55 runner
+# minutes a day. See Albion_ProfitChecker/ui/scripts/market-depth.mjs.
+# ACTIONS_CRON_SECRET = the Vercel env of that name.
+on:
+  schedule:
+    # 19:10 UTC: evening in Europe; 01:10 UTC: evening in the Americas
+    - cron: "10 19 * * *"
+    - cron: "10 1 * * *"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: "How long to listen (seconds)"
+        default: "1500"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: market-depth
+  cancel-in-progress: false
+
+jobs:
+  depth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /Albion_ProfitChecker/ui/api/_lib/
+            /Albion_ProfitChecker/ui/scripts/
+            /Albion_ProfitChecker/ui/public/items-categorized-crafting.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Listen and send
+        working-directory: Albion_ProfitChecker/ui
+        env:
+          MARKET_SECRET: ${{ secrets.ACTIONS_CRON_SECRET }}
+          DEPTH_SECONDS: ${{ inputs.seconds || '1500' }}
+        run: node scripts/market-depth.mjs
