@@ -1,5 +1,6 @@
-// City Crafter (premium, hidden until the launch): buy, craft and sell in one city. The live
-// snapshot priced for every recipe in the picked city (core/cityCraft.ts), ranked by profit a day.
+// City Crafter (premium, hidden until the launch): craft and sell in one city, the materials from
+// there or from wherever they are cheapest. Live, daily or mixed prices (core/books.ts) for every
+// recipe in the picked city (core/cityCraft.ts), ranked by profit a day.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
@@ -11,7 +12,8 @@ import { loadLive, type LiveStatus } from "@shared/live/liveData";
 import { MobileNavBurger, ToolNav, useFestivities, useSessionState } from "../../shared";
 import { normalizeRecipesPayload, type BmRecipe } from "../bm-crafter";
 import { iconUrl } from "../price-checker/core/items";
-import { CRAFT_CITIES, cityCraftRows, citySummary, worthIt, type BuyMode, type CityCraftOptions, type CityCraftRow, type SellMode } from "./core/cityCraft";
+import { dailyBook, dailyFromFiles, liveBook, mixBook, type DailyPrices, type PriceBook, type Quote } from "./core/books";
+import { cityCraftRows, citySummary, worthIt, type BuyMode, type CityCraftOptions, type CityCraftRow, type MatFrom, type SellMode } from "./core/cityCraft";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./cityCrafter.css";
 
@@ -41,10 +43,12 @@ const PAGE = 40;
 const ENCHANT_COLOR = ["#94a3b8", "#4ade80", "#60a5fa", "#c084fc", "#fbbf24"];
 
 type SortKey = "daily" | "profit" | "roi";
+type DataMode = "live" | "fill" | "daily";
 
 const silver = (n: number) => Math.round(n).toLocaleString("de-DE");
 const short = (n: number) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toFixed(1)}m` : Math.abs(n) >= 1e4 ? `${Math.round(n / 1e3)}k` : silver(n));
-const age = (minutes: number) => (minutes < 60 ? `${Math.max(0, Math.round(minutes))} min` : `${Math.round(minutes / 60)} h`);
+const age = (minutes: number) =>
+  minutes < 60 ? `${Math.max(0, Math.round(minutes))} min` : minutes < 48 * 60 ? `${Math.round(minutes / 60)} h` : `${Math.round(minutes / 1440)} d`;
 const nowMinute = () => Math.round(Date.now() / 60000);
 
 let recipesOnce: Promise<BmRecipe[]> | null = null;
@@ -57,6 +61,22 @@ const loadRecipes = () =>
       return [];
     }));
 
+const dailyOnce = new Map<string, Promise<DailyPrices | null>>();
+/** The free tools' daily files of a region (public/data), loaded once. */
+function loadDaily(region: string): Promise<DailyPrices | null> {
+  const hit = dailyOnce.get(region);
+  if (hit) return hit;
+  const get = (file: string) => fetch(`/data/${file}-${region}.json`).then((res) => (res.ok ? res.json() : {}));
+  const load = Promise.all([get("crafting-results"), get("materials-cities"), get("artefacts")])
+    .then(([results, materials, artefacts]) => dailyFromFiles(results, materials, artefacts))
+    .catch(() => {
+      dailyOnce.delete(region);
+      return null;
+    });
+  dailyOnce.set(region, load);
+  return load;
+}
+
 export function CityCrafterPage() {
   const visible = premiumVisible();
   const { pathname } = useLocation();
@@ -65,6 +85,8 @@ export function CityCrafterPage() {
   const festivities = useFestivities(region);
 
   const [city, setCity] = useSessionState<string>("cc-city", "Lymhurst");
+  const [dataMode, setDataMode] = useSessionState<DataMode>("cc-data", "fill");
+  const [matFrom, setMatFrom] = useSessionState<MatFrom>("cc-mat-from", "cheapest");
   const [buy, setBuy] = useSessionState<BuyMode>("cc-buy", "instant");
   const [sell, setSell] = useSessionState<SellMode>("cc-sell", "order");
   const [focus, setFocus] = useSessionState("cc-focus", false);
@@ -81,6 +103,7 @@ export function CityCrafterPage() {
 
   const [live, setLive] = useState<LiveStatus>({ kind: "loading" });
   const [recipes, setRecipes] = useState<BmRecipe[]>([]);
+  const [daily, setDaily] = useState<DailyPrices | null>(null);
 
   useSeo({
     title: "City Crafter | Blackmarket Reader",
@@ -106,26 +129,43 @@ export function CityCrafterPage() {
     };
   }, [region, visible]);
 
-  useEffect(() => setShown(PAGE), [city, buy, sell, focus, premiumTax, usageFee, tiers, enchants, minSold, minRoi, search, sort]);
+  useEffect(() => {
+    if (!visible || dataMode === "live") return;
+    let alive = true;
+    void loadDaily(region).then((data) => alive && setDaily(data));
+    return () => {
+      alive = false;
+    };
+  }, [region, visible, dataMode]);
+
+  useEffect(() => setShown(PAGE), [city, dataMode, matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, minSold, minRoi, search, sort]);
 
   const snap = live.kind === "ok" ? live.snap : null;
   const now = useMemo(() => nowMinute(), [snap]); // eslint-disable-line react-hooks/exhaustive-deps
   const options: Omit<CityCraftOptions, "city"> = useMemo(
-    () => ({ buy, sell, focus, taxRate: premiumTax ? 0.04 : 0.08, usageFee, tiers, enchants, bonuses: festivities.craftBonuses, now }),
-    [buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, now]
+    () => ({ matFrom, buy, sell, focus, taxRate: premiumTax ? 0.04 : 0.08, usageFee, tiers, enchants, bonuses: festivities.craftBonuses }),
+    [matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses]
   );
+  // the prices: live, daily, or live filled with daily (the sales a day always come from the snapshot)
+  const book: PriceBook | null = useMemo(() => {
+    if (!snap) return null;
+    const live = liveBook(snap, now);
+    if (dataMode === "live") return live;
+    if (!daily) return null;
+    return dataMode === "daily" ? dailyBook(daily, snap) : mixBook(live, dailyBook(daily, snap));
+  }, [snap, now, daily, dataMode]);
 
-  const summary = useMemo(() => (snap && recipes.length ? citySummary(snap, recipes, options, minRoi, minSold) : []), [snap, recipes, options, minRoi, minSold]);
+  const summary = useMemo(() => (book && recipes.length ? citySummary(book, recipes, options, minRoi, minSold) : []), [book, recipes, options, minRoi, minSold]);
   const rows = useMemo(() => {
-    if (!snap || !recipes.length) return [];
+    if (!book || !recipes.length) return [];
     const needle = search.trim().toLowerCase();
-    const list = cityCraftRows(snap, recipes, { ...options, city })
+    const list = cityCraftRows(book, recipes, { ...options, city })
       .filter((row) => worthIt(row, minRoi, minSold))
       .filter((row) => !needle || row.name.toLowerCase().includes(needle));
     if (sort === "profit") list.sort((a, b) => b.profit - a.profit);
     if (sort === "roi") list.sort((a, b) => b.roi - a.roi);
     return list;
-  }, [snap, recipes, options, city, minRoi, minSold, search, sort]);
+  }, [book, recipes, options, city, minRoi, minSold, search, sort]);
 
   if (!visible) return <Navigate to="/" replace />;
 
@@ -155,20 +195,22 @@ export function CityCrafterPage() {
           <span className="cc-kicker">✦ Premium · City Crafter</span>
           <h2>Craft where you sell.</h2>
           <p>
-            Buy the materials, craft and sell in one city. No transport, nothing to lose on the road. Every craft priced live and ranked by
-            what it earns a day.
+            Craft and sell in one city, the materials from there or from wherever they are cheapest. Every craft priced and ranked by what
+            it earns a day.
           </p>
-          {pricesAge !== null ? (
-            <span className="cc-live">
-              <i /> Live prices · {age(pricesAge)} ago
-            </span>
-          ) : null}
+          <span className="cc-badges">
+            {pricesAge !== null ? (
+              <span className="cc-live">
+                <i /> Live prices · {age(pricesAge)} ago
+              </span>
+            ) : null}
+          </span>
         </section>
 
         {live.kind === "guest" || live.kind === "locked" || live.kind === "error" ? (
           <Gate status={live} />
-        ) : !snap || !recipes.length ? (
-          <p className="cc-note">Loading the live market…</p>
+        ) : !book || !recipes.length ? (
+          <p className="cc-note">Loading the market…</p>
         ) : (
           <>
             <section className="cc-cities" aria-label="Pick a city">
@@ -198,6 +240,8 @@ export function CityCrafterPage() {
             </section>
 
             <section className="cc-filters" aria-label="Settings">
+              <Seg label="Prices" value={dataMode} onChange={setDataMode} options={[["live", "Live"], ["fill", "Live + daily"], ["daily", "Daily"]]} />
+              <Seg label="Materials from" value={matFrom} onChange={setMatFrom} options={[["cheapest", "Cheapest city"], ["city", `Only ${city}`]]} />
               <Seg label="Materials" value={buy} onChange={setBuy} options={[["instant", "Buy instantly"], ["order", "Buy orders"]]} />
               <Seg label="Sell" value={sell} onChange={setSell} options={[["order", "Sell order"], ["instant", "Instant sell"]]} />
               <Seg label="Focus" value={focus ? "on" : "off"} onChange={(v) => setFocus(v === "on")} options={[["off", "No focus"], ["on", "Focus"]]} />
@@ -206,7 +250,7 @@ export function CityCrafterPage() {
               <Chips label="Enchant" all={ENCHANTS} on={enchants} set={setEnchants} text={(e) => `.${e}`} />
               <NumberField label="Station fee" value={usageFee} onChange={setUsageFee} hint="per 100 nutrition" />
               <NumberField label="Sold / day ≥" value={minSold} onChange={setMinSold} />
-              <NumberField label="ROI ≥ %" value={minRoi} onChange={setMinRoi} />
+              <NumberField label="Profit % ≥" value={minRoi} onChange={setMinRoi} hint="profit per silver spent" />
               <label className="cc-field cc-search">
                 <span>Search</span>
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Item name" />
@@ -218,7 +262,7 @@ export function CityCrafterPage() {
                 <h3>
                   {rows.length} crafts pay in <b>{city}</b>
                 </h3>
-                <Seg label="Sort" value={sort} onChange={setSort} options={[["daily", "Profit / day"], ["profit", "Profit / craft"], ["roi", "ROI"]]} />
+                <Seg label="Sort" value={sort} onChange={setSort} options={[["daily", "Profit / day"], ["profit", "Profit / craft"], ["roi", "Profit %"]]} />
               </div>
               <div className="cc-table" role="table">
                 <div className="cc-row cc-row-head" role="row">
@@ -226,22 +270,38 @@ export function CityCrafterPage() {
                   <span role="columnheader">Cost</span>
                   <span role="columnheader">{sell === "order" ? "Sell order" : "Buy order"}</span>
                   <span role="columnheader">Profit</span>
-                  <span role="columnheader">ROI</span>
+                  <span role="columnheader" title="Profit per silver you spend: 50 % means 1.000 silver in, 1.500 back">
+                    Profit %
+                  </span>
                   <span role="columnheader">Sold / day</span>
                   <span role="columnheader">Profit / day</span>
                 </div>
                 {rows.slice(0, shown).map((row) => (
-                  <Row key={row.id} row={row} city={city} sell={sell} now={now} open={open === row.id} onToggle={() => setOpen(open === row.id ? null : row.id)} />
+                  <Row
+                    key={row.id}
+                    row={row}
+                    city={city}
+                    sell={sell}
+                    now={now}
+                    open={open === row.id}
+                    onToggle={() => setOpen(open === row.id ? null : row.id)}
+                  />
                 ))}
               </div>
-              {!rows.length ? <p className="cc-note">Nothing pays with these settings in {city}. Lower the ROI or sold-per-day floor, or try another city.</p> : null}
+              {!rows.length ? (
+                <p className="cc-note">
+                  Nothing pays with these settings in {city}.{" "}
+                  {dataMode === "daily" && sell === "instant" ? "The daily data has no buy orders: pick Sell order or live prices." : "Lower the profit % or sold-per-day floor, or try another city."}
+                </p>
+              ) : null}
               {rows.length > shown ? (
                 <button type="button" className="cc-more" onClick={() => setShown(shown + PAGE)}>
                   Show more ({rows.length - shown})
                 </button>
               ) : null}
               <p className="cc-fine">
-                Sold / day: the city's 7-day average, all qualities. Listings far above that average are left out. Profit / day assumes you
+                Profit %: the profit on the silver you put in (50 % = 1.000 in, 1.500 back). Prices: live every 30 minutes, daily once a day
+                (marked "daily"), or live filled with daily where live has none. Sold / day: the city's 7-day average, all qualities. Listings far above that average are left out. Profit / day assumes you
                 get the city's whole daily sales: with other crafters it is less.
               </p>
             </section>
@@ -253,7 +313,9 @@ export function CityCrafterPage() {
   );
 }
 
-function Row({ row, city, sell, now, open, onToggle }: { row: CityCraftRow; city: string; sell: SellMode; now: number; open: boolean; onToggle: () => void }) {
+type RowProps = { row: CityCraftRow; city: string; sell: SellMode; now: number; open: boolean; onToggle: () => void };
+
+function Row({ row, city, sell, now, open, onToggle }: RowProps) {
   const calc = `/crafting-calculator?${new URLSearchParams({ item: row.baseId, tier: String(row.tier), enchant: String(row.enchant), craftCity: city, sell: city })}`;
   return (
     <div className={`cc-item${open ? " is-open" : ""}`} role="rowgroup">
@@ -269,62 +331,88 @@ function Row({ row, city, sell, now, open, onToggle }: { row: CityCraftRow; city
               {row.bonusCity ? <i className="cc-chip is-gold">★ City bonus</i> : null}
               {row.dailyBonus ? <i className="cc-chip is-green">+{row.dailyBonus}% today</i> : null}
               {row.artefact ? <i className="cc-chip">Artefact</i> : null}
+              {row.imported ? <i className="cc-chip is-blue">Materials from {[...new Set([...row.materials, ...(row.artefact ? [row.artefact] : [])].filter((p) => p.city !== city).map((p) => p.city))].join(", ")}</i> : null}
             </span>
           </span>
         </span>
         <span role="cell" data-label="Cost">{silver(row.cost)}</span>
         <span role="cell" data-label={sell === "order" ? "Sell order" : "Buy order"}>
-          {silver(row.price)} <small className="cc-age">{age(now - row.priceAt)}</small>
+          {silver(row.sale.unit)} <QuoteAge quote={row.sale} now={now} />
         </span>
         <span role="cell" data-label="Profit" className="cc-profit">+{silver(row.profit)}</span>
-        <span role="cell" data-label="ROI">{Math.round(row.roi)} %</span>
+        <span role="cell" data-label="Profit %">+{Math.round(row.roi)} %</span>
         <span role="cell" data-label="Sold / day">{Math.round(row.sold)}</span>
         <span role="cell" data-label="Profit / day" className="cc-daily">+{short(row.dailyProfit)}</span>
       </button>
       {open ? (
         <div className="cc-detail">
           <div>
-            <h4>Buy in {city}</h4>
-            <ul>
-              {row.materials.map((m) => (
-                <li key={m.id}>
+            <h4>Shopping list · one craft</h4>
+            <div className="cc-shop">
+              <div className="cc-shop-row cc-shop-head">
+                <span>Material</span>
+                <span>Per piece</span>
+                <span>Pieces</span>
+                <span>Total</span>
+              </div>
+              {[...row.materials, ...(row.artefact ? [row.artefact] : [])].map((m) => (
+                <div key={m.id} className="cc-shop-row">
                   <span>
-                    {m.qty} × {m.name}
+                    <b>{m.name}</b>
+                    <small className={m.city !== city ? "is-away" : ""}>
+                      {m.city !== city ? `from ${m.city}` : `in ${city}`} · <QuoteAge quote={m} now={now} />
+                    </small>
                   </span>
+                  <span>{silver(m.unit)}</span>
+                  <span>× {m.qty}</span>
                   <b>{silver(m.unit * m.qty)}</b>
-                  <small>
-                    {silver(m.unit)} each · {age(now - m.at)} old
-                  </small>
-                </li>
+                </div>
               ))}
-              {row.artefact ? (
-                <li>
-                  <span>1 × {row.artefact.name}</span>
-                  <b>{silver(row.artefact.unit)}</b>
-                  <small>{age(now - row.artefact.at)} old</small>
-                </li>
-              ) : null}
-            </ul>
-          </div>
-          <div>
-            <h4>One craft</h4>
-            <ul>
+            </div>
+            <ul className="cc-sum">
               <li>
-                <span>Return rate</span>
-                <b>{(row.returnRate * 100).toFixed(1)} %</b>
+                <span>Materials at full price</span>
+                <b>{silver(row.materialCost + (row.artefact?.unit ?? 0))}</b>
+              </li>
+              <li>
+                <span>Back from the return rate ({(row.returnRate * 100).toFixed(1)} %)</span>
+                <b className="cc-plus">−{silver(row.materialCost * row.returnRate)}</b>
               </li>
               <li>
                 <span>Station fee</span>
                 <b>{silver(row.stationFee)}</b>
               </li>
-              <li>
-                <span>Cost after returns</span>
+              <li className="is-total">
+                <span>One craft costs</span>
                 <b>{silver(row.cost)}</b>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4>Selling it in {city}</h4>
+            <ul>
+              <li>
+                <span>{sell === "order" ? "Sell order" : "Buy order"} price</span>
+                <b>{silver(row.sale.unit)}</b>
               </li>
               <li>
                 <span>Tax{sell === "order" ? " and setup fee" : ""}</span>
-                <b>{silver(row.fees)}</b>
+                <b>−{silver(row.fees)}</b>
               </li>
+              <li>
+                <span>You get</span>
+                <b>{silver(row.net)}</b>
+              </li>
+              <li className="is-total">
+                <span>Profit per craft</span>
+                <b className="cc-plus">+{silver(row.profit)}</b>
+              </li>
+            </ul>
+            <p className="cc-explain">
+              You put in <b>{silver(row.cost)}</b> and get <b>{silver(row.net)}</b> back: <b>+{silver(row.profit)}</b>, that is{" "}
+              <b>+{Math.round(row.roi)} %</b> on your silver.
+            </p>
+            <ul>
               <li>
                 <span>7-day average price</span>
                 <b>{row.avgPrice ? silver(row.avgPrice) : "–"}</b>
@@ -343,6 +431,16 @@ function Row({ row, city, sell, now, open, onToggle }: { row: CityCraftRow; city
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** A price's age, and "daily" when it comes from the daily data. */
+function QuoteAge({ quote, now }: { quote: Quote; now: number }) {
+  return (
+    <small className={`cc-age${quote.src === "daily" ? " is-daily" : ""}`}>
+      {quote.src === "daily" ? "daily · " : ""}
+      {age(now - quote.at)}
+    </small>
   );
 }
 
