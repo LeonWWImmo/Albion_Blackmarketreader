@@ -499,6 +499,47 @@
   color: #e6edf3;
 }
 
+/* ---------- free preview: the locked rest ---------- */
+.cc-lock {
+  position: relative;
+  margin-top: 6px;
+}
+.cc-lock-rows {
+  display: grid;
+  gap: 6px;
+  filter: blur(3px);
+  opacity: 0.5;
+}
+.cc-lock-rows span {
+  height: 58px;
+  border-radius: 14px;
+  border: 1px solid var(--cc-line);
+  background: linear-gradient(90deg, var(--cc-card), rgba(var(--cc-gold-rgb), 0.08), var(--cc-card));
+}
+.cc-lock-card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px;
+  text-align: center;
+}
+.cc-lock-card b {
+  font-size: 17px;
+  color: var(--cc-gold-hi);
+}
+.cc-lock-card p {
+  margin: 0;
+  max-width: 560px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+.cc-lock-card .cc-cta {
+  margin-top: 4px;
+}
+
 /* ---------- smaller screens ---------- */
 @media (max-width: 1180px) {
   .cc-cities {

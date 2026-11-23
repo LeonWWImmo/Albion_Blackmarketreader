@@ -62,6 +62,13 @@ describe("priceCraft", () => {
     expect(row.sold).toBe(4);
   });
 
+  it("journals add their share of one craft", () => {
+    const base = priceCraft(book, BOW, 4, 0, opt())!;
+    const row = priceCraft(book, BOW, 4, 0, opt({ journal: (recipe, tier, city) => (recipe.itemId === "2H_BOW" && tier === 4 && city === "Lymhurst" ? 120 : 0) }))!;
+    expect(row.journal).toBe(120);
+    expect(row.profit).toBeCloseTo(base.profit + 120, 6);
+  });
+
   it("focus adds its bonus", () => {
     expect(priceCraft(book, BOW, 4, 0, opt({ focus: true }))!.returnRate).toBeCloseTo(1 - 1 / 1.92, 6);
     expect(cityReturnRate(false, true, 0)).toBeCloseTo(1 - 1 / 1.77, 6);

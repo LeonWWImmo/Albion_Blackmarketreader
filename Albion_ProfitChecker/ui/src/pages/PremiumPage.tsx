@@ -54,8 +54,8 @@ const FEATURES: Feature[] = [
     key: "city",
     title: "City Crafter",
     line: "Buy, craft and sell in one city. No transport, nothing to lose on the road.",
-    points: ["Every craft in every city, live", "Ranked by profit a day", "City bonus and focus counted in"],
-    where: "City Crafter",
+    points: ["Every craft in every city, live", "Materials from the cheapest city", "Focus Planner: where your focus earns most"],
+    where: "City Crafter and Focus Planner",
     visual: <CityVisual />
   }
 ];

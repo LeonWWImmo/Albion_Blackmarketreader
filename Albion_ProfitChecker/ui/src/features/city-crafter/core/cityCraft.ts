@@ -49,6 +49,8 @@ export type CityCraftOptions = {
   enchants: readonly number[];
   /** today's crafting bonuses (empty when unknown) */
   bonuses?: ReadonlyArray<CraftBonus>;
+  /** silver one craft adds by filling crafting journals (0 or missing: journals off) */
+  journal?: (recipe: BmRecipe, tier: number, city: string) => number;
 };
 
 export type PricedPart = Quote & { id: string; name: string; qty: number; city: string };
@@ -78,6 +80,8 @@ export type CityCraftRow = {
   fees: number;
   /** what one item brings in after tax and fees */
   net: number;
+  /** filled journals' share of one craft (0 with journals off) */
+  journal: number;
   profit: number;
   /** profit per silver spent, percent */
   roi: number;
@@ -150,7 +154,8 @@ export function priceCraft(book: PriceBook, recipe: BmRecipe, tier: number, ench
 
   const fees = sale.unit * (opt.taxRate + (opt.sell === "order" ? SETUP_FEE_RATE : 0));
   const net = sale.unit - fees;
-  const profit = net - cost;
+  const journal = opt.journal?.(recipe, tier, opt.city) ?? 0;
+  const profit = net - cost + journal;
   const { sold, avg } = book.volume(id, opt.city);
   const parts = [...materials, ...(artefact ? [artefact] : [])];
 
@@ -172,6 +177,7 @@ export function priceCraft(book: PriceBook, recipe: BmRecipe, tier: number, ench
     sale,
     fees,
     net,
+    journal,
     profit,
     roi: cost > 0 ? (profit / cost) * 100 : 0,
     sold,

@@ -132,7 +132,7 @@ function devApi(): Plugin {
         const action = url.pathname.replace(/^\/+/, "");
         const store = await marketStore;
         const region = url.searchParams.get("region") ?? "";
-        if (action === "live" && market.LIVE_REGIONS.includes(region)) {
+        if ((action === "live" || action === "teaser") && market.LIVE_REGIONS.includes(region)) {
           let row = await store.read(region);
           if (!row) {
             const cached = await readFile(cacheFile(region), "utf8").then(JSON.parse).catch(() => null);

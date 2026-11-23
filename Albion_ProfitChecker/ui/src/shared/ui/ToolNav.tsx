@@ -14,6 +14,7 @@ export const TOOL_TABS: ReadonlyArray<Tab> = [
   { to: "/refining-calculator", label: "Refining Calculator", hint: "Ore, wood, fiber, hide and stone", crafting: true },
   { to: "/food-potion-crafter", label: "Food & Potion Crafter", hint: "Cooking and alchemy profit", crafting: true },
   { to: "/city-crafter", label: "City Crafter", hint: "Buy, craft and sell in one city · Premium", crafting: true, premium: true },
+  { to: "/focus-planner", label: "Focus Planner", hint: "Where your focus earns most · Premium", crafting: true, premium: true },
   { to: "/prices", label: "Price Checker" },
   { to: "/gold-tracker", label: "Gold Tracker" },
   { to: "/loot-split", label: "Loot Split" },

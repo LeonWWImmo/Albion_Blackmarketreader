@@ -1756,5 +1756,131 @@
         "a": "Discord may have deleted the webhook, or the daily run was late. Check the Discord tab: it shows when the last report went out."
       }
     ]
+  },
+  "city-crafter": {
+    "title": "City crafting in Albion Online: craft and sell in one city",
+    "quick": {
+      "tagline": "Craft in the city that gives your item its bonus, sell it right there, and carry nothing through danger.",
+      "video": "",
+      "poster": "picture/guides/city-crafting-poster.jpg",
+      "steps": [
+        {
+          "title": "Pick the bonus city",
+          "text": "Each royal city gives 15 extra points to its own item types.",
+          "image": "picture/guides/city-crafting-1.jpg"
+        },
+        {
+          "title": "Buy the materials",
+          "text": "In that city, or where they are cheapest among the outer royal cities.",
+          "image": "picture/guides/city-crafting-2.jpg"
+        },
+        {
+          "title": "Sell where you craft",
+          "text": "Sell order or instant sell, as many as the city buys a day.",
+          "image": "picture/guides/city-crafting-3.jpg"
+        }
+      ]
+    },
+    "guide": {
+      "slug": "albion-city-crafting",
+      "h1": "City crafting in Albion Online: craft and sell in one city",
+      "title": "Albion Online City Crafting Guide | Blackmarket Reader",
+      "description": "How city crafting works in Albion Online: bonus cities, return rates with and without focus, where to buy materials, sell orders against instant sells, and how many to craft.",
+      "keywords": "Albion Online city crafting, Albion crafting bonus city, Albion local production bonus, Albion crafting profit, Albion return rate",
+      "toolLabel": "Crafting Calculator",
+      "toolPath": "/crafting-calculator"
+    },
+    "summary": {
+      "intro": "City crafting means crafting in a royal city and selling the result on that city's market. You use the city's crafting bonus, you never carry finished gear through a red zone, and you know the price before you start.",
+      "cards": [
+        {
+          "label": "Return rate",
+          "formula": "1 - 1 / (1 + bonus / 100)",
+          "text": "Royal station 18 points, the city's own item types 15 more: 15.3% back without the bonus, 24.8% with it."
+        },
+        {
+          "label": "With focus",
+          "formula": "18 + 15 + 59 = 92 points",
+          "text": "47.9% of the materials come back in the bonus city, 43.5% anywhere else."
+        },
+        {
+          "label": "Sell order",
+          "formula": "price x (1 - tax - 2.5%)",
+          "text": "Tax is 4% with Albion premium, 8% without; a sell order also costs a 2.5% setup fee."
+        }
+      ],
+      "tipsHeading": "Bonus cities (+15 points)",
+      "tips": [
+        "Lymhurst: swords, bows, arcane staffs, leather helmets and shoes",
+        "Martlock: axes, quarterstaffs, frost staffs, off-hands, plate shoes",
+        "Thetford: maces, fire and nature staffs, cloth helmets, leather armor",
+        "Fort Sterling: hammers, spears, holy staffs, plate helmets, cloth armor",
+        "Bridgewatch: crossbows, daggers, cursed staffs, plate armor, cloth shoes",
+        "Caerleon: gloves, gathering tools and gathering gear",
+        "Brecilien: bags and capes"
+      ]
+    },
+    "sections": [
+      {
+        "heading": "What city crafting is",
+        "paragraphs": [
+          "City crafting is the quiet way to make silver from crafting. You stand in one royal city, craft the items that city is specialised in, and list them on the same city's market. There is no trip to the Black Market in Caerleon, no gear carried through a red zone and no loss if someone catches you on the road.",
+          "The trade-off is that a city market is smaller than the Black Market. A royal city buys a few, a few dozen or a few hundred of an item a day, depending on the item. City crafting pays when you pick items that both pay and sell, and when you craft about as many as the city takes."
+        ]
+      },
+      {
+        "heading": "Why the city decides your profit",
+        "paragraphs": [
+          "Every craft gives part of the materials back. How much depends on production bonus points, and the points stack on a curve:",
+          "returnRate = 1 - 1 / (1 + bonus / 100)",
+          "A royal city station gives 18 points, a 15.3% return. If the city is specialised in your item type it adds 15 points: 33 points, a 24.8% return. Focus adds 59 more: 92 points and a 47.9% return in the bonus city, against 43.5% in any other city.",
+          "On a craft that uses 30,000 silver of materials, the difference between 15.3% and 24.8% is close to 3,000 silver on every single craft. That is often the whole profit, so the bonus city is the first thing to get right."
+        ]
+      },
+      {
+        "heading": "Where to buy the materials",
+        "paragraphs": [
+          "Refined materials do not cost the same everywhere. Each royal city refines one material with its own bonus, so planks, metal bars, cloth and leather are usually cheapest in the city that refines them, and dearer in the others.",
+          "You can buy everything in the crafting city and carry nothing, or buy each material where it is cheapest and bring it in. The five outer royal cities (Lymhurst, Martlock, Thetford, Fort Sterling and Bridgewatch) are linked without red zones, so moving refined materials between them carries little risk. Caerleon can only be reached through red zones and Brecilien only through the Mists: carrying goods there is a risk you take on purpose.",
+          "Buy orders lower the cost further. A buy order is filled at your price plus a 2.5% setup fee, but it may take hours to fill. Instant buying takes the cheapest listing now."
+        ]
+      },
+      {
+        "heading": "Selling: sell order or instant sell",
+        "paragraphs": [
+          "A sell order lists your item at your price. You pay the sales tax (4% with Albion premium, 8% without) and a 2.5% setup fee, and you wait until someone buys it.",
+          "An instant sell fills the best buy order right away. You only pay the tax, but buy orders usually sit well below the cheapest listing, so instant selling earns less per item and more per hour.",
+          "Look at the 7-day average price before you list. A listing far above it may be a stale order that nobody pays, and pricing your own items against it leaves them unsold."
+        ]
+      },
+      {
+        "heading": "How many to craft",
+        "list": [
+          "Check how many the city sells a day. Crafting a hundred of an item the city buys five of a day ties up your silver for weeks.",
+          "Spread across items. Ten different crafts that each sell ten a day move faster than one craft that sells a hundred.",
+          "Use the daily crafting bonus. On top of the city bonus, the day's event adds 10 or 20 points to some item types, which can turn a flat craft into a good one.",
+          "Fill journals while you craft. Full crafting journals sell for more than empty ones, and that silver comes on top of the craft itself.",
+          "Spend focus where it pays most per point, not on the most expensive craft. Cheap crafts with a high return often beat one big craft per focus point."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "q": "Which city is best for crafting?",
+        "a": "The one that gives your item type its 15 bonus points, as long as its market buys enough of that item. The bonus is worth more than most material price differences, so start there and only move if the market is thin."
+      },
+      {
+        "q": "Is city crafting profitable without focus?",
+        "a": "Often yes in the bonus city, where 24.8% of the materials come back. Outside it, at 15.3%, many crafts barely cover the tax and fees. Focus raises the return to 47.9% and makes far more crafts worth it."
+      },
+      {
+        "q": "Is it safe to move materials between cities?",
+        "a": "Between the five outer royal cities, yes: the roads between them avoid red zones. Caerleon can only be reached through red zones and Brecilien only through the Mists, so anything you carry there can be lost."
+      },
+      {
+        "q": "Should I sell with sell orders or instantly?",
+        "a": "Sell orders earn more per item but take time and cost a 2.5% setup fee. Instant selling to buy orders is quick and only pays the tax, but at a lower price. When the gap between the two is small, sell instantly."
+      }
+    ]
   }
 }

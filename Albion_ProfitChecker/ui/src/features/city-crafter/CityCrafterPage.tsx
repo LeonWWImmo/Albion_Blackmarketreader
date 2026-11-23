@@ -9,80 +9,26 @@ import { premiumVisible } from "@shared/premium/premium";
 import { useRegion } from "@shared/region/useRegion";
 import { useSeo } from "@shared/seo/useSeo";
 import { loadLive, type LiveStatus } from "@shared/live/liveData";
-import { MobileNavBurger, ToolNav, useFestivities, useSessionState } from "../../shared";
-import { normalizeRecipesPayload, type BmRecipe } from "../bm-crafter";
+import { MobileNavBurger, ToolNav, resolveJournalProfit, useFestivities, useJournals, useSessionState } from "../../shared";
+import type { BmRecipe } from "../bm-crafter";
 import { iconUrl } from "../price-checker/core/items";
-import { dailyBook, dailyFromFiles, liveBook, mixBook, type DailyPrices, type PriceBook, type Quote } from "./core/books";
+import { dailyBook, liveBook, mixBook, type DailyPrices, type PriceBook, type Quote } from "./core/books";
+import { age, CITY_BONUS, Chips, CREST, ENCHANT_COLOR, ENCHANTS, loadDaily, loadRecipes, nowMinute, NumberField, Seg, short, silver, TIERS, type DataMode } from "./kit";
 import { cityCraftRows, citySummary, worthIt, type BuyMode, type CityCraftOptions, type CityCraftRow, type MatFrom, type SellMode } from "./core/cityCraft";
 import "../bm-crafter/ui/bmCrafter.css";
 import "./cityCrafter.css";
 
-const CREST: Record<string, string> = {
-  Bridgewatch: "picture/Bridgewatch.png",
-  Caerleon: "picture/Carleon.png",
-  "Fort Sterling": "picture/Fortsterlingwappen.png",
-  Lymhurst: "picture/Lymhurstwappen.png",
-  Martlock: "picture/Martlockwappen.png",
-  Thetford: "picture/Thefortwappen.png"
-};
-
-/** What each city crafts with its bonus (getBonusCityForItem), for the city cards. */
-const CITY_BONUS: Record<string, string> = {
-  Bridgewatch: "Crossbows, daggers, cursed, plate armor, cloth shoes",
-  Caerleon: "Gloves, tools, gathering gear",
-  "Fort Sterling": "Hammers, spears, holy, plate helmets, cloth armor",
-  Lymhurst: "Swords, bows, arcane, leather helmets and shoes",
-  Martlock: "Axes, quarterstaffs, frost, off-hands, plate shoes",
-  Thetford: "Maces, fire, nature, cloth helmets, leather armor",
-  Brecilien: "Bags and capes"
-};
-
-const TIERS = [4, 5, 6, 7, 8];
-const ENCHANTS = [0, 1, 2, 3, 4];
 const PAGE = 40;
-const ENCHANT_COLOR = ["#94a3b8", "#4ade80", "#60a5fa", "#c084fc", "#fbbf24"];
 
 type SortKey = "daily" | "profit" | "roi";
-type DataMode = "live" | "fill" | "daily";
-
-const silver = (n: number) => Math.round(n).toLocaleString("de-DE");
-const short = (n: number) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toFixed(1)}m` : Math.abs(n) >= 1e4 ? `${Math.round(n / 1e3)}k` : silver(n));
-const age = (minutes: number) =>
-  minutes < 60 ? `${Math.max(0, Math.round(minutes))} min` : minutes < 48 * 60 ? `${Math.round(minutes / 60)} h` : `${Math.round(minutes / 1440)} d`;
-const nowMinute = () => Math.round(Date.now() / 60000);
-
-let recipesOnce: Promise<BmRecipe[]> | null = null;
-const loadRecipes = () =>
-  (recipesOnce ??= fetch("/items-categorized-crafting.json")
-    .then((res) => res.json())
-    .then((json) => normalizeRecipesPayload(json).items)
-    .catch(() => {
-      recipesOnce = null;
-      return [];
-    }));
-
-const dailyOnce = new Map<string, Promise<DailyPrices | null>>();
-/** The free tools' daily files of a region (public/data), loaded once. */
-function loadDaily(region: string): Promise<DailyPrices | null> {
-  const hit = dailyOnce.get(region);
-  if (hit) return hit;
-  const get = (file: string) => fetch(`/data/${file}-${region}.json`).then((res) => (res.ok ? res.json() : {}));
-  const load = Promise.all([get("crafting-results"), get("materials-cities"), get("artefacts")])
-    .then(([results, materials, artefacts]) => dailyFromFiles(results, materials, artefacts))
-    .catch(() => {
-      dailyOnce.delete(region);
-      return null;
-    });
-  dailyOnce.set(region, load);
-  return load;
-}
 
 export function CityCrafterPage() {
   const visible = premiumVisible();
   const { pathname } = useLocation();
   const [region, setRegion] = useRegion();
-  const { meta, layers } = useToolAccount(pathname, null, region, setRegion);
+  const { meta, layers } = useToolAccount(pathname, "city-crafter", region, setRegion);
   const festivities = useFestivities(region);
+  const journals = useJournals(region);
 
   const [city, setCity] = useSessionState<string>("cc-city", "Lymhurst");
   const [dataMode, setDataMode] = useSessionState<DataMode>("cc-data", "fill");
@@ -143,8 +89,35 @@ export function CityCrafterPage() {
   const snap = live.kind === "ok" ? live.snap : null;
   const now = useMemo(() => nowMinute(), [snap]); // eslint-disable-line react-hooks/exhaustive-deps
   const options: Omit<CityCraftOptions, "city"> = useMemo(
-    () => ({ matFrom, buy, sell, focus, taxRate: premiumTax ? 0.04 : 0.08, usageFee, tiers, enchants, bonuses: festivities.craftBonuses }),
-    [matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses]
+    () => ({
+      matFrom,
+      buy,
+      sell,
+      focus,
+      taxRate: premiumTax ? 0.04 : 0.08,
+      usageFee,
+      tiers,
+      enchants,
+      bonuses: festivities.craftBonuses,
+      // filled crafting journals, the same way as in the BM Crafter (journal prices of the crafting city)
+      journal: journals.enabled
+        ? (recipe: BmRecipe, tier: number, at: string) =>
+            resolveJournalProfit(
+              {
+                categoryKey: recipe.categoryKey,
+                itemId: `T${tier}_${recipe.itemId}`,
+                tier,
+                artifactId: recipe.artifactId,
+                totalResourceCount: recipe.materials.reduce((sum, m) => sum + Number(m.qty || 0), 0),
+                city: at
+              },
+              true,
+              journals.owned,
+              journals.data
+            )?.journalProfit ?? 0
+        : undefined
+    }),
+    [matFrom, buy, sell, focus, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, journals.enabled, journals.owned, journals.data]
   );
   // the prices: live, daily, or live filled with daily (the sales a day always come from the snapshot)
   const book: PriceBook | null = useMemo(() => {
@@ -207,7 +180,9 @@ export function CityCrafterPage() {
           </span>
         </section>
 
-        {live.kind === "guest" || live.kind === "locked" || live.kind === "error" ? (
+        {live.kind === "guest" || live.kind === "locked" ? (
+          <Teaser region={region} city={city} setCity={setCity} guest={live.kind === "guest"} />
+        ) : live.kind === "error" ? (
           <Gate status={live} />
         ) : !book || !recipes.length ? (
           <p className="cc-note">Loading the market…</p>
@@ -245,6 +220,7 @@ export function CityCrafterPage() {
               <Seg label="Materials" value={buy} onChange={setBuy} options={[["instant", "Buy instantly"], ["order", "Buy orders"]]} />
               <Seg label="Sell" value={sell} onChange={setSell} options={[["order", "Sell order"], ["instant", "Instant sell"]]} />
               <Seg label="Focus" value={focus ? "on" : "off"} onChange={(v) => setFocus(v === "on")} options={[["off", "No focus"], ["on", "Focus"]]} />
+              <Seg label="Journals" value={journals.enabled ? "on" : "off"} onChange={(v) => journals.setEnabled(v === "on")} options={[["off", "Off"], ["on", "Fill journals"]]} />
               <Seg label="Tax" value={premiumTax ? "4" : "8"} onChange={(v) => setPremiumTax(v === "4")} options={[["4", "4 %"], ["8", "8 %"]]} />
               <Chips label="Tier" all={TIERS} on={tiers} set={setTiers} text={(t) => `T${t}`} />
               <Chips label="Enchant" all={ENCHANTS} on={enchants} set={setEnchants} text={(e) => `.${e}`} />
@@ -403,13 +379,19 @@ function Row({ row, city, sell, now, open, onToggle }: RowProps) {
                 <span>You get</span>
                 <b>{silver(row.net)}</b>
               </li>
+              {row.journal ? (
+                <li>
+                  <span>Filled journals (share of one craft)</span>
+                  <b className="cc-plus">+{silver(row.journal)}</b>
+                </li>
+              ) : null}
               <li className="is-total">
                 <span>Profit per craft</span>
                 <b className="cc-plus">+{silver(row.profit)}</b>
               </li>
             </ul>
             <p className="cc-explain">
-              You put in <b>{silver(row.cost)}</b> and get <b>{silver(row.net)}</b> back: <b>+{silver(row.profit)}</b>, that is{" "}
+              You put in <b>{silver(row.cost)}</b> and get <b>{silver(row.net + row.journal)}</b> back{row.journal ? " with the journals" : ""}: <b>+{silver(row.profit)}</b>, that is{" "}
               <b>+{Math.round(row.roi)} %</b> on your silver.
             </p>
             <ul>
@@ -444,46 +426,155 @@ function QuoteAge({ quote, now }: { quote: Quote; now: number }) {
   );
 }
 
-function Seg<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: Array<[T, string]> }) {
+/** One craft of the free preview, as /api/market/teaser sends it (api/_lib/cityTeaser.js). */
+type TeaserRow = {
+  id: string;
+  name: string;
+  tier: number;
+  enchant: number;
+  bonusCity: boolean;
+  materials: Array<{ city: string }>;
+  artefact: { city: string } | null;
+  cost: number;
+  price: number;
+  profit: number;
+  roi: number;
+  sold: number;
+  dailyProfit: number;
+};
+type TeaserCity = { city: string; count: number; topDaily: number; top: TeaserRow[] };
+
+/**
+ * Without premium: what each city earns and its best three crafts, worked out on the server. The
+ * rest never reaches the browser, so there is nothing to unlock here.
+ */
+function Teaser({ region, city, setCity, guest }: { region: string; city: string; setCity: (c: string) => void; guest: boolean }) {
+  const [cities, setCities] = useState<TeaserCity[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setCities(null);
+    setFailed(false);
+    fetch(`/api/market/teaser?region=${region}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then((data: { cities?: TeaserCity[] }) => alive && setCities(data.cities ?? []))
+      .catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [region]);
+
+  if (failed) return <Gate status={{ kind: guest ? "guest" : "locked" }} />;
+  if (!cities) return <p className="cc-note">Loading the market…</p>;
+  const best = Math.max(0, ...cities.map((c) => c.topDaily));
+  const here = cities.find((c) => c.city === city) ?? cities[0];
+  const more = Math.max(0, (here?.count ?? 0) - (here?.top.length ?? 0));
+
   return (
-    <div className="cc-field">
-      <span>{label}</span>
-      <div className="cc-seg" role="group" aria-label={label}>
-        {options.map(([key, text]) => (
-          <button key={key} type="button" className={key === value ? "is-on" : ""} aria-pressed={key === value} onClick={() => onChange(key)}>
-            {text}
+    <>
+      <section className="cc-cities" aria-label="Pick a city">
+        {cities.map((c) => (
+          <button
+            key={c.city}
+            type="button"
+            className={`cc-city${c.city === here?.city ? " is-on" : ""}`}
+            aria-pressed={c.city === here?.city}
+            onClick={() => setCity(c.city)}
+            style={{ "--fill": best > 0 ? `${Math.round((c.topDaily / best) * 100)}%` : "0%" } as CSSProperties}
+          >
+            <span className="cc-city-head">
+              {CREST[c.city] ? <img src={assetUrl(CREST[c.city])} alt="" width={30} height={30} /> : <span className="cc-crest">B</span>}
+              <b>{c.city}</b>
+            </span>
+            <span className="cc-city-sum">
+              <strong>{short(c.topDaily)}</strong> a day
+            </span>
+            <span className="cc-city-meta">{c.count} good crafts</span>
+            <span className="cc-city-bar" aria-hidden="true">
+              <i />
+            </span>
+            <small>{CITY_BONUS[c.city]}</small>
           </button>
         ))}
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function Chips({ label, all, on, set, text }: { label: string; all: number[]; on: number[]; set: (v: number[]) => void; text: (n: number) => string }) {
-  const toggle = (n: number) => {
-    const next = on.includes(n) ? on.filter((x) => x !== n) : [...on, n].sort((a, b) => a - b);
-    if (next.length) set(next);
-  };
-  return (
-    <div className="cc-field">
-      <span>{label}</span>
-      <div className="cc-seg" role="group" aria-label={label}>
-        {all.map((n) => (
-          <button key={n} type="button" className={on.includes(n) ? "is-on" : ""} aria-pressed={on.includes(n)} onClick={() => toggle(n)}>
-            {text(n)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function NumberField({ label, value, onChange, hint }: { label: string; value: number; onChange: (v: number) => void; hint?: string }) {
-  return (
-    <label className="cc-field cc-num">
-      <span>{label}</span>
-      <input inputMode="numeric" value={String(value)} onChange={(e) => onChange(Math.max(0, Number(e.target.value.replace(/\D/g, "")) || 0))} title={hint} />
-    </label>
+      <section className="cc-results" aria-label={`Best crafts in ${here?.city ?? city}`}>
+        <div className="cc-results-head">
+          <h3>
+            Free preview: the best 3 of {here?.count ?? 0} crafts in <b>{here?.city ?? city}</b>
+          </h3>
+        </div>
+        <div className="cc-table" role="table">
+          <div className="cc-row cc-row-head" role="row">
+            <span role="columnheader">Item</span>
+            <span role="columnheader">Cost</span>
+            <span role="columnheader">Sell order</span>
+            <span role="columnheader">Profit</span>
+            <span role="columnheader">Profit %</span>
+            <span role="columnheader">Sold / day</span>
+            <span role="columnheader">Profit / day</span>
+          </div>
+          {(here?.top ?? []).map((row) => {
+            const away = [...new Set([...row.materials, ...(row.artefact ? [row.artefact] : [])].map((p) => p.city).filter((c) => c !== here?.city))];
+            return (
+              <div key={row.id} className="cc-item" role="rowgroup">
+                <div className="cc-row" role="row">
+                  <span className="cc-name" role="cell">
+                    <img src={iconUrl(row.id)} alt="" width={40} height={40} loading="lazy" />
+                    <span>
+                      <b>{row.name}</b>
+                      <span className="cc-chips">
+                        <i className="cc-chip" style={{ "--chip": ENCHANT_COLOR[row.enchant] } as CSSProperties}>
+                          T{row.tier}.{row.enchant}
+                        </i>
+                        {row.bonusCity ? <i className="cc-chip is-gold">★ City bonus</i> : null}
+                        {row.artefact ? <i className="cc-chip">Artefact</i> : null}
+                        {away.length ? <i className="cc-chip is-blue">Materials from {away.join(", ")}</i> : null}
+                      </span>
+                    </span>
+                  </span>
+                  <span role="cell" data-label="Cost">{silver(row.cost)}</span>
+                  <span role="cell" data-label="Sell order">{silver(row.price)}</span>
+                  <span role="cell" data-label="Profit" className="cc-profit">+{silver(row.profit)}</span>
+                  <span role="cell" data-label="Profit %">+{Math.round(row.roi)} %</span>
+                  <span role="cell" data-label="Sold / day">{Math.round(row.sold)}</span>
+                  <span role="cell" data-label="Profit / day" className="cc-daily">+{short(row.dailyProfit)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!here?.top.length ? <p className="cc-note">Nothing pays in {here?.city ?? city} right now with the standard settings.</p> : null}
+        <div className="cc-lock">
+          <div className="cc-lock-rows" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span key={i} />
+            ))}
+          </div>
+          <div className="cc-lock-card">
+            <b>{more > 0 ? `${more} more crafts pay in ${here?.city ?? city}` : "Every craft in every city"}</b>
+            <p>
+              Premium shows all of them with the shopping list, your own settings (focus, journals, buy orders, instant sell) and
+              live or daily prices.
+            </p>
+            {guest ? (
+              <a className="cc-cta" href={`/login?next=${encodeURIComponent("/city-crafter")}`}>
+                Sign in
+              </a>
+            ) : (
+              <a className="cc-cta" href="/premium">
+                Get Premium
+              </a>
+            )}
+          </div>
+        </div>
+        <p className="cc-fine">
+          The preview uses the standard settings: materials bought instantly where they are cheapest, sold by sell order, no focus, 4 %
+          tax, live prices.
+        </p>
+      </section>
+    </>
   );
 }
 

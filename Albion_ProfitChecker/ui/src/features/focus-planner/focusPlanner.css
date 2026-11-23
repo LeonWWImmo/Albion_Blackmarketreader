@@ -1,0 +1,83 @@
+/* Focus Planner (FocusPlannerPage.tsx): the City Crafter's look (cityCrafter.css) plus its own bits. */
+
+.fp-budget {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.fp-budget input {
+  width: 110px;
+}
+.fp-select {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--cc-line);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+}
+
+.fp-sum {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.fp-sum > div {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--cc-line);
+  background: var(--cc-card);
+}
+.fp-sum > div:first-child {
+  border-color: rgba(var(--cc-gold-rgb), 0.6);
+  background: linear-gradient(160deg, rgba(var(--cc-gold-rgb), 0.16), var(--cc-card) 60%);
+}
+.fp-sum span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cc-muted);
+}
+.fp-sum strong {
+  font: 800 26px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--cc-gold-hi);
+}
+.fp-sum small {
+  color: var(--cc-muted);
+  font-size: 12px;
+}
+
+.fp-row {
+  grid-template-columns: minmax(240px, 2.4fr) 1.1fr repeat(4, minmax(80px, 1fr));
+}
+.fp-row.is-plan {
+  grid-template-columns: minmax(240px, 2.4fr) 1.1fr 0.6fr repeat(4, minmax(80px, 1fr));
+}
+.fp-city {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.fp-crafts {
+  font-weight: 800;
+  color: #e6edf3;
+}
+
+@media (max-width: 900px) {
+  .fp-sum {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cc-item > .fp-row,
+  .cc-item > .fp-row.is-plan {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .fp-city {
+    justify-content: flex-start;
+  }
+}

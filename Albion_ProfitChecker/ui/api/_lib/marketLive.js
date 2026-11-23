@@ -217,6 +217,26 @@ export async function liveAnswer(store, region, nowMs = Date.now()) {
 /** For tests: forget the kept snapshots. */
 export function clearLiveCache() {
   liveCache.clear();
+  teaserCache.clear();
+}
+
+/**
+ * The City Crafter's free preview (cityTeaser.js), worked out once per snapshot from the snapshot
+ * liveAnswer already holds: only the top 3 of each city leave the server.
+ */
+const teaserCache = new Map();
+
+export async function teaserAnswer(store, region, nowMs = Date.now()) {
+  const live = await liveAnswer(store, region, nowMs);
+  if (!live) return null;
+  const hit = teaserCache.get(region);
+  if (hit && hit.key === live.key) return hit;
+  const { cityTeaser, TEASER_SETTINGS } = await import("./cityTeaser.js");
+  const snap = JSON.parse(live.raw);
+  const body = { region, pricesAt: snap.pricesAt, settings: TEASER_SETTINGS, cities: cityTeaser(snap, undefined, Math.round(nowMs / 60000)) };
+  const entry = { key: live.key, body };
+  teaserCache.set(region, entry);
+  return entry;
 }
 
 /** The bounds an ingested snapshot must stay in (a broken job must not store garbage). */
@@ -239,6 +259,7 @@ function validCells(map, width) {
  * /api/market/<action>:
  * - POST ingest {region, prices?, volume?}: the GitHub job stores a snapshot part (actions secret)
  * - GET live?region=: the latest snapshot, premium players only
+ * - GET teaser?region=: the City Crafter's free preview (top 3 per city), for everyone
  * deps: store (read / write), actionsSecret, userFromToken, premium(userId), now()
  */
 export async function handleMarket(action, req, deps) {
@@ -273,6 +294,16 @@ export async function handleMarket(action, req, deps) {
     if (!answer) return { status: 404, body: { error: "No live snapshot yet, the next one comes within 30 minutes." }, maxAge: 0 };
     // premium data: private (never on the CDN); the browser keeps it and asks with the ETag
     return { status: 200, raw: answer.raw, gzip: answer.gzip, etag: answer.etag, maxAge: 0 };
+  }
+
+  if (action === "teaser") {
+    if (req.method !== "GET") return { status: 405, body: { error: "GET only" }, maxAge: 0 };
+    const region = String(req.query?.region ?? "");
+    if (!LIVE_REGIONS.includes(region)) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
+    const answer = deps.store ? await teaserAnswer(deps.store, region, deps.now().getTime()) : null;
+    if (!answer) return { status: 404, body: { error: "No live snapshot yet, the next one comes within 30 minutes." }, maxAge: 0 };
+    // the same for everyone: the CDN keeps it until the next snapshot is near
+    return { status: 200, body: answer.body, maxAge: 600 };
   }
 
   return { status: 404, body: { error: "unknown action" }, maxAge: 0 };
