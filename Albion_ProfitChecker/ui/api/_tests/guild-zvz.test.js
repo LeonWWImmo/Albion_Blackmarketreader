@@ -79,7 +79,7 @@ describe("ZvZ job", () => {
     const [url, payload] = deps.discord.post.mock.calls[0];
     expect(url).toBe(HOOK);
     expect(payload.embeds[0].url).toBe("https://blackmarketreader.com/guild/battle/eu/7");
-    expect(payload.embeds[0].title).toBe("⚖️ Stalemate");
+    expect(payload.embeds[0].title).toBe("⚖️ Stalemate vs [AX]");
     expect(payload.embeds[0].author.name).toBe("ZvZ report · [BOSSS] Angry fuzzies");
     expect(store.webhooks.get("user-ann:eu").zvz_after).toBe("2026-11-14T10:00:00Z");
     expect((await runJob()).body.posted).toBe(0);
@@ -109,9 +109,9 @@ describe("zvzReport", () => {
   const player = (id, guildId, allianceId, s) => ({ id, name: id, guildId, guildName: guildId, allianceId, allianceName: allianceId, kills: 0, deaths: 0, killFame: 0, damage: 0, healAssists: 0, ...s });
   const body = {
     battle: { id: 99, startTime: "2026-11-14T10:00:00Z", endTime: "2026-11-14T10:23:00Z", kills: 6, fame: 1, players: 7 },
-    guilds: [{ id: GID, name: "Angry fuzzies", kills: 5, deaths: 2, killFame: 2_500_000 }],
+    guilds: [{ id: GID, name: "Angry fuzzies", kills: 5, deaths: 2, killFame: 2_500_000, deathFame: 900_000 }],
     players: [
-      player("Ann", GID, "A", { damage: 90_000, killFame: 1_000_000, healAssists: 0 }),
+      player("Ann", GID, "A", { damage: 90_000, killFame: 1_000_000, healAssists: 0, kills: 3 }),
       player("Bo", GID, "A", { damage: 50_000, killFame: 1_500_000, healAssists: 4 }),
       player("Ally", "g2", "A", { damage: 999_999 }),
       player("E1", "g3", "B"),
@@ -120,9 +120,9 @@ describe("zvzReport", () => {
       player("E4", "g3", "B")
     ],
     kills: [
-      { victim: { guildId: GID, gearValue: 1_200_000 } },
-      { victim: { guildId: GID, gearValue: 800_000 } },
-      { victim: { guildId: "g3", gearValue: 5_000_000 } }
+      { killer: { name: "E1", guildId: "g3" }, victim: { name: "Ann", guildId: GID, gearValue: 1_200_000 } },
+      { killer: { name: "E2", guildId: "g3" }, victim: { name: "Bo", guildId: GID, gearValue: 800_000 } },
+      { killer: { name: "Ann", guildId: GID }, victim: { name: "E1", guildId: "g3", gearValue: 5_000_000 } }
     ],
     priced: true
   };
@@ -132,17 +132,20 @@ describe("zvzReport", () => {
     const [embed] = embeds;
     const field = (name) => embed.fields.find((f) => f.name.includes(name)).value;
     expect(allowed_mentions).toEqual({ parse: [] });
-    expect(embed.title).toBe("🏆 Victory");
+    expect(embed.title).toBe("🏆 Victory vs [B]");
     expect(embed.author.name).toBe("ZvZ report · [FUZ] Angry fuzzies");
     expect(embed.url).toBe("https://blackmarketreader.com/guild/battle/eu/99");
     expect(embed.color).toBe(0x4ade80);
     // the scoreboard: kills against deaths, the bar, then time, length, server and size
     expect(embed.description).toBe(
-      ["## 5 ⚔️ 2", `${killBar(5, 2)}  **K/D 2.50**`, "-# 🕒 <t:1794650400:f> · ⏱️ 23 min · 🌍 Europe · 👥 2 of 7 players"].join("\n")
+      ["# 5 ⚔️ 2", `${killBar(5, 2)}  **K/D 2.50** · 📈 +1.6m fame`, "-# 🕒 <t:1794650400:f> · ⏱️ 23 min · 🌍 Europe · 👥 2 of 7 players"].join("\n")
     );
     expect(field("Regear")).toBe("**2m** silver");
     // the MVP: most kill fame
-    expect(field("MVP")).toBe("**Bo** · 0 kills · 1.5m fame · 50k damage");
+    expect(embed.fields[0]).toMatchObject({ name: "👑 MVP", value: "### Bo\n0 kills · 1.5m fame · 50k damage" });
+    expect(field("Kills")).toBe("🥇 **Ann** · 3 kills");
+    expect(field("Best kill")).toBe("**Ann** ➜ E1\n5m silver of gear");
+    expect(field("Biggest loss")).toBe("**Ann**\n1.2m silver of gear");
     expect(field("Damage")).toBe("🥇 **Ann** · 90k\n🥈 **Bo** · 50k");
     expect(field("Kill fame").startsWith("**")).toBe(true);
     expect(embed.fields.find((f) => f.name === "🏆 Kill fame").value).toBe("🥇 **Bo** · 1.5m\n🥈 **Ann** · 1m");
@@ -158,6 +161,7 @@ describe("zvzReport", () => {
   it("without prices or deaths: a regear link, and no division by zero", () => {
     const [embed] = zvzReport(guild, { ...body, guilds: [{ id: GID, kills: 3, deaths: 0, killFame: 1 }], priced: false }).embeds;
     expect(embed.description).toContain("**K/D ∞**");
+    expect(embed.fields.some((f) => f.name.includes("Best kill") || f.name.includes("Biggest loss"))).toBe(false);
     expect(embed.description).toContain("🟩".repeat(10));
     expect(embed.fields.find((f) => f.name.includes("Regear")).value).toContain("/guild/eu/angry-fuzzies/regear");
   });

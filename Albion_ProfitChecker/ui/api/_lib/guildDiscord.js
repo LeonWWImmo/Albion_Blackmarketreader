@@ -41,6 +41,8 @@ const BAR_CELLS = 12;
 const MEDALS = ["🥇", "🥈", "🥉"];
 const REGION = { eu: "Europe", us: "America" };
 const DAY_MS = 86_400_000;
+/** An empty field name (Discord needs one). */
+const SPACER = "\u200b";
 
 const author = { name: "Blackmarket Reader · Guild tools", url: `${SITE}/guild`, icon_url: ICON };
 const guildUrl = (guild, tab) => `${SITE}/guild/${guild.region}/${guild.slug}${tab ? `/${tab}` : ""}`;
@@ -56,10 +58,32 @@ export function statusBar({ active = 0, quiet = 0, inactive = 0 }) {
   return "🟩".repeat(cells[0]) + "🟨".repeat(cells[1]) + "🟥".repeat(cells[2]);
 }
 
+/** The best of each kind of fame in a week, for the daily report's "stars of the week". */
+const STARS = [
+  ["pvp", "⚔️", "PvP"],
+  ["pve", "🐉", "PvE"],
+  ["gathering", "⛏️", "Gathering"],
+  ["crafting", "🔨", "Crafting"]
+];
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const kdOf = (kills, deaths) => (deaths ? (kills / deaths).toFixed(2) : kills ? "∞" : "–");
+const battleUrl = (region, id) => `${SITE}/guild/battle/${region}/${id}`;
+/** The tabs of the guild page as one line of links. */
+const tabLinks = (guild) =>
+  [
+    ["📊", "Activity", "activity"],
+    ["⚔️", "Battles", "battles"],
+    ["📋", "Attendance", "attendance"],
+    ["🛡️", "Regear", "regear"]
+  ]
+    .map(([icon, label, tab]) => `[${icon} ${label}](${guildUrl(guild, tab)})`)
+    .join("  ·  ");
+
 /**
- * The daily report of one guild, from its guild page answer (guild, tracking, activity, fights):
- * the members as a bar, the fights of the last day, who joined or left since `since` (a day,
- * inclusive) and who gained the most fame in 7 days. One Discord embed, with links to the tabs.
+ * The daily report of one guild, from its guild page answer (guild, tracking, activity, fights).
+ * At the top the last day's fighting (kills against deaths, K/D, the biggest fight), then the roster
+ * as a bar, the week's fame (the guild's total, the top gainers and the best of each kind), who
+ * joined or left since `since` (a day, inclusive) and links to the tabs. One Discord embed.
  */
 export function dailyReport({ guild, tracking, activity, fights = [] }, since, now) {
   const { counts, members, left } = activity;
@@ -68,48 +92,69 @@ export function dailyReport({ guild, tracking, activity, fights = [] }, since, n
   const fresh = !trackedSince || trackedSince >= since;
   const joined = fresh ? [] : members.filter((m) => m.joinedOn && m.joinedOn > trackedSince && m.joinedOn >= since).map((m) => m.name);
   const gone = fresh ? [] : left.filter((m) => m.leftOn >= since).map((m) => m.name);
+  const week = (m, kind = "total") => m.gains["7"]?.[kind] ?? 0;
   const gainers = members
-    .filter((m) => (m.gains["7"]?.total ?? 0) > 0)
-    .sort((a, b) => b.gains["7"].total - a.gains["7"].total)
+    .filter((m) => week(m) > 0)
+    .sort((a, b) => week(b) - week(a))
     .slice(0, TOP_GAINERS)
-    .map((m, i) => `${MEDALS[i] ?? `\`${i + 1}.\``} **${m.name}** · ${shortNumber(m.gains["7"].total)}`);
+    .map((m, i) => `${MEDALS[i] ?? `\`${i + 1}.\``} **${m.name}** · ${shortNumber(week(m))}`);
+  const weekFame = members.reduce((t, m) => t + week(m), 0);
+  const stars = STARS.map(([kind, icon, label]) => {
+    const best = members.reduce((top, m) => (week(m, kind) > (top ? week(top, kind) : 0) ? m : top), null);
+    return best ? `${icon} ${label} · **${best.name}** · ${shortNumber(week(best, kind))}` : null;
+  }).filter(Boolean);
   const lastDay = fights.filter((f) => now - Date.parse(f.startTime) <= DAY_MS);
   const kills = lastDay.reduce((t, f) => t + f.kills, 0);
   const deaths = lastDay.reduce((t, f) => t + f.deaths, 0);
+  // the fight of the day: the most players
+  const biggest = lastDay.reduce((top, f) => (!top || f.players > top.players ? f : top), null);
   const date = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   const bar = statusBar(counts);
+  const share = (n) => (guild.memberCount ? ` (${Math.round((n / guild.memberCount) * 100)}%)` : "");
+  const moves = fresh ? "" : ` · 📥 +${joined.length} · 📤 −${gone.length}`;
   return {
     username: "Blackmarket Reader",
     avatar_url: ICON,
     allowed_mentions: { parse: [] },
     embeds: [
       {
-        author,
+        author: { ...author, name: `Daily report · ${date}` },
         title: `🛡️ ${guild.allianceTag ? `[${guild.allianceTag}] ` : ""}${guild.name}`,
         url: guildUrl(guild, "activity"),
         description: [
-          `**Daily report** · ${date} · ${REGION[guild.region] ?? guild.region.toUpperCase()}`,
-          "",
-          `👥 **${guild.memberCount} members**`,
-          ...(bar ? [bar] : []),
-          `🟩 ${counts.active} active · 🟨 ${counts.quiet} quiet · 🟥 ${counts.inactive} inactive (14+ days)`
+          `-# 🌍 ${REGION[guild.region] ?? guild.region.toUpperCase()} · 👥 ${guild.memberCount} members${moves}`,
+          ...(lastDay.length
+            ? [`## ⚔️ ${kills} – ${deaths} 💀`, `${killBar(kills, deaths)}  **K/D ${kdOf(kills, deaths)}** · ${plural(lastDay.length, "fight")} in 24h`]
+            : ["## 🕊️ No fights in 24h"])
         ].join("\n"),
         color: ACCENT,
         fields: [
-          { name: "⚔️ Fights, 24h", value: `**${lastDay.length}**`, inline: true },
-          { name: "🗡️ Kills", value: `**${kills}**`, inline: true },
-          { name: "💀 Deaths", value: deaths ? `**${deaths}** · [regear](${guildUrl(guild, "regear")})` : "**0**", inline: true },
+          ...(biggest
+            ? [
+                {
+                  name: "🔥 Fight of the day",
+                  value: `[**${biggest.kills} – ${biggest.deaths}**](${battleUrl(guild.region, biggest.id)})${biggest.enemy ? ` vs ${biggest.enemy}` : ""} · ${biggest.ours} of ${biggest.players} players · <t:${Math.round(Date.parse(biggest.startTime) / 1000)}:t>${deaths ? `\n🛡️ ${plural(deaths, "death")} to regear: [open](${guildUrl(guild, "regear")})` : ""}`
+                }
+              ]
+            : []),
+          {
+            name: "👥 Roster",
+            value: [...(bar ? [bar] : []), `🟩 **${counts.active}** active${share(counts.active)} · 🟨 **${counts.quiet}** quiet · 🟥 **${counts.inactive}** inactive (14+ days)`].join("\n")
+          },
+          ...(gainers.length
+            ? [
+                { name: `🏆 Top fame · 7 days · +${shortNumber(weekFame)} in all`, value: gainers.join("\n"), inline: true },
+                ...(stars.length ? [{ name: "🌟 Stars of the week", value: stars.join("\n"), inline: true }] : [])
+              ]
+            : [{ name: "🏆 Top fame · 7 days", value: "Shows after a week of daily snapshots." }]),
           ...(fresh
             ? [{ name: "📥 Joined and 📤 left", value: "From the next report on: today is the guild's first snapshot." }]
             : [
-                { name: `📥 Joined (${joined.length})`, value: joined.length ? nameList(joined) : "Nobody", inline: true },
-                { name: `📤 Left (${gone.length})`, value: gone.length ? nameList(gone) : "Nobody", inline: true }
+                // one field each, not inline: inline ones would join the fame row above
+                { name: `📥 Joined (${joined.length})`, value: joined.length ? nameList(joined) : "Nobody" },
+                { name: `📤 Left (${gone.length})`, value: gone.length ? nameList(gone) : "Nobody" }
               ]),
-          { name: "🏆 Most fame, 7 days", value: gainers.length ? gainers.join("\n") : "Shows after a week of daily snapshots." },
-          {
-            name: "🔗 Open",
-            value: ["activity", "battles", "attendance", "regear"].map((tab) => `[${tab[0].toUpperCase()}${tab.slice(1)}](${guildUrl(guild, tab)})`).join(" · ")
-          }
+          { name: SPACER, value: tabLinks(guild) }
         ],
         footer: { text: "Daily snapshot · blackmarketreader.com", icon_url: ICON },
         timestamp: now.toISOString()
@@ -212,12 +257,16 @@ export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
   const regear = priced ? kills.filter((e) => e.victim.guildId === guild.id).reduce((t, e) => t + e.victim.gearValue, 0) : null;
   const start = Math.round(Date.parse(battle.startTime) / 1000);
   const minutes = Math.max(1, Math.round((Date.parse(battle.endTime) - Date.parse(battle.startTime)) / 60_000));
-  const battleUrl = `${SITE}/guild/battle/${guild.region}/${battle.id}`;
+  const url = battleUrl(guild.region, battle.id);
   const tag = guild.allianceTag ? `[${guild.allianceTag}] ` : "";
   // the MVP: most kill fame, then damage
   const mvp = [...ours].sort((a, b) => b.killFame - a.killFame || b.damage - a.damage).find((p) => p.killFame > 0 || p.damage > 0) ?? null;
-  const kd = d ? (k / d).toFixed(2) : k ? "∞" : "–";
   const table = enemyTable(enemies, ours.length);
+  // with prices: the most expensive kill of ours and the most expensive death
+  const mostValue = (list) => list.reduce((top, e) => (!top || e.victim.gearValue > top.victim.gearValue ? e : top), null);
+  const bestKill = priced ? mostValue(kills.filter((e) => e.killer?.guildId === guild.id && e.victim.guildId !== guild.id && e.victim.gearValue > 0)) : null;
+  const worstDeath = priced ? mostValue(kills.filter((e) => e.victim.guildId === guild.id && e.victim.gearValue > 0)) : null;
+  const balance = fameLost === null ? null : fame - fameLost;
   return {
     username: "Blackmarket Reader",
     avatar_url: ICON,
@@ -225,32 +274,35 @@ export function zvzReport(guild, { battle, guilds, players, kills, priced }) {
     embeds: [
       {
         author: { name: `ZvZ report · ${tag}${guild.name}`, url: guildUrl(guild, "battles"), icon_url: ICON },
-        title: `${result.icon} ${result.word}`,
-        url: battleUrl,
+        title: `${result.icon} ${result.word}${enemies[0] ? ` vs ${enemies[0].name}` : ""}`,
+        url,
         description: [
-          `## ${k} ⚔️ ${d}`,
-          `${killBar(k, d)}  **K/D ${kd}**`,
+          `# ${k} ⚔️ ${d}`,
+          `${killBar(k, d)}  **K/D ${kdOf(k, d)}**${balance === null ? "" : ` · ${balance >= 0 ? "📈 +" : "📉 −"}${shortNumber(Math.abs(balance))} fame`}`,
           `-# 🕒 <t:${start}:f> · ⏱️ ${minutes} min · 🌍 ${REGION[guild.region] ?? guild.region.toUpperCase()} · 👥 ${ours.length} of ${battle.players} players`
         ].join("\n"),
         color: result.color,
         ...(mvp?.weapon?.type ? { thumbnail: { url: `https://render.albiononline.com/v1/item/${encodeURIComponent(mvp.weapon.type)}.png?quality=${mvp.weapon.quality ?? 1}` } } : {}),
         fields: [
-          { name: "⭐ Kill fame", value: `**${shortNumber(fame)}**`, inline: true },
-          { name: "🩸 Fame lost", value: fameLost === null ? "–" : `**${shortNumber(fameLost)}**`, inline: true },
-          { name: "💰 Regear", value: regear === null ? `[open](${guildUrl(guild, "regear")})` : `**${shortNumber(regear)}** silver`, inline: true },
           ...(mvp
             ? [
                 {
                   name: "👑 MVP",
-                  value: `**${mvp.name}** · ${mvp.kills} kill${mvp.kills === 1 ? "" : "s"} · ${shortNumber(mvp.killFame)} fame · ${shortNumber(mvp.damage)} damage${mvp.itemPower ? ` · IP ${Math.round(mvp.itemPower)}` : ""}`
+                  value: `### ${mvp.name}\n${plural(mvp.kills, "kill")} · ${shortNumber(mvp.killFame)} fame · ${shortNumber(mvp.damage)} damage${mvp.itemPower ? ` · IP ${Math.round(mvp.itemPower)}` : ""}`
                 }
               ]
             : []),
+          { name: "⭐ Kill fame", value: `**${shortNumber(fame)}**`, inline: true },
+          { name: "🩸 Fame lost", value: fameLost === null ? "–" : `**${shortNumber(fameLost)}**`, inline: true },
+          { name: "💰 Regear", value: regear === null ? `[open](${guildUrl(guild, "regear")})` : `**${shortNumber(regear)}** silver`, inline: true },
           { name: "🔥 Damage", value: podium(ours, (p) => p.damage, shortNumber), inline: true },
           { name: "🏆 Kill fame", value: podium(ours, (p) => p.killFame, shortNumber), inline: true },
           { name: "💚 Support", value: podium(ours, (p) => p.healAssists, (n) => `${n} heals`), inline: true },
+          { name: "🎯 Kills", value: podium(ours, (p) => p.kills, (n) => plural(n, "kill")), inline: true },
+          ...(bestKill ? [{ name: "💎 Best kill", value: `**${bestKill.killer.name}** ➜ ${bestKill.victim.name}\n${shortNumber(bestKill.victim.gearValue)} silver of gear`, inline: true }] : []),
+          ...(worstDeath ? [{ name: "💸 Biggest loss", value: `**${worstDeath.victim.name}**\n${shortNumber(worstDeath.victim.gearValue)} silver of gear`, inline: true }] : []),
           ...(table ? [{ name: "🆚 Who was there", value: table }] : []),
-          { name: "\u200b", value: `[📜 Battle report](${battleUrl})  ·  [🛡️ Regear](${guildUrl(guild, "regear")})  ·  [📋 Attendance](${guildUrl(guild, "attendance")})` }
+          { name: SPACER, value: `[📜 Battle report](${url})  ·  [🛡️ Regear](${guildUrl(guild, "regear")})  ·  [📋 Attendance](${guildUrl(guild, "attendance")})` }
         ],
         image: { url: `${SITE}/picture/zvz-${kind}.jpg` },
         footer: { text: "Guild Pro · blackmarketreader.com", icon_url: ICON },
