@@ -106,6 +106,9 @@
   font-size: 16px;
   color: var(--cc-muted);
 }
+.fp-sub b {
+  color: var(--cc-gold-hi);
+}
 
 .fp-row {
   grid-template-columns: minmax(230px, 2.3fr) 1.1fr repeat(4, minmax(76px, 1fr));

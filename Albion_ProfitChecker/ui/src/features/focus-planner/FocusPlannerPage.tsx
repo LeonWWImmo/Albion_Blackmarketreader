@@ -30,6 +30,7 @@ import "../city-crafter/cityCrafter.css";
 import "./focusPlanner.css";
 
 const BUDGETS = [10000, 20000, 30000];
+const MORE = 25;
 const ALL = "All cities";
 
 type Line = FocusCandidate & { crafts?: number; total?: number; competition: Competition | null; depth: Depth | null };
@@ -50,9 +51,10 @@ export function FocusPlannerPage() {
   const [usageFee, setUsageFee] = useSessionState("fp-usage-fee", 1000);
   const [tiers, setTiers] = useSessionState<number[]>("fp-tiers", [4, 5, 6, 7, 8]);
   const [enchants, setEnchants] = useSessionState<number[]>("fp-enchants", [0, 1, 2, 3]);
-  const [minSold, setMinSold] = useSessionState("fp-min-sold", 3);
+  const [minSold, setMinSold] = useSessionState("fp-min-sold-v2", 1);
   const [hideCrowded, setHideCrowded] = useSessionState("fp-hide-crowded", false);
   const [open, setOpen] = useState<string | null>(null);
+  const [shown, setShown] = useState(MORE);
   const [showSpecs, setShowSpecs] = useState(false);
 
   const [live, setLive] = useState<LiveStatus>({ kind: "loading" });
@@ -142,6 +144,7 @@ export function FocusPlannerPage() {
   if (!visible) return <Navigate to="/" replace />;
 
   const crafts = plan.lines.reduce((n, l) => n + l.crafts, 0);
+  const rest = useMemo(() => candidates.filter((c) => !plan.lines.some((l) => l.row.id === c.row.id && l.city === c.city)), [candidates, plan]);
 
   return (
     <div className="cc-root">
@@ -250,8 +253,15 @@ export function FocusPlannerPage() {
             </section>
 
             <section className="cc-results" aria-label="More crafts">
-              <h3 className="fp-sub">Next best per focus point</h3>
-              <PlanTable lines={candidates.filter((c) => !plan.lines.some((l) => l.row.id === c.row.id && l.city === c.city)).slice(0, 15)} open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} depthAt={depth?.depthAt ?? null} />
+              <h3 className="fp-sub">
+                Next best per focus point <b>· {rest.length} more pay</b>
+              </h3>
+              <PlanTable lines={rest.slice(0, shown)} open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} depthAt={depth?.depthAt ?? null} />
+              {rest.length > shown ? (
+                <button type="button" className="cc-more" onClick={() => setShown(shown + MORE)}>
+                  Show more ({rest.length - shown})
+                </button>
+              ) : null}
               <p className="cc-fine">
                 Focus with your specs from the Crafting Calculator. Competition: pieces listed at or below the price, checked twice a day; crowded
                 = more than {CROWDED_DAYS} days of sales.

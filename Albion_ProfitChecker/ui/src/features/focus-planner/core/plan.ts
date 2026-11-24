@@ -47,7 +47,7 @@ export function focusCandidates(book: PriceBook, recipes: readonly BmRecipe[], o
  * The day's plan: the best crafts first, each as often as the focus left allows but no more than
  * the city sells of it a day (more would only wait on the market).
  */
-export function planFocus<T extends FocusCandidate>(candidates: readonly T[], budget: number, maxLines = 12) {
+export function planFocus<T extends FocusCandidate>(candidates: readonly T[], budget: number, maxLines = Infinity) {
   let left = Math.max(0, budget);
   const lines: Array<T & Omit<FocusLine, keyof FocusCandidate>> = [];
   for (const c of candidates) {
