@@ -30,7 +30,7 @@ const FEATURES: Feature[] = [
     key: "alerts",
     title: "Price alerts",
     line: "Name your price. Discord pings you when the market hits it.",
-    points: ["Up to 25 items", "Drops below or buy order above", "Straight to your own channel"],
+    points: ["Up to 25 items, any tier, enchant and quality", "Instant buy (sell order below) or instant sell (buy order above)", "Straight to your own channel"],
     where: "Price Checker",
     visual: <AlertVisual />
   },
@@ -54,11 +54,22 @@ const FEATURES: Feature[] = [
     key: "city",
     title: "City Crafter",
     line: "Buy, craft and sell in one city. No transport, nothing to lose on the road.",
-    points: ["Every craft in every city, live", "Materials from the cheapest city", "Focus Planner: where your focus earns most"],
-    where: "City Crafter and Focus Planner",
+    points: ["Every craft in every city, T4 to T8, .0 to .4", "Materials from the cheapest city, journals filled in", "Profit a day from what the city really sells"],
+    where: "City Crafter",
     visual: <CityVisual />
+  },
+  {
+    key: "focus",
+    title: "Focus Planner",
+    line: "Type your focus, get the day's plan: what to craft, where and how often.",
+    points: ["Every craft ranked by silver per focus point", "Your specs from the Crafting Calculator, synced", "Never more than the city sells a day"],
+    where: "Focus Planner",
+    visual: <FocusVisual />
   }
 ];
+
+/** What stays free, said once more next to the price. */
+const FREE: string[] = ["Dashboard", "Price Checker", "All calculators", "Loot Split", "Gold Tracker", "Guild tools"];
 
 /** The tape: example deals as the live market finds them. */
 const TAPE: Array<[string, string, string]> = [
@@ -178,7 +189,8 @@ export function PremiumPage() {
 
   useSeo({
     title: "Premium | Blackmarket Reader",
-    description: "Blackmarket Reader Premium: the live market every 30 minutes, price alerts in Discord, Guild Pro with ZvZ reports and live prices in every calculator. Every free tool stays free.",
+    description:
+      "Blackmarket Reader Premium: the live market every 30 minutes, price alerts in Discord, Guild Pro with ZvZ reports, live prices in every calculator, the City Crafter and the Focus Planner. Every free tool stays free.",
     canonical: "https://blackmarketreader.com/premium",
     noindex: !PREMIUM_OPEN
   });
@@ -302,7 +314,13 @@ export function PremiumPage() {
             <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
             {error ? <p className="ob-error">{error}</p> : null}
           </div>
-          <p className="ob-fine">Cancel any time · Paid through Stripe · Every free tool stays free</p>
+          <p className="ob-fine">Cancel any time · Paid through Stripe</p>
+          <div className="ob-free">
+            <span>Always free</span>
+            {FREE.map((tool) => (
+              <i key={tool}>✓ {tool}</i>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -440,6 +458,38 @@ function CityVisual() {
       <p className="ov-city-best">
         ★ Master's Siege Hammer · <b>+18.132</b> a craft · 313 sold a day
       </p>
+    </div>
+  );
+}
+
+function FocusVisual() {
+  const plan: Array<[string, string, string]> = [
+    ["Elder's Bag", "× 3", "+412.000"],
+    ["Master's Fire Staff", "× 6", "+268.900"],
+    ["Expert's Cowl", "× 12", "+169.500"]
+  ];
+  return (
+    <div className="ov-focus">
+      <p className="ov-focus-head">
+        <span>
+          <b>10.000</b> focus
+        </span>
+        <em>→</em>
+        <strong className="ob-foil">+850.400</strong>
+      </p>
+      <div className="ov-focus-bar">
+        <i style={{ "--w": "46%" } as CSSProperties} />
+        <i style={{ "--w": "31%" } as CSSProperties} />
+        <i style={{ "--w": "23%" } as CSSProperties} />
+      </div>
+      {plan.map(([item, crafts, total], i) => (
+        <div key={item} className="ov-focus-row" style={{ "--d": `${i * 0.12}s` } as CSSProperties}>
+          <b>{item}</b>
+          <span>{crafts}</span>
+          <ins>{total}</ins>
+        </div>
+      ))}
+      <p className="ov-city-best">✓ Specs synced from the Crafting Calculator</p>
     </div>
   );
 }

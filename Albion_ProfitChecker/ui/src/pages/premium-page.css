@@ -395,6 +395,20 @@ h1.ob-foil {
 .ov-city-row em { font-style: normal; font-family: "JetBrains Mono", monospace; color: var(--ob-gold-hi); }
 .ov-city-best { margin: 4px 0 0; font-size: 13px; color: var(--ob-muted); }
 .ov-city-best b { color: var(--ob-green); }
+.ob-card.is-focus { --hue: 224, 178, 82; }
+.ov-focus { display: grid; gap: 10px; }
+.ov-focus-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 0; color: var(--ob-muted); }
+.ov-focus-head b { font: 800 22px "JetBrains Mono", monospace; color: #fff; }
+.ov-focus-head em { font-style: normal; font-size: 22px; color: var(--ob-gold-hi); }
+.ov-focus-head strong { font: 900 clamp(30px, 4vw, 44px) "JetBrains Mono", monospace; }
+.ov-focus-bar { display: flex; gap: 3px; height: 10px; }
+.ov-focus-bar i { width: var(--w); border-radius: 5px; background: linear-gradient(90deg, #b8862f, var(--ob-gold-hi)); }
+.ov-focus-bar i + i { opacity: 0.6; }
+.ov-focus-bar i + i + i { opacity: 0.35; }
+.ov-focus-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 9px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); font-size: 14px; }
+.ov-focus-row b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-focus-row span { font-family: "JetBrains Mono", monospace; color: var(--ob-muted); }
+.ov-focus-row ins { text-decoration: none; font-family: "JetBrains Mono", monospace; font-weight: 800; color: var(--ob-green); }
 
 /* live crafting */
 .ov-craft { display: grid; gap: 10px; }
@@ -462,6 +476,9 @@ h1.ob-foil {
 .ob-active { display: inline-flex; align-items: center; gap: 10px; margin: 0; font-weight: 700; }
 .ob-badge { padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #1a1306; background: var(--ob-foil); }
 .ob-fine { margin: 28px 0 0; font-size: 12px; letter-spacing: 0.06em; color: var(--ob-faint); }
+.ob-free { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 18px; max-width: 560px; }
+.ob-free span { width: 100%; font-size: 11px; font-weight: 800; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ob-muted); }
+.ob-free i { font-style: normal; padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; color: var(--ob-muted); }
 
 .ob-foot {
   display: flex;
