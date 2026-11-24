@@ -24,7 +24,7 @@ import { computeFocusEfficiency, resolveSpecKey } from "../crafting-calculator/s
 import { SpecsModal } from "../crafting-calculator/specs/SpecsModal";
 import { useCraftingSpecs } from "../crafting-calculator/specs/useCraftingSpecs";
 import { competitionOf, CROWDED_DAYS, type Competition } from "./core/competition";
-import { focusCandidates, planFocus, type FocusCandidate } from "./core/plan";
+import { focusRows, planFocus, rankFocus, type FocusCandidate } from "./core/plan";
 import "../bm-crafter/ui/bmCrafter.css";
 import "../city-crafter/cityCrafter.css";
 import "./focusPlanner.css";
@@ -50,7 +50,7 @@ export function FocusPlannerPage() {
   const [premiumTax, setPremiumTax] = useSessionState("fp-premium-tax", true);
   const [usageFee, setUsageFee] = useSessionState("fp-usage-fee", 1000);
   const [tiers, setTiers] = useSessionState<number[]>("fp-tiers", [4, 5, 6, 7, 8]);
-  const [enchants, setEnchants] = useSessionState<number[]>("fp-enchants", [0, 1, 2, 3]);
+  const [enchants, setEnchants] = useSessionState<number[]>("fp-enchants-v2", [0, 1, 2, 3, 4]);
   const [minSold, setMinSold] = useSessionState("fp-min-sold-v2", 1);
   const [hideCrowded, setHideCrowded] = useSessionState("fp-hide-crowded", false);
   const [open, setOpen] = useState<string | null>(null);
@@ -116,9 +116,10 @@ export function FocusPlannerPage() {
     return dataMode === "daily" ? dailyBook(daily, snap) : mixBook(liveOnly, dailyBook(daily, snap));
   }, [snap, now, daily, dataMode]);
 
-  const candidates: Line[] = useMemo(() => {
+  // three steps, so a spec or competition change does not price every craft again
+  const rows = useMemo(() => {
     if (!book || !recipes.length) return [];
-    const list = focusCandidates(book, recipes, {
+    return focusRows(book, recipes, {
       cities: where === ALL ? CRAFT_CITIES : [where],
       matFrom,
       buy: "instant",
@@ -128,17 +129,24 @@ export function FocusPlannerPage() {
       tiers,
       enchants,
       bonuses: festivities.craftBonuses,
-      efficiencyOf: (baseId, categoryKey) => computeFocusEfficiency(specs.progress, resolveSpecKey({ id: baseId }), { id: baseId, categoryKey }, specItems),
       minRoi: 0,
       minSold
     });
-    return list
-      .map((c) => {
-        const d = depthAt(depth, c.row.id, c.city);
-        return { ...c, depth: d, competition: competitionOf(d, c.row.sale.unit, c.row.sold) };
-      })
-      .filter((c) => !hideCrowded || !c.competition?.crowded);
-  }, [book, recipes, where, matFrom, sell, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, specs.progress, specItems, minSold, depth, hideCrowded]);
+  }, [book, recipes, where, matFrom, sell, premiumTax, usageFee, tiers, enchants, festivities.craftBonuses, minSold]);
+  const ranked = useMemo(
+    () => rankFocus(rows, (baseId, categoryKey) => computeFocusEfficiency(specs.progress, resolveSpecKey({ id: baseId }), { id: baseId, categoryKey }, specItems)),
+    [rows, specs.progress, specItems]
+  );
+  const candidates: Line[] = useMemo(
+    () =>
+      ranked
+        .map((c) => {
+          const d = depthAt(depth, c.row.id, c.city);
+          return { ...c, depth: d, competition: competitionOf(d, c.row.sale.unit, c.row.sold) };
+        })
+        .filter((c) => !hideCrowded || !c.competition?.crowded),
+    [ranked, depth, hideCrowded]
+  );
   const plan = useMemo(() => planFocus(candidates, budget), [candidates, budget]);
 
   if (!visible) return <Navigate to="/" replace />;

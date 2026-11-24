@@ -42,8 +42,8 @@ export function CityCrafterPage() {
   const [premiumTax, setPremiumTax] = useSessionState("cc-premium-tax", true);
   const [usageFee, setUsageFee] = useSessionState("cc-usage-fee", 1000);
   const [tiers, setTiers] = useSessionState<number[]>("cc-tiers", [4, 5, 6, 7, 8]);
-  const [enchants, setEnchants] = useSessionState<number[]>("cc-enchants", [0, 1, 2, 3]);
-  const [minSold, setMinSold] = useSessionState("cc-min-sold", 3);
+  const [enchants, setEnchants] = useSessionState<number[]>("cc-enchants-v2", [0, 1, 2, 3, 4]);
+  const [minSold, setMinSold] = useSessionState("cc-min-sold-v2", 1);
   const [minRoi, setMinRoi] = useSessionState("cc-min-roi", 10);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useSessionState<SortKey>("cc-sort", "daily");

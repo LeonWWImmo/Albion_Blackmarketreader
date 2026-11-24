@@ -9,31 +9,30 @@ export const SPEC_LEVEL_MIN = 0;
 export const SPEC_LEVEL_MAX = 100;
 
 /**
- * Focus cost efficiency model (matches in-game wiki formula + community cheatsheet).
+ * Focus cost efficiency model, checked against the game's data files (ao-data/ao-bin-dumps:
+ * gamedata.xml costreductionconstant 1.00695555 ^ 100 = 2, achievements.xml crafting nodes).
  *
  *   focus = base * 0.5^(efficiency / 10000)
  *   efficiency = mastery * 30
- *              + activeSpec * uniqueBonus               // per-item unique
- *              + Σ(siblingSpec * mutualBonus)            // per-sibling mutual
+ *              + activeSpec * (uniqueBonus + mutualBonus)  // a node's shared bonus covers its own item too
+ *              + Σ(siblingSpec * siblingMutualBonus)
  *
- * Per-item bonuses verified against community-maintained spreadsheet
- * (Focus & Fee tab in Goldenium2024 sheet):
+ *  | Item type                          | unique | mutual |
+ *  | ---------------------------------- | ------ | ------ |
+ *  | Regular item                       |   250  |  30    |
+ *  | Artefact item (HELL/MORGANA/...)   |   250  |  15    |
+ *  | Leather armour artefact            |   250  |  12.5  |
+ *  | Crystal item                       |   250  |  2.15  |
+ *  | Base off-hand (Tome, Shield, Torch)|   250  |  90    |
+ *  | Tool                               |   250  |  60    |
+ *  | Bag / Satchel of Insight           |   310  |  30    |
+ *  | Siege hammer                       |   310  |  30    |
+ *  | Cape                               |   340  |  30    |
  *
- *  | Item type                    | unique | mutual |
- *  | ---------------------------- | ------ | ------ |
- *  | Bag / Satchel of Insight     |   340  |   0    |
- *  | Cape                         |   370  |   0    |
- *  | Avalonian Demolition Hammer  |   370  |  30    |
- *  | Tool (incl. Avalonian tools) |   250  |  60    |
- *  | Artefact item (HELL/MORGANA/ |   250  |  15    |
- *  |  KEEPER/AVALON/UNDEAD/...)   |        |        |
- *  | Regular item                 |   250  |  30    |
+ *  - Mastery (0–100) of the item's group: 30 efficiency per level (max 3,000).
+ *  - Broadsword at 100/100 with no other specs: 3,000 + 100 * 280 = 31,000.
  *
- *  - Active item's mastery (item-power 0–100): 30 efficiency per level (max 3,000).
- *    Assumed = 100 whenever active spec > 0 (spec progression requires mastery 100).
- *  - Active node NOT in the mutual sum (only siblings contribute mutual).
- *
- * Specs do NOT affect resource return rate.
+ * Specs do NOT affect resource return rate (they raise the quality chance, not modelled here).
  */
 export const MASTERY_EFFICIENCY_PER_LEVEL = 30;
 export const FOCUS_EFFICIENCY_HALF_LIFE = 10000;
@@ -48,12 +47,14 @@ export function getSpecBonuses(item: { id?: string; categoryKey?: string } | nul
   const id = String(item.id).toUpperCase();
   const category = String(item.categoryKey || "");
 
-  if (id === "BAG" || id === "BAG_INSIGHT") return { unique: 340, mutual: 0 };
-  if (id === "CAPE") return { unique: 370, mutual: 0 };
-  if (id.startsWith("2H_TOOL_SIEGEHAMMER")) return { unique: 370, mutual: 30 };
+  if (id === "BAG" || id === "BAG_INSIGHT") return { unique: 310, mutual: 30 };
+  if (id === "CAPE") return { unique: 340, mutual: 30 };
+  if (id.startsWith("2H_TOOL_SIEGEHAMMER")) return { unique: 310, mutual: 30 };
   if (id.startsWith("2H_TOOL_") || category === "tools") return { unique: 250, mutual: 60 };
 
-  if (ARTEFACT_SUFFIX_PATTERN.test(id)) return { unique: 250, mutual: 15 };
+  if (id.endsWith("_CRYSTAL")) return { unique: 250, mutual: 2.15 };
+  if (ARTEFACT_SUFFIX_PATTERN.test(id)) return { unique: 250, mutual: LEATHER_TOKENS.some((t) => id.startsWith(t)) ? 12.5 : 15 };
+  if (BASE_OFFHANDS.includes(id)) return { unique: 250, mutual: 90 };
 
   return { unique: 250, mutual: 30 };
 }
@@ -97,8 +98,12 @@ export function getStationLabel(station: SpecStation): string {
 const PLATE_TOKENS = ["HEAD_PLATE", "ARMOR_PLATE", "SHOES_PLATE"];
 const LEATHER_TOKENS = ["HEAD_LEATHER", "ARMOR_LEATHER", "SHOES_LEATHER"];
 const CLOTH_TOKENS = ["HEAD_CLOTH", "ARMOR_CLOTH", "SHOES_CLOTH"];
-const OFFHAND_SHIELD_TOKENS = ["OFF_SHIELD", "OFF_SPIKEDSHIELD"];
-const OFFHAND_HUNTER_TOKENS = ["OFF_TORCH", "OFF_TOTEM", "OFF_HORN"];
+// Warrior: Shield, Sarcophagus, Caitiff Shield, Facebreaker, Astral Aegis.
+// Hunter: Torch, Mistcaller, Leering Cane, Cryptcandle, Sacred Scepter. Mage: the rest (Tome, Taproot, ...).
+const OFFHAND_SHIELD_TOKENS = ["OFF_SHIELD", "OFF_SPIKEDSHIELD", "OFF_TOWERSHIELD"];
+const OFFHAND_HUNTER_TOKENS = ["OFF_TORCH", "OFF_HORN", "OFF_JESTERCANE", "OFF_LAMP", "OFF_TALISMAN"];
+/** the plain off-hands, whose node shares 90 efficiency per level with their group */
+const BASE_OFFHANDS = ["OFF_SHIELD", "OFF_TORCH", "OFF_BOOK"];
 const GATHERER_TOKENS = ["HEAD_GATHERER", "ARMOR_GATHERER", "SHOES_GATHERER", "BACKPACK_GATHERER"];
 
 /** Resolve which station an item is crafted at. */
@@ -258,7 +263,8 @@ export function computeFocusEfficiency(
 
   const activeBonuses = getSpecBonuses(activeItem);
   const masteryEff = activeMastery * MASTERY_EFFICIENCY_PER_LEVEL;
-  const uniqueEff = activeSpec * activeBonuses.unique;
+  // the node's shared bonus covers its own item as well
+  const uniqueEff = activeSpec * (activeBonuses.unique + activeBonuses.mutual);
 
   if (!activeGroup) return uniqueEff + masteryEff;
 
