@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -170,12 +170,6 @@ function devApi(): Plugin {
               .catch((err) => console.warn("dev live market volume", err instanceof Error ? err.message : err));
           }
           if (!row?.prices) await marketFetching.get(region)?.catch((err) => console.warn("dev live market", err instanceof Error ? err.message : err));
-        }
-        // market depth: what scripts/market-depth.mjs wrote with DEPTH_OUT=node_modules/.cache/bmr-depth
-        if (action === "depth" && market.LIVE_REGIONS.includes(region) && !(await store.readDepth(region))) {
-          const file = path.join(rootDir, `node_modules/.cache/bmr-depth/depth-${region}.json`);
-          const saved = await readFile(file, "utf8").then(JSON.parse).catch(() => null);
-          if (saved?.depth) await store.write(region, { depth: saved.depth, depthAt: (await stat(file)).mtime.toISOString() });
         }
         const env = (name: string) => envJs.match(new RegExp(`${name}:\\s*"([^"]+)"`))?.[1] ?? "";
         const auth = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } }).auth;

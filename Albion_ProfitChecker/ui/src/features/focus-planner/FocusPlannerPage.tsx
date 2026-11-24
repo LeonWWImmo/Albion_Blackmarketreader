@@ -1,7 +1,6 @@
 // Focus Planner (premium, hidden until the launch): how to spend a day's focus for the most silver.
 // The City Crafter's prices and engine with focus on (core/plan.ts), the player's specs from the
-// Crafting Calculator (same storage and account sync), and the competition on each craft's market
-// from the market depth (core/competition.ts).
+// Crafting Calculator (same storage and account sync).
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { assetUrl } from "@shared/assets/assets";
@@ -12,18 +11,16 @@ import { premiumVisible } from "@shared/premium/premium";
 import { useRegion } from "@shared/region/useRegion";
 import { useSeo } from "@shared/seo/useSeo";
 import { loadLive, type LiveStatus } from "@shared/live/liveData";
-import { depthAt, loadDepth, type Depth, type DepthSnapshot } from "@shared/live/depthData";
 import { MobileNavBurger, ToolNav, useFestivities, useSessionState } from "../../shared";
 import type { BmRecipe } from "../bm-crafter";
 import { iconUrl } from "../price-checker/core/items";
 import { dailyBook, liveBook, mixBook, type DailyPrices, type PriceBook } from "../city-crafter/core/books";
 import { CRAFT_CITIES, type MatFrom, type SellMode } from "../city-crafter/core/cityCraft";
 import { CraftDetail } from "../city-crafter/CraftDetail";
-import { age, Chips, CREST, ENCHANT_COLOR, ENCHANTS, loadDaily, loadRecipes, nowMinute, NumberField, Seg, short, silver, TIERS, type DataMode } from "../city-crafter/kit";
+import { Chips, CREST, ENCHANT_COLOR, ENCHANTS, loadDaily, loadRecipes, nowMinute, NumberField, Seg, short, silver, TIERS, type DataMode } from "../city-crafter/kit";
 import { computeFocusEfficiency, resolveSpecKey } from "../crafting-calculator/specs/data";
 import { SpecsModal } from "../crafting-calculator/specs/SpecsModal";
 import { useCraftingSpecs } from "../crafting-calculator/specs/useCraftingSpecs";
-import { competitionOf, CROWDED_DAYS, type Competition } from "./core/competition";
 import { focusRows, planFocus, rankFocus, type FocusCandidate } from "./core/plan";
 import "../bm-crafter/ui/bmCrafter.css";
 import "../city-crafter/cityCrafter.css";
@@ -33,7 +30,7 @@ const BUDGETS = [10000, 20000, 30000];
 const MORE = 25;
 const ALL = "All cities";
 
-type Line = FocusCandidate & { crafts?: number; total?: number; competition: Competition | null; depth: Depth | null };
+type Line = FocusCandidate & { crafts?: number; total?: number };
 
 export function FocusPlannerPage() {
   const visible = premiumVisible();
@@ -52,7 +49,6 @@ export function FocusPlannerPage() {
   const [tiers, setTiers] = useSessionState<number[]>("fp-tiers", [4, 5, 6, 7, 8]);
   const [enchants, setEnchants] = useSessionState<number[]>("fp-enchants-v2", [0, 1, 2, 3, 4]);
   const [minSold, setMinSold] = useSessionState("fp-min-sold-v2", 1);
-  const [hideCrowded, setHideCrowded] = useSessionState("fp-hide-crowded", false);
   const [open, setOpen] = useState<string | null>(null);
   const [shown, setShown] = useState(MORE);
   const [showSpecs, setShowSpecs] = useState(false);
@@ -60,7 +56,6 @@ export function FocusPlannerPage() {
   const [live, setLive] = useState<LiveStatus>({ kind: "loading" });
   const [recipes, setRecipes] = useState<BmRecipe[]>([]);
   const [daily, setDaily] = useState<DailyPrices | null>(null);
-  const [depth, setDepth] = useState<DepthSnapshot | null>(null);
 
   // the specs of the Crafting Calculator: same browser storage and the same account sync
   const [authService, setAuthService] = useState<AuthService | null>(null);
@@ -91,7 +86,6 @@ export function FocusPlannerPage() {
     setLive({ kind: "loading" });
     void loadLive(region).then((status) => alive && setLive(status));
     void loadRecipes().then((list) => alive && setRecipes(list));
-    void loadDepth(region).then((status) => alive && setDepth(status.kind === "ok" ? status.snap : null));
     return () => {
       alive = false;
     };
@@ -116,7 +110,7 @@ export function FocusPlannerPage() {
     return dataMode === "daily" ? dailyBook(daily, snap) : mixBook(liveOnly, dailyBook(daily, snap));
   }, [snap, now, daily, dataMode]);
 
-  // three steps, so a spec or competition change does not price every craft again
+  // two steps, so a spec change does not price every craft again
   const rows = useMemo(() => {
     if (!book || !recipes.length) return [];
     return focusRows(book, recipes, {
@@ -137,16 +131,7 @@ export function FocusPlannerPage() {
     () => rankFocus(rows, (baseId, categoryKey) => computeFocusEfficiency(specs.progress, resolveSpecKey({ id: baseId }), { id: baseId, categoryKey }, specItems)),
     [rows, specs.progress, specItems]
   );
-  const candidates: Line[] = useMemo(
-    () =>
-      ranked
-        .map((c) => {
-          const d = depthAt(depth, c.row.id, c.city);
-          return { ...c, depth: d, competition: competitionOf(d, c.row.sale.unit, c.row.sold) };
-        })
-        .filter((c) => !hideCrowded || !c.competition?.crowded),
-    [ranked, depth, hideCrowded]
-  );
+  const candidates: Line[] = ranked;
   const plan = useMemo(() => planFocus(candidates, budget), [candidates, budget]);
 
   if (!visible) return <Navigate to="/" replace />;
@@ -247,7 +232,6 @@ export function FocusPlannerPage() {
               <Seg label="Prices" value={dataMode} onChange={setDataMode} options={[["live", "Live"], ["fill", "Live + daily"], ["daily", "Daily"]]} />
               <Seg label="Materials" value={matFrom} onChange={setMatFrom} options={[["cheapest", "Cheapest city"], ["city", "Crafting city"]]} />
               <Seg label="Sell" value={sell} onChange={setSell} options={[["order", "Sell order"], ["instant", "Instant"]]} />
-              <Seg label="Competition" value={hideCrowded ? "hide" : "all"} onChange={(v) => setHideCrowded(v === "hide")} options={[["all", "Show all"], ["hide", "Hide crowded"]]} />
               <Chips label="Tier" all={TIERS} on={tiers} set={setTiers} text={(t) => `T${t}`} />
               <Chips label="Enchant" all={ENCHANTS} on={enchants} set={setEnchants} text={(e) => `.${e}`} />
               <Seg label="Tax" value={premiumTax ? "4" : "8"} onChange={(v) => setPremiumTax(v === "4")} options={[["4", "4 %"], ["8", "8 %"]]} />
@@ -256,7 +240,7 @@ export function FocusPlannerPage() {
             </section>
 
             <section className="cc-results" aria-label="Today's plan">
-              <PlanTable lines={plan.lines} plan open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} depthAt={depth?.depthAt ?? null} />
+              <PlanTable lines={plan.lines} plan open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} />
               {!plan.lines.length ? <p className="cc-note">Nothing fits: more focus, more tiers or a lower sold-per-day floor.</p> : null}
             </section>
 
@@ -264,15 +248,15 @@ export function FocusPlannerPage() {
               <h3 className="fp-sub">
                 Next best per focus point <b>· {rest.length} more pay</b>
               </h3>
-              <PlanTable lines={rest.slice(0, shown)} open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} depthAt={depth?.depthAt ?? null} />
+              <PlanTable lines={rest.slice(0, shown)} open={open} setOpen={setOpen} sell={sell} now={now} usageFee={usageFee} />
               {rest.length > shown ? (
                 <button type="button" className="cc-more" onClick={() => setShown(shown + MORE)}>
                   Show more ({rest.length - shown})
                 </button>
               ) : null}
               <p className="cc-fine">
-                Focus with your specs from the Crafting Calculator. Competition: pieces listed at or below the price, checked twice a day; crowded
-                = more than {CROWDED_DAYS} days of sales.
+                Focus with your specs from the Crafting Calculator. Sold / day: the city's 7-day average, all qualities; a plan crafts at most a
+                day's sales of an item.
               </p>
             </section>
           </>
@@ -302,10 +286,9 @@ type TableProps = {
   sell: SellMode;
   now: number;
   usageFee: number;
-  depthAt: string | null;
 };
 
-function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee, depthAt }: TableProps) {
+function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee }: TableProps) {
   return (
     <div className="cc-table" role="table">
       <div className={`cc-row cc-row-head fp-row${plan ? " is-plan" : ""}`} role="row">
@@ -315,7 +298,7 @@ function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee, de
         <span role="columnheader">Focus</span>
         <span role="columnheader">Profit</span>
         <span role="columnheader">Silver / focus</span>
-        <span role="columnheader">Competition</span>
+        <span role="columnheader">Sold / day</span>
         {plan ? <span role="columnheader">Total</span> : null}
       </div>
       {lines.map((l) => {
@@ -349,18 +332,7 @@ function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee, de
               <span role="cell" data-label="Focus">{silver(l.focus)}</span>
               <span role="cell" data-label="Profit" className="cc-profit">+{silver(l.row.profit)}</span>
               <span role="cell" data-label="Silver / focus" className="cc-daily">{l.perFocus.toFixed(1)}</span>
-              <span role="cell" data-label="Competition" className={`fp-comp${l.competition ? (l.competition.crowded ? " is-crowded" : " is-open") : ""}`}>
-                {l.competition ? (
-                  <>
-                    {l.competition.ahead} listed
-                    <small>{l.competition.days === null ? "no sales" : `${l.competition.days.toFixed(1)} days`}</small>
-                  </>
-                ) : (
-                  <>
-                    –<small>not seen</small>
-                  </>
-                )}
-              </span>
+              <span role="cell" data-label="Sold / day">{soldText(l.row.sold)}</span>
               {plan ? (
                 <span role="cell" data-label="Total" className="cc-daily">
                   +{short(l.total ?? 0)}
@@ -375,7 +347,6 @@ function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee, de
                 now={now}
                 usageFee={usageFee}
                 focus={{ perCraft: l.focus, perFocus: l.perFocus, efficiency: l.efficiency }}
-                extra={<MarketPanel line={l} now={now} depthAt={depthAt} />}
               />
             ) : null}
           </div>
@@ -385,48 +356,5 @@ function PlanTable({ lines, plan = false, open, setOpen, sell, now, usageFee, de
   );
 }
 
-/** The competition on one craft's market: what is listed (cheapest first) and what buy orders want. */
-function MarketPanel({ line, now, depthAt }: { line: Line; now: number; depthAt: string | null }) {
-  const { depth, competition: c } = line;
-  if (!depth) {
-    return (
-      <div className="fp-market">
-        <h4>Market in {line.city}</h4>
-        <p className="cc-note">
-          {depthAt ? "Nobody opened this item there during the last check (twice a day)." : "The competition check has not run yet (twice a day)."}
-        </p>
-      </div>
-    );
-  }
-  const most = Math.max(1, ...depth.sell.slice(0, 6).map(([, a]) => a));
-  return (
-    <div className="fp-market">
-      <h4>
-        Market in {line.city} <small>seen {age(now - depth.seen)} ago</small>
-      </h4>
-      <div className="fp-market-chips">
-        <span>
-          <b>{c?.ahead ?? 0}</b> listed at or below {silver(line.row.sale.unit)}
-        </span>
-        <span>
-          <b>{depth.sellTotal}</b> listed in all
-        </span>
-        <span>
-          <b>{depth.buyTotal}</b> wanted by buy orders
-        </span>
-        <span className={c?.crowded ? "is-crowded" : "is-open"}>
-          <b>{c?.days === null || c?.days === undefined ? "–" : c.days.toFixed(1)}</b> days of sales ahead of you
-        </span>
-      </div>
-      <div className="fp-ladder">
-        {depth.sell.slice(0, 6).map(([price, amount]) => (
-          <div key={price} className={price <= line.row.sale.unit ? "is-ahead" : ""}>
-            <span>{silver(price)}</span>
-            <i style={{ "--w": `${(amount / most) * 100}%` } as CSSProperties} />
-            <b>{amount}</b>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/** What the city sells a day (7-day average): "0.4", "3.5", "120". */
+const soldText = (sold: number) => (sold < 10 ? sold.toFixed(1) : silver(Math.round(sold)));

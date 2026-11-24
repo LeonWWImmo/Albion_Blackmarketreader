@@ -14,7 +14,6 @@
 
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { validDepth } from "./marketDepth.js";
 
 /** The markets of a snapshot, in the order every price array uses. */
 export const LIVE_LOCATIONS = ["Black Market", "Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
@@ -219,7 +218,6 @@ export async function liveAnswer(store, region, nowMs = Date.now()) {
 export function clearLiveCache() {
   liveCache.clear();
   teaserCache.clear();
-  depthCache.clear();
 }
 
 /**
@@ -238,26 +236,6 @@ export async function teaserAnswer(store, region, nowMs = Date.now()) {
   const body = { region, pricesAt: snap.pricesAt, settings: TEASER_SETTINGS, cities: cityTeaser(snap, undefined, Math.round(nowMs / 60000)) };
   const entry = { key: live.key, body };
   teaserCache.set(region, entry);
-  return entry;
-}
-
-/** The same for the market depth (api/_lib/marketDepth.js): read again only when a newer one came. */
-const depthCache = new Map();
-
-export async function depthAnswer(store, region, nowMs = Date.now()) {
-  const hit = depthCache.get(region);
-  if (hit && nowMs - hit.checkedAt < RECHECK_MS) return hit;
-  const stamp = await store.stamp(region);
-  if (!stamp?.depthAt) return null;
-  if (hit && hit.key === stamp.depthAt) {
-    hit.checkedAt = nowMs;
-    return hit;
-  }
-  const depth = await store.readDepth(region);
-  if (!depth?.depth) return null;
-  const raw = JSON.stringify({ region, locations: LIVE_LOCATIONS, depthAt: depth.depthAt, depth: depth.depth });
-  const entry = { key: stamp.depthAt, raw, gzip: gzipSync(raw), etag: `"${createHash("sha1").update(`depth|${region}|${stamp.depthAt}`).digest("base64url").slice(0, 20)}"`, checkedAt: nowMs };
-  depthCache.set(region, entry);
   return entry;
 }
 
@@ -282,7 +260,6 @@ function validCells(map, width) {
  * - POST ingest {region, prices?, volume?}: the GitHub job stores a snapshot part (actions secret)
  * - GET live?region=: the latest snapshot, premium players only
  * - GET teaser?region=: the City Crafter's free preview (Lymhurst's top 3), for everyone
- * - GET depth?region=: the latest market depth (marketDepth.js), premium players only
  * deps: store (read / write), actionsSecret, userFromToken, premium(userId), now()
  */
 export async function handleMarket(action, req, deps) {
@@ -291,26 +268,17 @@ export async function handleMarket(action, req, deps) {
     if (!deps.actionsSecret || req.token !== deps.actionsSecret) return { status: 401, body: { error: "not allowed" }, maxAge: 0 };
     const body = req.body ?? {};
     if (!LIVE_REGIONS.includes(body.region)) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
-    const { prices, volume, depth } = body;
-    if (prices === undefined && volume === undefined && depth === undefined) return { status: 400, body: { error: "nothing to store" }, maxAge: 0 };
-    if ((prices !== undefined && !validCells(prices, 4)) || (volume !== undefined && !validCells(volume, 2)) || (depth !== undefined && !validDepth(depth))) {
+    const { prices, volume } = body;
+    if (prices === undefined && volume === undefined) return { status: 400, body: { error: "nothing to store" }, maxAge: 0 };
+    if ((prices !== undefined && !validCells(prices, 4)) || (volume !== undefined && !validCells(volume, 2))) {
       return { status: 400, body: { error: "bad snapshot" }, maxAge: 0 };
     }
     if (!deps.store) return { status: 503, body: { error: "storage not configured" }, maxAge: 0 };
     const at = deps.now().toISOString();
-    await deps.store.write(body.region, {
-      ...(prices ? { prices, pricesAt: at } : {}),
-      ...(volume ? { volume, volumeAt: at } : {}),
-      ...(depth ? { depth, depthAt: at } : {})
-    });
+    await deps.store.write(body.region, { ...(prices ? { prices, pricesAt: at } : {}), ...(volume ? { volume, volumeAt: at } : {}) });
     return {
       status: 200,
-      body: {
-        region: body.region,
-        prices: prices ? Object.keys(prices).length : null,
-        volume: volume ? Object.keys(volume).length : null,
-        depth: depth ? Object.keys(depth).length : null
-      },
+      body: { region: body.region, prices: prices ? Object.keys(prices).length : null, volume: volume ? Object.keys(volume).length : null },
       maxAge: 0
     };
   }
@@ -338,18 +306,6 @@ export async function handleMarket(action, req, deps) {
     return { status: 200, body: answer.body, maxAge: 600 };
   }
 
-  if (action === "depth") {
-    if (req.method !== "GET") return { status: 405, body: { error: "GET only" }, maxAge: 0 };
-    const region = String(req.query?.region ?? "");
-    if (!LIVE_REGIONS.includes(region)) return { status: 400, body: { error: "region must be eu or us" }, maxAge: 0 };
-    const user = req.token ? await deps.userFromToken(req.token) : null;
-    if (!user) return { status: 401, body: { error: "Sign in to see the market depth." }, maxAge: 0 };
-    if (!deps.premium || !(await deps.premium(user.id))) return { status: 403, body: { error: "The market depth is part of premium." }, maxAge: 0 };
-    const answer = deps.store ? await depthAnswer(deps.store, region, deps.now().getTime()) : null;
-    if (!answer) return { status: 404, body: { error: "No market depth yet." }, maxAge: 0 };
-    return { status: 200, raw: answer.raw, gzip: answer.gzip, etag: answer.etag, maxAge: 0 };
-  }
-
   return { status: 404, body: { error: "unknown action" }, maxAge: 0 };
 }
 
@@ -358,14 +314,9 @@ export function createMarketStore(db) {
   return {
     /** Only when the region's snapshot parts were stored: a few bytes instead of the snapshot. */
     async stamp(region) {
-      const { data, error } = await db.from("market_live").select("prices_at, volume_at, depth_at").eq("region", region).maybeSingle();
+      const { data, error } = await db.from("market_live").select("prices_at, volume_at").eq("region", region).maybeSingle();
       if (error) throw error;
-      return data ? { pricesAt: data.prices_at, volumeAt: data.volume_at, depthAt: data.depth_at } : null;
-    },
-    async readDepth(region) {
-      const { data, error } = await db.from("market_live").select("depth, depth_at").eq("region", region).maybeSingle();
-      if (error) throw error;
-      return data ? { depth: data.depth, depthAt: data.depth_at } : null;
+      return data ? { pricesAt: data.prices_at, volumeAt: data.volume_at } : null;
     },
     async read(region) {
       const { data, error } = await db.from("market_live").select("prices, prices_at, volume, volume_at").eq("region", region).maybeSingle();
@@ -376,7 +327,6 @@ export function createMarketStore(db) {
       const row = { region };
       if (part.prices) Object.assign(row, { prices: part.prices, prices_at: part.pricesAt });
       if (part.volume) Object.assign(row, { volume: part.volume, volume_at: part.volumeAt });
-      if (part.depth) Object.assign(row, { depth: part.depth, depth_at: part.depthAt });
       const { error } = await db.from("market_live").upsert(row, { onConflict: "region" });
       if (error) throw error;
     }
@@ -389,14 +339,10 @@ export function createMemoryMarketStore() {
   return {
     async stamp(region) {
       const row = rows.get(region);
-      return row ? { pricesAt: row.pricesAt ?? null, volumeAt: row.volumeAt ?? null, depthAt: row.depthAt ?? null } : null;
+      return row ? { pricesAt: row.pricesAt ?? null, volumeAt: row.volumeAt ?? null } : null;
     },
     async read(region) {
       return rows.get(region) ?? null;
-    },
-    async readDepth(region) {
-      const row = rows.get(region);
-      return row?.depth ? { depth: row.depth, depthAt: row.depthAt } : null;
     },
     async write(region, part) {
       rows.set(region, { ...(rows.get(region) ?? {}), ...part });
