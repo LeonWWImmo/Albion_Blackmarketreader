@@ -20,6 +20,19 @@ body.dashboard-body {
   display: flex;
   justify-content: center;
 }
+/* the app root fills the body: as a centered flex item without a width, .page's min(1500px, 100%)
+   resolved to 1500px and the page ran out both sides (under the side rail) below 1536px */
+body.dashboard-body > #root {
+  width: 100%;
+  min-width: 0;
+}
+/* the side rail (68px, fixed, shown above 1100px) must not cover the page's left edge */
+@media (min-width: 1101px) {
+  body.dashboard-body {
+    padding-left: 80px;
+    padding-right: 80px;
+  }
+}
 .static-bg {
   position: fixed;
   inset: 0;
@@ -1620,9 +1633,9 @@ body.dashboard-body.panel-open::before {
   }
 }
 
-/* Dashboard overrides: wider cards + compact city panel */
+/* Dashboard overrides: wider cards + compact city panel (4 columns at full width, fewer when narrower) */
 .grid {
-  grid-template-columns: repeat(4, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
 .city-panel {
