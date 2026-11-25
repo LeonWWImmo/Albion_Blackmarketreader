@@ -117,6 +117,9 @@ export function createGuildStore(db) {
         must(await db.from("guild_snapshots").upsert(rows.slice(i, i + WRITE_CHUNK), { onConflict: "guild_id,player_id,day" }));
       }
     },
+    async dropSnapshotsBefore(guildId, day) {
+      must(await db.from("guild_snapshots").delete().eq("guild_id", guildId).lt("day", day));
+    },
     /** The player's Discord webhook for this server ({ url, name, last_sent_on }), or null. */
     async getWebhook(userId, region) {
       return must(await db.from("guild_webhooks").select("*").eq("user_id", userId).eq("region", region).maybeSingle());

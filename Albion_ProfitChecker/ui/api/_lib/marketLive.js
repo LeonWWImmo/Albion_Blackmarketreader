@@ -13,7 +13,7 @@
 // the volume is what the market history says was sold per day.
 
 import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 /** The markets of a snapshot, in the order every price array uses. */
 export const LIVE_LOCATIONS = ["Black Market", "Caerleon", "Bridgewatch", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
@@ -309,6 +309,13 @@ export async function handleMarket(action, req, deps) {
   return { status: 404, body: { error: "unknown action" }, maxAge: 0 };
 }
 
+/**
+ * The snapshot parts are stored gzipped (base64 text): a read moves ~a quarter of the bytes out of
+ * Supabase (egress), and a fresh snapshot is read by every warm function instance every 30 minutes.
+ */
+const pack = (value) => gzipSync(JSON.stringify(value)).toString("base64");
+const unpack = (text) => (text ? JSON.parse(gunzipSync(Buffer.from(text, "base64")).toString("utf8")) : null);
+
 /** public.market_live in Supabase (service role only: RLS on, no policies). */
 export function createMarketStore(db) {
   return {
@@ -319,14 +326,14 @@ export function createMarketStore(db) {
       return data ? { pricesAt: data.prices_at, volumeAt: data.volume_at } : null;
     },
     async read(region) {
-      const { data, error } = await db.from("market_live").select("prices, prices_at, volume, volume_at").eq("region", region).maybeSingle();
+      const { data, error } = await db.from("market_live").select("prices_gz, prices_at, volume_gz, volume_at").eq("region", region).maybeSingle();
       if (error) throw error;
-      return data ? { prices: data.prices, pricesAt: data.prices_at, volume: data.volume, volumeAt: data.volume_at } : null;
+      return data ? { prices: unpack(data.prices_gz), pricesAt: data.prices_at, volume: unpack(data.volume_gz), volumeAt: data.volume_at } : null;
     },
     async write(region, part) {
       const row = { region };
-      if (part.prices) Object.assign(row, { prices: part.prices, prices_at: part.pricesAt });
-      if (part.volume) Object.assign(row, { volume: part.volume, volume_at: part.volumeAt });
+      if (part.prices) Object.assign(row, { prices_gz: pack(part.prices), prices_at: part.pricesAt });
+      if (part.volume) Object.assign(row, { volume_gz: pack(part.volume), volume_at: part.volumeAt });
       const { error } = await db.from("market_live").upsert(row, { onConflict: "region" });
       if (error) throw error;
     }

@@ -108,6 +108,8 @@ const PRO_FIGHT_PAGES = 8;
 const PRO_FIGHTS_BUDGET_MS = 35_000;
 /** Days kept before the longest period, so a missed daily snapshot still leaves a start point. */
 const BASELINE_SLACK_DAYS = 3;
+/** Daily snapshots older than this are deleted at the sync: the pages read 33 days at most. */
+const SNAPSHOT_KEEP_DAYS = 95;
 const SLUG = /^[a-z0-9-]{1,90}$/;
 /** A marked guild not synced for this long: the daily sync is broken (it runs every 24 h). */
 const SYNC_LATE_MS = 28 * 3600 * 1000;
@@ -206,6 +208,7 @@ export async function syncGuild({ store, gameinfo, guild, now }) {
   const plan = planSync({ guildId: guild.id, members, battles, players, before, today });
   // snapshots first: if they fail (e.g. a column missing), no join or leave is written without them
   await store.saveSnapshots(plan.snapshots);
+  await store.dropSnapshotsBefore(guild.id, addDays(today, -SNAPSHOT_KEEP_DAYS));
   await store.savePlayers(plan.players);
   const slug = info.name === guild.name ? guild.slug : await uniqueSlug(store, guild.region, info.name, guild.id);
   await store.saveGuild({ ...guildRow(info, guild.region, slug, members.length), last_synced_at: now.toISOString() });

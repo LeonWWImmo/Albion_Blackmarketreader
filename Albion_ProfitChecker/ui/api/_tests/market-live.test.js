@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { sendResult } from "../_lib/aodp.js";
 import {
   clearLiveCache,
+  createMarketStore,
   createMemoryMarketStore,
   fetchLive,
   handleMarket,
@@ -249,5 +250,47 @@ describe("sendResult", () => {
     const pub = fakeRes();
     sendResult(pub, { status: 200, raw: big.raw, maxAge: 300 }, { headers: { "accept-encoding": "gzip" } });
     expect(pub.headers["Content-Encoding"]).toBeUndefined();
+  });
+});
+
+describe("createMarketStore (Supabase)", () => {
+  // the one row per region as the fake table keeps it, and a minimal supabase-js chain over it
+  function fakeDb() {
+    const rows = new Map();
+    const db = {
+      rows,
+      from: () => ({
+        upsert: async (row) => {
+          rows.set(row.region, { ...rows.get(row.region), ...row });
+          return { error: null };
+        },
+        select: (cols) => ({
+          eq: (_col, region) => ({
+            maybeSingle: async () => {
+              const row = rows.get(region);
+              return { data: row ? Object.fromEntries(cols.split(", ").map((c) => [c, row[c] ?? null])) : null, error: null };
+            }
+          })
+        })
+      })
+    };
+    return db;
+  }
+
+  it("stores the parts gzipped and reads them back", async () => {
+    const db = fakeDb();
+    const store = createMarketStore(db);
+    const prices = { T4_BAG: [[1000, 900]] };
+    await store.write("eu", { prices, pricesAt: "2026-11-25T10:00:00Z" });
+    const stored = db.rows.get("eu");
+    expect(JSON.parse(gunzipSync(Buffer.from(stored.prices_gz, "base64")).toString("utf8"))).toEqual(prices);
+    expect(stored.volume_gz).toBeUndefined();
+    expect(await store.read("eu")).toEqual({ prices, pricesAt: "2026-11-25T10:00:00Z", volume: null, volumeAt: null });
+
+    const volume = { T4_BAG: [3, 1] };
+    await store.write("eu", { volume, volumeAt: "2026-11-25T12:00:00Z" });
+    expect(await store.read("eu")).toEqual({ prices, pricesAt: "2026-11-25T10:00:00Z", volume, volumeAt: "2026-11-25T12:00:00Z" });
+    expect(await store.stamp("eu")).toEqual({ pricesAt: "2026-11-25T10:00:00Z", volumeAt: "2026-11-25T12:00:00Z" });
+    expect(await store.read("us")).toBeNull();
   });
 });

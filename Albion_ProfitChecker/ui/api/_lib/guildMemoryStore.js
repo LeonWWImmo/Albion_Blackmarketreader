@@ -63,6 +63,9 @@ export function createMemoryGuildStore() {
     saveSnapshots: async (rows) => {
       for (const row of rows) snapshots.set(`${row.guild_id}:${row.player_id}:${row.day}`, row);
     },
+    dropSnapshotsBefore: async (guildId, day) => {
+      for (const [key, s] of snapshots) if (s.guild_id === guildId && s.day < day) snapshots.delete(key);
+    },
     getWebhook: async (userId, region) => webhooks.get(`${userId}:${region}`) ?? null,
     saveWebhook: async (userId, region, url, name) => {
       // like the database's upsert: a new link keeps the ZvZ setting

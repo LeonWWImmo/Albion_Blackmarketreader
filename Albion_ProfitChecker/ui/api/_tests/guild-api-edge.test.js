@@ -49,6 +49,20 @@ describe("guild API edge cases", () => {
     expect([...store.players.values()].filter((p) => p.left_on)).toHaveLength(0);
   });
 
+  it("deletes the guild's daily snapshots older than 95 days at the sync", async () => {
+    const { call, store, deps, markAs } = setup();
+    await markAs("tok-ann");
+    const old = { guild_id: GID, player_id: "p-old", day: "2026-08-01" };
+    const kept = { guild_id: GID, player_id: "p-old", day: "2026-08-20" };
+    const other = { guild_id: OTHER, player_id: "p-x", day: "2026-01-01" };
+    await store.saveSnapshots([old, kept, other]);
+    deps.now = () => new Date(NOW.getTime() + DAY_MS + 1000);
+    expect(await call("sync", { authorization: "Bearer cron-123" })).toMatchObject({ body: { synced: 1 } });
+    const days = [...store.snapshots.values()].filter((r) => r.player_id === "p-old").map((r) => r.day);
+    expect(days).toEqual(["2026-08-20"]);
+    expect([...store.snapshots.values()].some((r) => r.guild_id === OTHER)).toBe(true);
+  });
+
   it("accepts a real split: a short list that the second answer confirms", async () => {
     const { call, store, deps, markAs } = setup();
     const many = Array.from({ length: 20 }, (_, i) => member(`p${i}`, `P${i}`));
