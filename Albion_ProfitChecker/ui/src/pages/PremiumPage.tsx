@@ -256,7 +256,7 @@ export function PremiumPage() {
           <p className="ob-sub">See the market before everyone else.</p>
           <a className="ob-cta ob-magnet" href="#price">
             <span>{hasPremium ? "Your Premium" : "Get Premium"}</span>
-            <b>4.99 CHF / month</b>
+            <b>€4.99 / month</b>
           </a>
         </div>
         <span className="ob-scroll" aria-hidden="true" />
@@ -307,8 +307,8 @@ export function PremiumPage() {
             <i />
           </p>
           <h2 id="ob-price-title" className="ob-amount">
-            <span className="ob-foil">4.99</span>
-            <small>CHF / month</small>
+            <span className="ob-foil">€4.99</span>
+            <small>/ month</small>
           </h2>
           <div className="ob-action">
             <PlanAction state={state} busy={busy} waiting={waiting} onBuy={() => void go(checkoutUrl)} onManage={() => void go(portalUrl)} onRetry={reload} />
