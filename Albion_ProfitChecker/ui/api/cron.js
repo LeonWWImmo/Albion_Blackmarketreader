@@ -1,8 +1,8 @@
-// GET /api/cron/<job>  ->  started by Vercel Cron (vercel.json "crons", times in UTC).
-// GitHub's own schedule trigger runs hours late or skips runs, so every scheduled workflow is started
-// from here by workflow_dispatch, which GitHub runs right away (see api/_lib/dispatch.js).
-// One file for all jobs: every .js file under api/ is its own Vercel function.
-import { dispatchWorkflow } from "../_lib/dispatch.js";
+// GET /api/cron/<job> (rewritten to /api/cron?job=<job>, vercel.json)  ->  started by Vercel Cron
+// (vercel.json "crons", times in UTC). GitHub's own schedule trigger runs hours late or skips runs, so
+// every scheduled workflow is started from here by workflow_dispatch, which GitHub runs right away
+// (see api/_lib/dispatch.js). One file for all jobs: every .js file under api/ is its own Vercel function.
+import { dispatchWorkflow } from "./_lib/dispatch.js";
 
 /** job (the URL part) -> [workflow file, inputs] */
 export const JOBS = {

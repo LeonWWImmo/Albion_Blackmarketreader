@@ -2,7 +2,7 @@ name: Discord Live Gold
 
 # Gold alerts (every hour: ping the Gold Alerts role when a server's gold price breaks its 30-day
 # low or high, only the big moves) and the live "💰 Gold EU / US" channel names (three times
-# a day). Vercel Cron starts both (vercel.json, api/cron/[job].js: gold-alerts, gold-names).
+# a day). Vercel Cron starts both (vercel.json, api/cron.js: gold-alerts, gold-names).
 # See Albion_ProfitChecker/ui/scripts/discord-live.mjs.
 on:
   workflow_dispatch:

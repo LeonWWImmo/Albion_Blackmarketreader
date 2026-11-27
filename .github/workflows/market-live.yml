@@ -4,7 +4,7 @@ name: Live Market Snapshot
 # eight markets (both regions) go to /api/market/ingest (stored in Supabase, not in git, so no
 # commit and no deploy). The sales volume too once the stored one is 6 hours old. See
 # Albion_ProfitChecker/ui/scripts/market-live.mjs. ACTIONS_CRON_SECRET = the Vercel env of that name.
-# Vercel Cron starts it (vercel.json, api/cron/[job].js): GitHub's own schedule ran hours late.
+# Vercel Cron starts it (vercel.json, api/cron.js): GitHub's own schedule ran hours late.
 on:
   workflow_dispatch:
     inputs:

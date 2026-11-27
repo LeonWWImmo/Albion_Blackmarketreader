@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { connect } from "node:tls";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { JOBS } from "../api/cron/[job].js";
+import { JOBS } from "../api/cron.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = path.resolve(ROOT, "../..");
@@ -81,7 +81,7 @@ export function overall(sections) {
 
 // ---------------------------------------------------------------- checks
 
-// scheduled: on a GitHub schedule or started by Vercel Cron (api/cron/[job].js)
+// scheduled: on a GitHub schedule or started by Vercel Cron (api/cron.js)
 const cronWorkflows = new Set(Object.values(JOBS).map(([file]) => file));
 const workflowFiles = () =>
   readdirSync(path.join(REPO_ROOT, ".github/workflows"))

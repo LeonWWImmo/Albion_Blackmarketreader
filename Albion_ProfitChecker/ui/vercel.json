@@ -112,6 +112,10 @@
       "destination": "/api/billing?action=:action"
     },
     {
+      "source": "/api/cron/:job",
+      "destination": "/api/cron?job=:job"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

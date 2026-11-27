@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import handler, { JOBS } from "../cron/[job].js";
+import handler, { JOBS } from "../cron.js";
 
 const UI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const WORKFLOWS = path.resolve(UI, "../../.github/workflows");
