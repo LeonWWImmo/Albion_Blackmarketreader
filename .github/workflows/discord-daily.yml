@@ -9,7 +9,7 @@ run-name: ${{ format('{0}', inputs.dry_run) == 'true' && 'Discord Daily Update (
 # new bonus (checks every 30 min, posts each region once, gives up at 16:00 UTC), so it never
 # starts more than once a day. See Albion_ProfitChecker/ui/scripts/discord-daily.mjs.
 #
-# Vercel Cron starts it at 10:15 UTC by workflow_dispatch (api/cron/discord-daily.js), because
+# Vercel Cron starts it at 10:15 UTC by workflow_dispatch (api/cron/[job].js), because
 # GitHub's schedule trigger can run hours late. The schedule stays as a backup. Every real run
 # does nothing when today's update was already posted (the channels are public, so no double
 # pings), unless it is started by hand with "force".

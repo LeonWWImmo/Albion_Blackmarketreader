@@ -2,12 +2,11 @@ name: Guild ZvZ Reports
 
 # Guild Pro (premium): every 30 minutes, the site posts the report of each new big fight of a marked
 # guild to the Discord webhooks of its premium players who turned the ZvZ report on
-# (/api/guild/zvz, see Albion_ProfitChecker/ui/api/_lib/guildApi.js). Vercel Hobby allows one cron a
-# day, so GitHub starts it. ACTIONS_CRON_SECRET is the same value as the Vercel env of that name.
+# (/api/guild/zvz, see Albion_ProfitChecker/ui/api/_lib/guildApi.js). Vercel Cron starts it
+# (vercel.json, api/cron/[job].js): GitHub's own schedule ran hours late.
+# ACTIONS_CRON_SECRET is the same value as the Vercel env of that name.
 # The job itself only calls the site; a run with nothing new does nothing.
 on:
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:

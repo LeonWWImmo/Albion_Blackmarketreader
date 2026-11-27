@@ -2,9 +2,6 @@ name: Build Material Prices by City (EU + US)
 
 on:
   workflow_dispatch:
-  schedule:
-    # Raw material city prices for refining, after crafting calculator refresh.
-    - cron: "35 10 * * *"
 
 permissions:
   contents: write

@@ -2,8 +2,6 @@ name: Merge Results EU (09:00 UTC)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 9 * * *"
 
 permissions:
   contents: write

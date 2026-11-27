@@ -2,9 +2,6 @@ name: Build Journal Prices (EU + US)
 
 on:
   workflow_dispatch:
-  schedule:
-    # Crafting-journal (book) empty/full prices, after the material refresh.
-    - cron: "45 10 * * *"
 
 permissions:
   contents: write

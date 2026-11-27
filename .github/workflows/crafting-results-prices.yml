@@ -2,9 +2,6 @@ name: Build Crafting Results Prices (EU + US)
 
 on:
   workflow_dispatch:
-  schedule:
-    # After other morning jobs to reduce API overlap.
-    - cron: "5 10 * * *"
 
 permissions:
   contents: write

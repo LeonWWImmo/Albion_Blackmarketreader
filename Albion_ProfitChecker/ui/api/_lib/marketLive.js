@@ -276,9 +276,11 @@ export async function handleMarket(action, req, deps) {
     if (!deps.store) return { status: 503, body: { error: "storage not configured" }, maxAge: 0 };
     const at = deps.now().toISOString();
     await deps.store.write(body.region, { ...(prices ? { prices, pricesAt: at } : {}), ...(volume ? { volume, volumeAt: at } : {}) });
+    // the job fetches the slow-moving volume only when the stored one has aged (see scripts/market-live.mjs)
+    const stamp = await deps.store.stamp(body.region);
     return {
       status: 200,
-      body: { region: body.region, prices: prices ? Object.keys(prices).length : null, volume: volume ? Object.keys(volume).length : null },
+      body: { region: body.region, prices: prices ? Object.keys(prices).length : null, volume: volume ? Object.keys(volume).length : null, volumeAt: stamp?.volumeAt ?? null },
       maxAge: 0
     };
   }

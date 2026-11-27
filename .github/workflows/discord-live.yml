@@ -2,12 +2,9 @@ name: Discord Live Gold
 
 # Gold alerts (every hour: ping the Gold Alerts role when a server's gold price breaks its 30-day
 # low or high, only the big moves) and the live "💰 Gold EU / US" channel names (three times
-# a day). GitHub may start these late or skip a run; for alerts and names that is fine.
+# a day). Vercel Cron starts both (vercel.json, api/cron/[job].js: gold-alerts, gold-names).
 # See Albion_ProfitChecker/ui/scripts/discord-live.mjs.
 on:
-  schedule:
-    - cron: "41 * * * *"
-    - cron: "11 0,8,16 * * *"
   workflow_dispatch:
     inputs:
       alerts:
@@ -49,19 +46,13 @@ jobs:
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_LIVE_MODE: ${{ vars.DISCORD_LIVE_MODE }}
-          EVENT: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
           IN_ALERTS: ${{ inputs.alerts }}
           IN_NAMES: ${{ inputs.names }}
           IN_DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           ARGS=()
-          if [ "$EVENT" = "schedule" ]; then
-            if [ "$SCHEDULE" = "41 * * * *" ]; then ARGS+=(--alerts); else ARGS+=(--names); fi
-          else
-            if [ "$IN_ALERTS" = "true" ]; then ARGS+=(--alerts); fi
-            if [ "$IN_NAMES" = "true" ]; then ARGS+=(--names); fi
-            if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
-          fi
+          if [ "$IN_ALERTS" = "true" ]; then ARGS+=(--alerts); fi
+          if [ "$IN_NAMES" = "true" ]; then ARGS+=(--names); fi
+          if [ "$IN_DRY_RUN" = "true" ]; then ARGS+=(--dry-run); fi
           node scripts/discord-live.mjs "${ARGS[@]}"

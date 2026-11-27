@@ -2,8 +2,6 @@ name: Data Sync EU - Topf 1 (Lymhurst/Martlock/Fort Sterling)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 11 * * *" # 11:00 UTC (EU)
 
 permissions:
   contents: write

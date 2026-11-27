@@ -2,9 +2,6 @@ name: Build Food & Potion Prices (EU + US)
 
 on:
   workflow_dispatch:
-  schedule:
-    # 04:00 UTC — quiet slot, clear of the other data syncs (02:00 / 08:00+).
-    - cron: "0 4 * * *"
 
 permissions:
   contents: write

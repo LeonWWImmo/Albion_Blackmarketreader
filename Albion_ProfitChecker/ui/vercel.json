@@ -73,7 +73,22 @@
     {
       "path": "/api/guild/sync",
       "schedule": "30 3 * * *"
-    }
+    },
+    { "path": "/api/cron/market-live", "schedule": "7,37 * * * *" },
+    { "path": "/api/cron/guild-zvz", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/gold-alerts", "schedule": "41 * * * *" },
+    { "path": "/api/cron/gold-names", "schedule": "11 0,8,16 * * *" },
+    { "path": "/api/cron/data-sync-eu-1", "schedule": "0 11 * * *" },
+    { "path": "/api/cron/data-sync-eu-2", "schedule": "0 16 * * *" },
+    { "path": "/api/cron/data-sync-1", "schedule": "0 21 * * *" },
+    { "path": "/api/cron/data-sync-2", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/food-potion-prices", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/merge-results", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/daily-avg-history", "schedule": "30 8 * * *" },
+    { "path": "/api/cron/merge-results-eu", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/crafting-results-prices", "schedule": "5 10 * * *" },
+    { "path": "/api/cron/materials-prices-by-city", "schedule": "35 10 * * *" },
+    { "path": "/api/cron/journal-prices", "schedule": "45 10 * * *" }
   ],
   "rewrites": [
     {

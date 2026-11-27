@@ -2,8 +2,6 @@ name: Data Sync EU - Topf 2 (Bridgewatch/Thetford/Caerleon)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 16 * * *" # 16:00 UTC (EU)
 
 permissions:
   contents: write

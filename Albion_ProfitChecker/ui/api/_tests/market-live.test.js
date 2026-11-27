@@ -187,6 +187,13 @@ describe("handleMarket", () => {
     expect(ok.volumeAt).toBe(NOW.toISOString());
   });
 
+  it("tells the job how old the stored volume is", async () => {
+    const { ingest } = setup();
+    expect((await ingest({ region: "eu", prices })).body.volumeAt).toBeNull();
+    await ingest({ region: "eu", volume });
+    expect((await ingest({ region: "eu", prices })).body.volumeAt).toBe(NOW.toISOString());
+  });
+
   it("reads the snapshot out of the database only when a newer one was stored", async () => {
     const { ingest, live, store, deps } = setup();
     await ingest({ region: "eu", prices });
