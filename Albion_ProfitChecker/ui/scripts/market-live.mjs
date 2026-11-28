@@ -17,9 +17,11 @@ const secret = process.env.MARKET_SECRET || "";
 const dry = process.env.MARKET_DRY === "1";
 const regions = (process.env.MARKET_REGIONS || LIVE_REGIONS.join(",")).split(",").map((r) => r.trim()).filter((r) => LIVE_REGIONS.includes(r));
 // the volume comes along when forced or when the stored one (the ingest answer's volumeAt) is older
-// than VOLUME_EVERY_H, so a late or skipped run cannot leave it stale
+// than VOLUME_EVERY_H, so a late or skipped run cannot leave it stale. volumeAt is stamped a few minutes
+// into its run, so the run VOLUME_EVERY_H later sees it as slightly younger: SLACK_MS lets that one fetch.
 const forceVolume = process.env.MARKET_VOLUME === "1";
-const volumeStale = (volumeAt) => !volumeAt || Date.now() - Date.parse(volumeAt) > VOLUME_EVERY_H * 3600_000;
+const SLACK_MS = 15 * 60_000;
+const volumeStale = (volumeAt) => !volumeAt || Date.now() - Date.parse(volumeAt) > VOLUME_EVERY_H * 3600_000 - SLACK_MS;
 
 if (!secret && !dry) {
   console.error("MARKET_SECRET is missing");
