@@ -1,7 +1,7 @@
 # Blackmarket Reader
 
 Free Albion Online tools at https://blackmarketreader.com: React 18 + Vite + TypeScript SPA on Vercel
-(Hobby plan), Supabase for accounts and the guild data, GitHub Actions for the daily market data.
+(Pro plan), Supabase for accounts and the guild data, GitHub Actions for the daily market data.
 The user writes German; answer in German, short. Code, comments, commits and UI text are English.
 
 ## Hard rules
@@ -34,7 +34,7 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `api/guild.js` → `api/_lib/guildApi.js` | the guild API, one function, `/api/guild/<action>` |
 | `api/_lib/guildStore.js` / `guildMemoryStore.js` | Supabase store / in-memory store (tests, `npm run dev`) |
 | `api/billing.js` → `api/_lib/billing.js` | premium via Stripe: `/api/billing/webhook`, `status`, `checkout`, `portal` (env `STRIPE_*`); before the launch only `PREMIUM_TESTERS` (user ids) can buy or use it, `PREMIUM_LAUNCHED=1` opens it; premium features check `hasPremium()` |
-| `api/market.js` → `api/_lib/marketLive.js`, `src/features/dashboard/live/` | live market (premium): snapshot of all dashboard items in 8 markets every 30 min (GitHub job `scripts/market-live.mjs` → `/api/market/ingest` → table `market_live`), `/api/market/live` for premium players only; the dashboard panel computes the flips (`flips.ts`). AODP has no order quantities |
+| `api/market.js` → `api/_lib/marketLive.js`, `src/features/dashboard/live/` | live market (premium): snapshot of all dashboard items in 8 markets every 30 min (job `scripts/market-live.mjs` → `/api/market/ingest` → table `market_live`), `/api/market/live` for premium players only; the dashboard panel computes the flips (`flips.ts`). AODP has no order quantities |
 | `src/features/city-crafter/` | City Crafter (premium, `/city-crafter`): craft and sell in one city, materials from there or the cheapest city; prices Live / Live + daily / Daily (`core/books.ts`), journals on by default, ranked by profit a day. Without premium: `/api/market/teaser` (public, CDN cached) = Lymhurst's top 3 worked out on the server (`api/_lib/cityTeaser.js`, a JS copy of `core/cityCraft.ts` kept equal by `api/_tests/city-teaser.test.js`), nothing more reaches the browser |
 | `src/features/focus-planner/` | Focus Planner (premium, `/focus-planner`): crafts with focus ranked by silver per focus point, a day's plan for the player's focus, specs shared with the Crafting Calculator (`useCraftingSpecs`) |
 | `src/shared/live/` | live prices in the four calculators (premium; crafting, BM crafter, refining, food / potion): Daily / Live / Live + fill from the same snapshot (it also covers the crafting items, materials, artefacts, journals); every merged price keeps its source, marked with `data-src="live"\|"daily"` (dot drawn by CSS) |
@@ -44,16 +44,19 @@ The user writes German; answer in German, short. Code, comments, commits and UI 
 | `../../supabase/migrations/` | SQL migrations (run by the user) |
 | `../../.github/workflows/` | data refresh, Discord changelog, health check |
 
-Crons (`ui/vercel.json`, production only, Hobby = once a day each): Discord daily, health check,
-guild sync + Discord reports (03:30 UTC).
-GitHub Actions `guild-zvz.yml` (every 30 min, from `main`): `/api/guild/zvz` posts the ZvZ reports
+Crons (`ui/vercel.json`, production only, times in UTC): guild sync + Discord reports (03:30 UTC),
+and every scheduled GitHub workflow: `/api/cron/<job>` (`ui/api/cron.js`, list `JOBS`) starts it by
+workflow_dispatch on `main`, because GitHub's own schedule runs hours late. The workflows have no
+`schedule:` of their own (except `discord-daily.yml`, a guarded fallback); a new scheduled job goes
+into `JOBS` and `vercel.json` (`api/_tests/cron.test.js` checks both).
+`guild-zvz.yml` (every 30 min): `/api/guild/zvz` posts the ZvZ reports
 of Guild Pro (premium), `/api/guild/pro-fights` keeps the fights of guilds Guild Pro players marked
 (table `guild_fights`, 95 days, for attendance over 30/90 days), and from 05:00 UTC `/api/guild/sync-retry`
 re-runs the daily sync for guilds it missed (the Americas killboard is slow at 03:30 UTC); authorized with `ACTIONS_CRON_SECRET`
 (same value in Vercel and GitHub). Guild Pro also marks up to 5 guilds per server; the oldest mark is
 the main one (Discord and ZvZ report).
-GitHub Actions `market-live.yml` (:07 and :37, from `main`): the live market snapshot, same secret;
-the volume only every 6 hours. AODP throttles requests without gzip.
+`market-live.yml` (:07 and :37): the live market snapshot, same secret; the volume when the stored
+one is older than 6 hours (the ingest answer says its age). AODP throttles requests without gzip.
 The same job then runs `/api/market/alerts-run`: price alerts (premium, `api/_lib/priceAlerts.js`).
 
 ## Commands (in `Albion_ProfitChecker/ui`)
